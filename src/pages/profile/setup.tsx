@@ -32,7 +32,7 @@ export default function ProfileSetup() {
           </h1>
 
           <p className="text-xl text-gray-600 mb-8">
-            To get the most out of our AI-powered assistance, let's set up your profile first.
+            To get the most out of our AI-powered assistance, let&apos;s set up your profile first.
           </p>
 
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
