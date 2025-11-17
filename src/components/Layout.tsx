@@ -2,6 +2,8 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GraduationCap, User, FileText, LogOut } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import LanguageSwitch from './LanguageSwitch';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,6 +11,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -24,7 +27,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center h-16">
             <Link href="/dashboard" className="flex items-center space-x-2">
               <GraduationCap className="h-8 w-8 text-primary-600" />
-              <span className="text-xl font-bold text-gray-900">Application Assistant</span>
+              <span className="text-xl font-bold text-gray-900">{t.common.appNameShort}</span>
             </Link>
             
             <div className="flex items-center space-x-6">
@@ -33,7 +36,7 @@ export default function Layout({ children }: LayoutProps) {
                 className={`flex items-center space-x-1 ${router.pathname === '/dashboard' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
               >
                 <FileText className="h-5 w-5" />
-                <span className="font-medium">Applications</span>
+                <span className="font-medium">{t.dashboard.myApplications}</span>
               </Link>
               
               <Link 
@@ -41,15 +44,17 @@ export default function Layout({ children }: LayoutProps) {
                 className={`flex items-center space-x-1 ${router.pathname === '/profile' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
               >
                 <User className="h-5 w-5" />
-                <span className="font-medium">Profile</span>
+                <span className="font-medium">{t.profile.title}</span>
               </Link>
+
+              <LanguageSwitch variant="minimal" />
               
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
               >
                 <LogOut className="h-5 w-5" />
-                <span className="font-medium">Logout</span>
+                <span className="font-medium">{t.common.logout}</span>
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { Plus, FileText, Clock, CheckCircle, Trash2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Application {
   id: string;
@@ -24,6 +25,7 @@ interface Template {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [applications, setApplications] = useState<Application[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +96,7 @@ export default function Dashboard() {
   };
 
   const deleteApplication = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this application?')) return;
+    if (!confirm(t.dashboard.deleteConfirm)) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -132,7 +134,7 @@ export default function Dashboard() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg text-gray-600">Loading...</div>
+          <div className="text-lg text-gray-600">{t.common.loading}</div>
         </div>
       </Layout>
     );
@@ -149,15 +151,15 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Applications</h1>
-              <p className="text-gray-600 mt-2">Manage and track your school applications</p>
+              <h1 className="text-3xl font-bold text-gray-900">{t.dashboard.title}</h1>
+              <p className="text-gray-600 mt-2">{t.dashboard.subtitle}</p>
             </div>
             <button
               onClick={() => setShowNewAppModal(true)}
               className="btn-primary flex items-center space-x-2"
             >
               <Plus className="h-5 w-5" />
-              <span>New Application</span>
+              <span>{t.dashboard.newApplication}</span>
             </button>
           </div>
 
@@ -165,13 +167,13 @@ export default function Dashboard() {
           {applications.length === 0 ? (
             <div className="card text-center py-12">
               <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No applications yet</h3>
-              <p className="text-gray-600 mb-6">Start your first application to get going!</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t.dashboard.noApplications}</h3>
+              <p className="text-gray-600 mb-6">{t.dashboard.noApplicationsDesc}</p>
               <button
                 onClick={() => setShowNewAppModal(true)}
                 className="btn-primary"
               >
-                Create Your First Application
+                {t.dashboard.createFirst}
               </button>
             </div>
           ) : (
@@ -199,14 +201,14 @@ export default function Dashboard() {
                   <p className="text-gray-600 mb-4">{app.program}</p>
                   
                   <div className="text-sm text-gray-500 mb-4">
-                    Updated: {new Date(app.updatedAt).toLocaleDateString()}
+                    {t.dashboard.updated}: {new Date(app.updatedAt).toLocaleDateString()}
                   </div>
                   
                   <Link
                     href={`/application/${app.id}`}
                     className="btn-primary w-full text-center"
                   >
-                    {app.status === 'submitted' ? 'View Application' : 'Continue Application'}
+                    {app.status === 'submitted' ? t.dashboard.viewApplication : t.dashboard.continueApplication}
                   </Link>
                 </div>
               ))}
@@ -219,7 +221,7 @@ export default function Dashboard() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Choose a School to Apply
+                {t.dashboard.chooseSchool}
               </h2>
               
               <div className="space-y-4">
@@ -247,7 +249,7 @@ export default function Dashboard() {
                 onClick={() => setShowNewAppModal(false)}
                 className="btn-secondary w-full mt-6"
               >
-                Cancel
+                {t.common.cancel}
               </button>
             </div>
           </div>
