@@ -300,12 +300,12 @@
     },
     {
       "id": "parent_father_info",
-      "label": "父亲信息 / Father's Information",
+      "label": "父亲信息 / Father Information",
       "type": "section",
       "fields": [
         {
           "id": "father_name",
-          "label": "父亲姓名 (Father's Name)",
+          "label": "父亲姓名 (Father Name)",
           "type": "text",
           "required": false,
           "aiFillRule": "parents[0].name"
@@ -372,12 +372,12 @@
     },
     {
       "id": "parent_mother_info",
-      "label": "母亲信息 / Mother's Information",
+      "label": "母亲信息 / Mother Information",
       "type": "section",
       "fields": [
         {
           "id": "mother_name",
-          "label": "母亲姓名 (Mother's Name)",
+          "label": "母亲姓名 (Mother Name)",
           "type": "text",
           "required": false,
           "aiFillRule": "parents[1].name"

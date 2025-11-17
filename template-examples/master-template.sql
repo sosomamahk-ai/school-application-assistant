@@ -97,10 +97,10 @@ INSERT INTO "SchoolFormTemplate" (
     },
     {
       "id": "parent_father_info",
-      "label": "父亲信息 / Father'"'"'s Information",
+      "label": "父亲信息 / Father''s Information",
       "type": "section",
       "fields": [
-        {"id": "father_name", "label": "父亲姓名 (Father'"'"'s Name)", "type": "text", "required": false, "aiFillRule": "parents[0].name"},
+        {"id": "father_name", "label": "父亲姓名 (Father''s Name)", "type": "text", "required": false, "aiFillRule": "parents[0].name"},
         {"id": "father_passport", "label": "父亲护照号码 (Passport Number)", "type": "text", "required": false, "aiFillRule": "parents[0].passportNumber"},
         {"id": "father_id_number", "label": "父亲身份证号码 (ID Number)", "type": "text", "required": false, "aiFillRule": "parents[0].idNumber"},
         {"id": "father_visa_status", "label": "父亲签证情况 (Visa Status)", "type": "select", "required": false, "options": ["受养人", "永久居民", "工作签证", "待办中"], "aiFillRule": "parents[0].visaStatus"},
@@ -113,10 +113,10 @@ INSERT INTO "SchoolFormTemplate" (
     },
     {
       "id": "parent_mother_info",
-      "label": "母亲信息 / Mother'"'"'s Information",
+      "label": "母亲信息 / Mother''s Information",
       "type": "section",
       "fields": [
-        {"id": "mother_name", "label": "母亲姓名 (Mother'"'"'s Name)", "type": "text", "required": false, "aiFillRule": "parents[1].name"},
+        {"id": "mother_name", "label": "母亲姓名 (Mother''s Name)", "type": "text", "required": false, "aiFillRule": "parents[1].name"},
         {"id": "mother_passport", "label": "母亲护照号码 (Passport Number)", "type": "text", "required": false, "aiFillRule": "parents[1].passportNumber"},
         {"id": "mother_id_number", "label": "母亲身份证号码 (ID Number)", "type": "text", "required": false, "aiFillRule": "parents[1].idNumber"},
         {"id": "mother_visa_status", "label": "母亲签证情况 (Visa Status)", "type": "select", "required": false, "options": ["受养人", "永久居民", "工作签证", "待办中"], "aiFillRule": "parents[1].visaStatus"},
