@@ -5,7 +5,7 @@ import Layout from '@/components/Layout';
 import AIGuidancePanel from '@/components/AIGuidancePanel';
 import FormFieldInput from '@/components/FormFieldInput';
 import { FormField, ApplicationFormData } from '@/types';
-import { ChevronLeft, ChevronRight, Save, Send, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, Send, Loader2, Download, FileText, Code } from 'lucide-react';
 
 interface ApplicationData {
   id: string;
@@ -30,6 +30,7 @@ export default function ApplicationForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAllFields, setShowAllFields] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     if (applicationId) {
@@ -131,6 +132,39 @@ export default function ApplicationForm() {
     }));
   };
 
+  const handleExport = async (format: 'html' | 'txt' | 'json') => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/applications/${applicationId}/export?format=${format}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `application-${application?.template.schoolName}-${format}.${format === 'json' ? 'json' : format === 'html' ? 'html' : 'txt'}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        setShowExportMenu(false);
+        
+        if (format === 'html') {
+          alert('HTML 文件已下载！\n\n您可以：\n1. 在浏览器中打开 HTML 文件\n2. 按 Ctrl+P 打印\n3. 选择"另存为 PDF"\n4. 保存 PDF 文件');
+        }
+      } else {
+        alert('导出失败，请重试');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('导出失败，请重试');
+    }
+  };
+
   const goToNextField = () => {
     if (application && currentFieldIndex < application.template.fields.length - 1) {
       setCurrentFieldIndex(currentFieldIndex + 1);
@@ -193,6 +227,60 @@ export default function ApplicationForm() {
                 <p className="text-gray-600">{application.template.program}</p>
               </div>
               <div className="flex space-x-2">
+                {/* Export Button with Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    className="btn-secondary flex items-center space-x-2"
+                  >
+                    <Download className="h-5 w-5" />
+                    <span>导出</span>
+                  </button>
+                  
+                  {showExportMenu && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setShowExportMenu(false)}
+                      />
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                        <div className="py-1">
+                          <button
+                            onClick={() => handleExport('html')}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
+                          >
+                            <FileText className="h-5 w-5 text-primary-600" />
+                            <div>
+                              <div className="font-medium text-gray-900">导出为 HTML</div>
+                              <div className="text-xs text-gray-500">可打印为 PDF</div>
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => handleExport('txt')}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
+                          >
+                            <FileText className="h-5 w-5 text-gray-600" />
+                            <div>
+                              <div className="font-medium text-gray-900">导出为 TXT</div>
+                              <div className="text-xs text-gray-500">纯文本格式</div>
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => handleExport('json')}
+                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
+                          >
+                            <Code className="h-5 w-5 text-green-600" />
+                            <div>
+                              <div className="font-medium text-gray-900">导出为 JSON</div>
+                              <div className="text-xs text-gray-500">数据备份</div>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                
                 <button
                   onClick={() => saveApplication()}
                   disabled={saving}
