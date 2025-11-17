@@ -6,8 +6,8 @@
 
 ## 🔐 管理员账号信息
 
-- **邮箱**: `administrator`
-- **密码**: `admin-soma`
+- **邮箱**: `sosomamahk@gmail.com`
+- **密码**: `admin-sosomama`
 
 ## 🚀 创建管理员账号的三种方法
 
@@ -58,7 +58,7 @@
    ```
 
 4. **注册管理员账号**
-   - 先在应用中注册账号（email: `administrator`, password: `admin-soma`）
+   - 先在应用中注册账号（email: `sosomamahk@gmail.com`, password: `admin-sosomama`）
    - 然后运行以下 SQL 升级为管理员：
 
    ```sql
@@ -66,14 +66,14 @@
    SET 
      role = 'admin',
      "updatedAt" = CURRENT_TIMESTAMP
-   WHERE email = 'administrator';
+   WHERE email = 'sosomamahk@gmail.com';
    ```
 
 5. **验证**
    ```sql
    SELECT id, email, role, "createdAt"
    FROM "User"
-   WHERE email = 'administrator';
+   WHERE email = 'sosomamahk@gmail.com';
    ```
 
 ---
@@ -85,14 +85,14 @@
    使用 Node.js：
    ```javascript
    const bcrypt = require('bcryptjs');
-   bcrypt.hash('admin-soma', 10).then(hash => {
+   bcrypt.hash('admin-sosomama', 10).then(hash => {
      console.log(hash);
    });
    ```
 
    或在线工具：
    - 访问：https://bcrypt-generator.com/
-   - 输入密码：`admin-soma`
+   - 输入密码：`admin-sosomama`
    - 轮数：10
    - 复制生成的 hash
 
@@ -106,7 +106,7 @@
    INSERT INTO "User" (id, email, password, role, "createdAt", "updatedAt")
    VALUES (
      gen_random_uuid()::text,
-     'administrator',
+     'sosomamahk@gmail.com',
      'YOUR_BCRYPT_HASH_HERE',  -- 替换为实际的 bcrypt hash
      'admin',
      CURRENT_TIMESTAMP,
@@ -124,8 +124,8 @@
 
 1. **登录系统**
    - 访问：https://your-app.vercel.app/auth/login
-   - 邮箱：`administrator`
-   - 密码：`admin-soma`
+   - 邮箱：`sosomamahk@gmail.com`
+   - 密码：`admin-sosomama`
 
 2. **检查导航栏**
    - 登录后应该能看到 **"管理模板"** 链接
@@ -206,7 +206,7 @@
 **解决方案**：
 1. 检查数据库中账号的 role 字段：
    ```sql
-   SELECT email, role FROM "User" WHERE email = 'administrator';
+   SELECT email, role FROM "User" WHERE email = 'sosomamahk@gmail.com';
    ```
 2. 确保 role = 'admin'
 3. 退出登录后重新登录

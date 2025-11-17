@@ -13,8 +13,8 @@ const prisma = new PrismaClient();
 
 async function createAdminAccount() {
   try {
-    const adminEmail = 'administrator';
-    const adminPassword = 'admin-soma';
+    const adminEmail = 'sosomamahk@gmail.com';
+    const adminPassword = 'admin-sosomama';
 
     // 检查管理员账号是否已存在
     const existingAdmin = await prisma.user.findUnique({
