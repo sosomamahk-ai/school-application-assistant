@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { GraduationCap, User, FileText, LogOut } from 'lucide-react';
+import { GraduationCap, User, FileText, LogOut, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitch from './LanguageSwitch';
 
@@ -12,12 +12,28 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const { t } = useLanguage();
+  const [userRole, setUserRole] = useState<string>('user');
+
+  useEffect(() => {
+    // 从localStorage获取用户信息
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserRole(user.role || 'user');
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/');
   };
+
+  const isAdmin = userRole === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,6 +62,17 @@ export default function Layout({ children }: LayoutProps) {
                 <User className="h-5 w-5" />
                 <span className="font-medium">{t.profile.title}</span>
               </Link>
+
+              {/* 只有管理员才能看到管理模板链接 */}
+              {isAdmin && (
+                <Link 
+                  href="/admin/templates" 
+                  className={`flex items-center space-x-1 ${router.pathname.startsWith('/admin') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
+                >
+                  <Settings className="h-5 w-5" />
+                  <span className="font-medium">管理模板</span>
+                </Link>
+              )}
 
               <LanguageSwitch variant="minimal" />
               

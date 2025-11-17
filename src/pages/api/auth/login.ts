@@ -35,9 +35,9 @@ export default async function handler(
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate JWT token
+    // Generate JWT token (include role in token)
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role || 'user' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -48,6 +48,7 @@ export default async function handler(
       user: {
         id: user.id,
         email: user.email,
+        role: user.role || 'user',
         profileId: user.profile?.id
       }
     });

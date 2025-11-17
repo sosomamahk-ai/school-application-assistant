@@ -11,10 +11,10 @@ export default async function handler(
   }
 
   try {
-    // 验证用户身份
-    const userId = await authenticate(req);
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    // 验证管理员权限
+    const authResult = await authenticateAdmin(req);
+    if (!authResult) {
+      return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
     const templateData = req.body;

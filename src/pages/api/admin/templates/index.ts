@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authenticate } from '@/utils/auth';
+import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(
@@ -11,26 +11,14 @@ export default async function handler(
   }
 
   try {
-    // 验证用户身份（所有登录用户都可以访问管理后台）
-    const userId = await authenticate(req);
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    // 验证用户身份 - 只有管理员可以访问
+    const authResult = await authenticateAdmin(req);
+    if (!authResult) {
+      return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
     // 获取所有模板（包括禁用的）- 管理员专用
     const templates = await prisma.schoolFormTemplate.findMany({
-      select: {
-        id: true,
-        schoolId: true,
-        schoolName: true,
-        program: true,
-        description: true,
-        category: true,
-        fieldsData: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
-      },
       orderBy: {
         updatedAt: 'desc'
       }
@@ -49,7 +37,7 @@ export default async function handler(
         schoolName: template.schoolName,
         program: template.program,
         description: template.description,
-        category: template.category || null,
+        category: (template as any).category || null,
         fieldsData: template.fieldsData,
         isActive: template.isActive,
         createdAt: template.createdAt.toISOString(),

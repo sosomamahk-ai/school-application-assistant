@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { authenticate } from '@/utils/auth';
+import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(
@@ -11,9 +11,10 @@ export default async function handler(
   }
 
   try {
-    const userId = await authenticate(req);
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    // 验证管理员权限
+    const authResult = await authenticateAdmin(req);
+    if (!authResult) {
+      return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
     const { id } = req.query;
