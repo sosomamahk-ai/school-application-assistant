@@ -1,0 +1,109 @@
+{
+  "schoolId": "pku-graduate-2024",
+  "schoolName": "北京大学",
+  "program": "2024年研究生招生",
+  "description": "北京大学研究生入学申请表",
+  "isActive": true,
+  "fieldsData": [
+    {
+      "id": "basic_info",
+      "label": "基本信息",
+      "type": "section",
+      "fields": [
+        {
+          "id": "name",
+          "label": "姓名",
+          "type": "text",
+          "required": true,
+          "aiFillRule": "basicInfo.fullName"
+        },
+        {
+          "id": "gender",
+          "label": "性别",
+          "type": "select",
+          "required": true,
+          "options": ["男", "女"]
+        },
+        {
+          "id": "id_number",
+          "label": "身份证号",
+          "type": "text",
+          "required": true
+        },
+        {
+          "id": "phone",
+          "label": "联系电话",
+          "type": "tel",
+          "required": true,
+          "aiFillRule": "basicInfo.phone"
+        },
+        {
+          "id": "email",
+          "label": "电子邮箱",
+          "type": "email",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "undergraduate_info",
+      "label": "本科学习背景",
+      "type": "section",
+      "fields": [
+        {
+          "id": "bachelor_school",
+          "label": "本科院校",
+          "type": "text",
+          "required": true,
+          "aiFillRule": "education[0].school"
+        },
+        {
+          "id": "bachelor_major",
+          "label": "本科专业",
+          "type": "text",
+          "required": true,
+          "aiFillRule": "education[0].major"
+        },
+        {
+          "id": "bachelor_gpa",
+          "label": "本科GPA",
+          "type": "text",
+          "required": true,
+          "aiFillRule": "education[0].gpa"
+        },
+        {
+          "id": "graduation_date",
+          "label": "毕业时间",
+          "type": "date",
+          "required": true,
+          "aiFillRule": "education[0].endDate"
+        }
+      ]
+    },
+    {
+      "id": "research_plan",
+      "label": "研究计划",
+      "type": "textarea",
+      "required": true,
+      "maxLength": 1500,
+      "helpText": "请详细阐述您的研究兴趣、研究计划和职业目标（1000-1500字）"
+    },
+    {
+      "id": "research_experience",
+      "label": "科研经历",
+      "type": "textarea",
+      "required": false,
+      "maxLength": 1000,
+      "helpText": "请介绍您参与过的科研项目和成果"
+    },
+    {
+      "id": "publications",
+      "label": "发表论文",
+      "type": "textarea",
+      "required": false,
+      "maxLength": 500,
+      "helpText": "请列出您发表的学术论文（如有）"
+    }
+  ]
+}
+

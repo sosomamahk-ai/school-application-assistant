@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { Plus, FileText, Clock, CheckCircle, Trash2 } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, Trash2, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Application {
@@ -154,13 +154,22 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold text-gray-900">{t.dashboard.title}</h1>
               <p className="text-gray-600 mt-2">{t.dashboard.subtitle}</p>
             </div>
-            <button
-              onClick={() => setShowNewAppModal(true)}
-              className="btn-primary flex items-center space-x-2"
-            >
-              <Plus className="h-5 w-5" />
-              <span>{t.dashboard.newApplication}</span>
-            </button>
+            <div className="flex space-x-3">
+              <Link
+                href="/admin/templates"
+                className="btn-secondary flex items-center space-x-2"
+              >
+                <Settings className="h-5 w-5" />
+                <span>管理模板</span>
+              </Link>
+              <button
+                onClick={() => setShowNewAppModal(true)}
+                className="btn-primary flex items-center space-x-2"
+              >
+                <Plus className="h-5 w-5" />
+                <span>{t.dashboard.newApplication}</span>
+              </button>
+            </div>
           </div>
 
           {/* Applications List */}

@@ -1,0 +1,152 @@
+{
+  "schoolId": "tsinghua-undergraduate-2024",
+  "schoolName": "清华大学",
+  "program": "2024年本科招生",
+  "description": "清华大学本科生综合评价招生申请表",
+  "isActive": true,
+  "fieldsData": [
+    {
+      "id": "basic_info",
+      "label": "基本信息",
+      "type": "section",
+      "fields": [
+        {
+          "id": "name",
+          "label": "姓名",
+          "type": "text",
+          "required": true,
+          "aiFillRule": "basicInfo.fullName",
+          "helpText": "请填写您的真实姓名"
+        },
+        {
+          "id": "gender",
+          "label": "性别",
+          "type": "select",
+          "required": true,
+          "options": ["男", "女"],
+          "helpText": "请选择性别"
+        },
+        {
+          "id": "id_number",
+          "label": "身份证号",
+          "type": "text",
+          "required": true,
+          "helpText": "请填写18位身份证号码"
+        },
+        {
+          "id": "birthday",
+          "label": "出生日期",
+          "type": "date",
+          "required": true,
+          "aiFillRule": "basicInfo.birthday"
+        },
+        {
+          "id": "phone",
+          "label": "联系电话",
+          "type": "tel",
+          "required": true,
+          "aiFillRule": "basicInfo.phone",
+          "helpText": "请填写11位手机号码"
+        },
+        {
+          "id": "email",
+          "label": "电子邮箱",
+          "type": "email",
+          "required": true,
+          "helpText": "用于接收申请相关通知"
+        }
+      ]
+    },
+    {
+      "id": "education_background",
+      "label": "教育背景",
+      "type": "section",
+      "fields": [
+        {
+          "id": "high_school",
+          "label": "就读中学",
+          "type": "text",
+          "required": true,
+          "aiFillRule": "education[0].school",
+          "helpText": "请填写您当前就读或毕业的高中"
+        },
+        {
+          "id": "class_name",
+          "label": "班级",
+          "type": "text",
+          "required": true,
+          "helpText": "例如：高三(1)班"
+        },
+        {
+          "id": "gpa",
+          "label": "平均成绩/GPA",
+          "type": "text",
+          "required": true,
+          "aiFillRule": "education[0].gpa",
+          "helpText": "请填写您的平均成绩或GPA"
+        },
+        {
+          "id": "class_rank",
+          "label": "年级排名",
+          "type": "text",
+          "required": false,
+          "helpText": "例如：5/500（您的排名/年级总人数）"
+        }
+      ]
+    },
+    {
+      "id": "major_selection",
+      "label": "专业志愿",
+      "type": "section",
+      "fields": [
+        {
+          "id": "first_choice",
+          "label": "第一志愿专业",
+          "type": "text",
+          "required": true,
+          "helpText": "请填写您的第一志愿专业"
+        },
+        {
+          "id": "second_choice",
+          "label": "第二志愿专业",
+          "type": "text",
+          "required": false,
+          "helpText": "可选填"
+        },
+        {
+          "id": "major_reason",
+          "label": "专业选择理由",
+          "type": "textarea",
+          "required": true,
+          "maxLength": 500,
+          "helpText": "请简要说明您选择该专业的原因（500字以内）"
+        }
+      ]
+    },
+    {
+      "id": "personal_statement",
+      "label": "个人陈述",
+      "type": "textarea",
+      "required": true,
+      "maxLength": 800,
+      "helpText": "请结合自身经历，阐述您的学习动机、个人特长和未来规划（800字以内）"
+    },
+    {
+      "id": "awards_honors",
+      "label": "获奖情况",
+      "type": "textarea",
+      "required": false,
+      "maxLength": 500,
+      "helpText": "请列举您在高中期间获得的主要奖项和荣誉"
+    },
+    {
+      "id": "extracurricular",
+      "label": "课外活动",
+      "type": "textarea",
+      "required": false,
+      "maxLength": 500,
+      "helpText": "请简要介绍您参与的课外活动、社团或志愿服务"
+    }
+  ]
+}
+
