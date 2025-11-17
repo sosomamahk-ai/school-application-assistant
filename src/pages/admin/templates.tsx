@@ -51,7 +51,8 @@ export default function TemplatesAdmin() {
   const fetchTemplates = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/templates', {
+      // 使用管理员专用API，获取所有模板（包括禁用的）
+      const response = await fetch('/api/admin/templates', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -60,6 +61,9 @@ export default function TemplatesAdmin() {
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates || []);
+      } else if (response.status === 401) {
+        // 未授权，重定向到登录页
+        router.push('/auth/login');
       }
     } catch (error) {
       console.error('Error fetching templates:', error);

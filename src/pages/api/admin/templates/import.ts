@@ -11,6 +11,7 @@ export default async function handler(
   }
 
   try {
+    // 验证用户身份
     const userId = await authenticate(req);
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -18,57 +19,57 @@ export default async function handler(
 
     const templateData = req.body;
 
-    // Validate required fields
+    // 验证必需字段
     if (!templateData.schoolId || !templateData.schoolName || !templateData.program) {
-      return res.status(400).json({ 
-        error: '缺少必需字段：schoolId, schoolName, program' 
-      });
+      return res.status(400).json({ error: 'Missing required fields: schoolId, schoolName, program' });
     }
 
-    // Check if template with same schoolId already exists
-    const existing = await prisma.schoolFormTemplate.findUnique({
-      where: { schoolId: templateData.schoolId }
+    // 如果存在相同 schoolId，则更新；否则创建新记录
+    const template = await prisma.schoolFormTemplate.upsert({
+      where: { schoolId: templateData.schoolId },
+      update: {
+        schoolName: templateData.schoolName,
+        program: templateData.program,
+        description: templateData.description || null,
+        category: templateData.category || null,
+        fieldsData: templateData.fieldsData || templateData.fields || [],
+        isActive: templateData.isActive !== undefined ? templateData.isActive : true,
+        updatedAt: new Date()
+      },
+      create: {
+        schoolId: templateData.schoolId,
+        schoolName: templateData.schoolName,
+        program: templateData.program,
+        description: templateData.description || null,
+        category: templateData.category || null,
+        fieldsData: templateData.fieldsData || templateData.fields || [],
+        isActive: templateData.isActive !== undefined ? templateData.isActive : true
+      }
     });
-
-    let template;
-
-    if (existing) {
-      // Update existing template
-      template = await prisma.schoolFormTemplate.update({
-        where: { schoolId: templateData.schoolId },
-        data: {
-          schoolName: templateData.schoolName,
-          program: templateData.program,
-          description: templateData.description || '',
-          fieldsData: templateData.fieldsData || templateData.fields || [],
-          isActive: templateData.isActive !== false,
-        }
-      });
-    } else {
-      // Create new template
-      template = await prisma.schoolFormTemplate.create({
-        data: {
-          schoolId: templateData.schoolId,
-          schoolName: templateData.schoolName,
-          program: templateData.program,
-          description: templateData.description || '',
-          fieldsData: templateData.fieldsData || templateData.fields || [],
-          isActive: templateData.isActive !== false,
-        }
-      });
-    }
 
     res.status(200).json({
       success: true,
-      template,
-      message: existing ? '模板已更新' : '模板已创建'
+      message: 'Template imported successfully',
+      template: {
+        id: template.id,
+        schoolId: template.schoolId,
+        schoolName: template.schoolName,
+        program: template.program,
+        description: template.description,
+        category: template.category,
+        isActive: template.isActive
+      }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Template import error:', error);
-    res.status(500).json({ 
-      error: '导入失败',
-      details: error instanceof Error ? error.message : String(error)
-    });
+    
+    // 处理唯一约束冲突
+    if (error.code === 'P2002') {
+      return res.status(400).json({ 
+        error: 'Template with this schoolId already exists. Use update instead.' 
+      });
+    }
+    
+    res.status(500).json({ error: 'Failed to import template' });
   }
 }
-
