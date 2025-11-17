@@ -1,0 +1,154 @@
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+import Layout from '@/components/Layout';
+import { ArrowLeft, Save } from 'lucide-react';
+import Link from 'next/link';
+
+export default function EditTemplate() {
+  const router = useRouter();
+  const { id } = router.query;
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [template, setTemplate] = useState<any>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchTemplate();
+    }
+  }, [id]);
+
+  const fetchTemplate = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/templates/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTemplate(data.template);
+      } else {
+        alert('模板加载失败');
+        router.push('/admin/templates');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      alert('模板加载失败');
+      router.push('/admin/templates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!template) return;
+
+    setSaving(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/templates/import', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(template)
+      });
+
+      if (response.ok) {
+        alert('模板更新成功！');
+        router.push('/admin/templates');
+      } else {
+        const error = await response.json();
+        alert(`更新失败: ${error.error || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert('更新失败，请重试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-gray-600">加载中...</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!template) {
+    return (
+      <Layout>
+        <div className="text-center py-12">
+          <p className="text-gray-600">模板未找到</p>
+          <Link href="/admin/templates" className="text-primary-600 hover:text-primary-700 mt-4 inline-block">
+            返回模板列表
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <Head>
+        <title>编辑模板 - {template.schoolName}</title>
+      </Head>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <Link href="/admin/templates" className="text-primary-600 hover:text-primary-700 flex items-center mb-4">
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            返回模板列表
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">编辑模板：{template.schoolName}</h1>
+          <p className="text-gray-600 mt-2">修改学校信息和表单字段配置</p>
+        </div>
+
+        <div className="card mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">JSON 编辑器</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            您可以直接编辑 JSON 配置。建议先导出备份，再进行修改。
+          </p>
+          <textarea
+            value={JSON.stringify(template, null, 2)}
+            onChange={(e) => {
+              try {
+                const parsed = JSON.parse(e.target.value);
+                setTemplate(parsed);
+              } catch (error) {
+                // 忽略解析错误，继续编辑
+              }
+            }}
+            className="input-field font-mono text-sm"
+            rows={30}
+            spellCheck={false}
+          />
+        </div>
+
+        <div className="flex justify-between items-center">
+          <Link href="/admin/templates" className="btn-secondary">
+            取消
+          </Link>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary flex items-center space-x-2"
+          >
+            <Save className="h-5 w-5" />
+            <span>{saving ? '保存中...' : '保存更改'}</span>
+          </button>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
