@@ -49,3 +49,23 @@ export async function authenticateAdmin(req: NextApiRequest): Promise<{ userId: 
   }
 }
 
+export async function verifyAuth(req: NextApiRequest): Promise<{
+  isValid: boolean;
+  user?: JWTPayload;
+}> {
+  try {
+    const token = extractToken(req);
+    if (!token) {
+      return { isValid: false };
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    return {
+      isValid: true,
+      user: decoded,
+    };
+  } catch (error) {
+    return { isValid: false };
+  }
+}
+

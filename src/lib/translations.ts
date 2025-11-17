@@ -171,6 +171,16 @@ export const translations: TranslationData = {
     'zh-CN': '姓名',
     'zh-TW': '姓名',
   },
+  'auth.register.email': {
+    en: 'Email',
+    'zh-CN': '电子邮箱',
+    'zh-TW': '電子郵箱',
+  },
+  'auth.register.password': {
+    en: 'Password',
+    'zh-CN': '密码',
+    'zh-TW': '密碼',
+  },
   'auth.register.confirmPassword': {
     en: 'Confirm Password',
     'zh-CN': '确认密码',
