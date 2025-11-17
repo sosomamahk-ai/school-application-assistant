@@ -50,6 +50,7 @@ model SchoolFormTemplate {
   schoolName  String
   program     String
   description String?
+  category    String?  @default("国际学校") // 模板类别：国际学校、香港本地中学、香港本地小学、香港幼稚园、大学
   
   // Template fields stored as JSON for flexibility
   fieldsData  Json     // Array of field definitions

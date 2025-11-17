@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
@@ -17,17 +17,70 @@ interface Field {
   fields?: Field[];
 }
 
+// 5个类别
+const CATEGORIES = [
+  '国际学校',
+  '香港本地中学',
+  '香港本地小学',
+  '香港幼稚园',
+  '大学'
+];
+
 export default function NewTemplate() {
   const router = useRouter();
+  const { baseTemplate } = router.query;
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [template, setTemplate] = useState({
     schoolId: '',
     schoolName: '',
     program: '',
     description: '',
+    category: '国际学校',
     isActive: true,
   });
   const [fields, setFields] = useState<Field[]>([]);
+
+  // 如果有 baseTemplate 参数，加载该模板数据
+  useEffect(() => {
+    if (baseTemplate) {
+      loadBaseTemplate(baseTemplate as string);
+    }
+  }, [baseTemplate]);
+
+  const loadBaseTemplate = async (templateId: string) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/templates/${templateId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const baseData = data.template;
+        
+        // 复制模板数据，但清空 schoolId 和修改名称
+        setTemplate({
+          schoolId: '',
+          schoolName: `${baseData.schoolName} - 副本`,
+          program: baseData.program,
+          description: baseData.description,
+          category: baseData.category || '国际学校',
+          isActive: true
+        });
+        
+        setFields(baseData.fieldsData || []);
+      }
+    } catch (error) {
+      console.error('Error loading base template:', error);
+      alert('加载模板失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     // 验证必填字段
@@ -203,6 +256,24 @@ export default function NewTemplate() {
                 rows={3}
                 placeholder="简短描述这个申请表单"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                模板类别<span className="text-red-500">*</span>
+              </label>
+              <select
+                value={template.category}
+                onChange={(e) => setTemplate({ ...template, category: e.target.value })}
+                className="input-field"
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <p className="text-sm text-gray-500 mt-1">
+                {baseTemplate ? '基于类别模板创建，可以修改为其他类别' : '选择学校申请的类别'}
+              </p>
             </div>
 
             <div className="flex items-center">
