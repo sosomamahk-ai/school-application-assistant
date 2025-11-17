@@ -3,13 +3,13 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GraduationCap } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from '@/contexts/TranslationContext';
 import LanguageSwitch from '@/components/LanguageSwitch';
 import { setAuthTokenCookie } from '@/utils/token';
 
 export default function Register() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,12 +24,12 @@ export default function Register() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError(t.auth.errors.passwordMismatch);
+      setError(t('auth.errors.passwordMismatch'));
       return;
     }
 
     if (formData.password.length < 6) {
-      setError(t.auth.errors.passwordTooShort);
+      setError(t('auth.errors.passwordTooShort'));
       return;
     }
 
@@ -49,7 +49,7 @@ export default function Register() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || t.auth.errors.registrationFailed);
+        throw new Error(data.error || t('auth.errors.registrationFailed'));
       }
 
       // Save token
@@ -69,7 +69,7 @@ export default function Register() {
   return (
     <>
       <Head>
-        <title>Register - School Application Assistant</title>
+        <title>{t('auth.register.title')} - {t('common.appName')}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -79,15 +79,15 @@ export default function Register() {
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <Link href="/" className="flex items-center justify-center space-x-2">
             <GraduationCap className="h-12 w-12 text-primary-600" />
-            <span className="text-2xl font-bold text-gray-900">{t.common.appNameShort}</span>
+            <span className="text-2xl font-bold text-gray-900">{t('common.appNameShort')}</span>
           </Link>
           <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            {t.auth.register.title}
+            {t('auth.register.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {t.auth.register.alreadyHaveAccount}{' '}
+            {t('auth.register.hasAccount')}{' '}
             <Link href="/auth/login" className="font-medium text-primary-600 hover:text-primary-500">
-              {t.auth.register.signIn}
+              {t('auth.register.signIn')}
             </Link>
           </p>
         </div>
@@ -103,7 +103,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                  {t.auth.register.name}
+                  {t('auth.register.name')}
                 </label>
                 <div className="mt-1">
                   <input
@@ -120,7 +120,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  {t.auth.register.email}
+                  {t('auth.register.email')}
                 </label>
                 <div className="mt-1">
                   <input
@@ -138,7 +138,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  {t.auth.register.password}
+                  {t('auth.register.password')}
                 </label>
                 <div className="mt-1">
                   <input
@@ -156,7 +156,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  {t.auth.register.confirmPassword}
+                  {t('auth.register.confirmPassword')}
                 </label>
                 <div className="mt-1">
                   <input
@@ -178,7 +178,7 @@ export default function Register() {
                   disabled={loading}
                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? t.auth.register.registering : t.auth.register.button}
+                  {loading ? t('auth.register.registering') : t('auth.register.button')}
                 </button>
               </div>
             </form>

@@ -400,6 +400,31 @@ export const translations: TranslationData = {
     'zh-CN': '管理模板',
     'zh-TW': '管理範本',
   },
+  'dashboard.createFirst': {
+    en: 'Create Your First Application',
+    'zh-CN': '创建您的第一个申请',
+    'zh-TW': '創建您的第一個申請',
+  },
+  'dashboard.updated': {
+    en: 'Updated',
+    'zh-CN': '更新于',
+    'zh-TW': '更新於',
+  },
+  'dashboard.draft': {
+    en: 'Draft',
+    'zh-CN': '草稿',
+    'zh-TW': '草稿',
+  },
+  'dashboard.inProgress': {
+    en: 'In Progress',
+    'zh-CN': '进行中',
+    'zh-TW': '進行中',
+  },
+  'dashboard.submitted': {
+    en: 'Submitted',
+    'zh-CN': '已提交',
+    'zh-TW': '已提交',
+  },
 
   // Profile
   'profile.title': {
