@@ -36,7 +36,12 @@ export default async function handler(
       }
     });
 
-    res.status(200).json({
+    console.log(`[Admin Templates API] Found ${templates.length} templates`);
+    templates.forEach(t => {
+      console.log(`  - ${t.schoolId}: ${t.schoolName} (isActive: ${t.isActive})`);
+    });
+
+    const result = {
       success: true,
       templates: templates.map(template => ({
         id: template.id,
@@ -50,10 +55,20 @@ export default async function handler(
         createdAt: template.createdAt.toISOString(),
         updatedAt: template.updatedAt.toISOString()
       }))
-    });
-  } catch (error) {
+    };
+
+    res.status(200).json(result);
+  } catch (error: any) {
     console.error('Admin templates API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack
+    });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error?.message || 'Unknown error'
+    });
   }
 }
 

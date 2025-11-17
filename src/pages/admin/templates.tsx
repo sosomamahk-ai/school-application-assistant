@@ -60,13 +60,20 @@ export default function TemplatesAdmin() {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched templates:', data);
         setTemplates(data.templates || []);
       } else if (response.status === 401) {
         // 未授权，重定向到登录页
         router.push('/auth/login');
+      } else {
+        // 处理其他错误
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to fetch templates:', response.status, errorData);
+        alert(`加载模板失败: ${errorData.error || '未知错误'}`);
       }
     } catch (error) {
       console.error('Error fetching templates:', error);
+      alert('加载模板时发生错误，请检查网络连接');
     } finally {
       setLoading(false);
     }
@@ -125,11 +132,17 @@ export default function TemplatesAdmin() {
     ? templates 
     : templates.filter(t => t.category === selectedCategory);
 
-  // 获取系统预设模板（用于"基于模板创建"）
-  const systemTemplates = templates.filter(t => t.schoolId.startsWith('template-'));
+  // 获取系统预设模板（用于"基于模板创建"）- 包括所有以 template- 开头的模板
+  const systemTemplates = templates.filter(t => {
+    const isSystem = t.schoolId && t.schoolId.startsWith('template-');
+    if (isSystem) {
+      console.log('Found system template:', t.schoolId, t.schoolName);
+    }
+    return isSystem;
+  });
   
   // 获取用户创建的模板
-  const userTemplates = filteredTemplates.filter(t => !t.schoolId.startsWith('template-'));
+  const userTemplates = filteredTemplates.filter(t => !t.schoolId || !t.schoolId.startsWith('template-'));
 
   return (
     <Layout>
@@ -180,28 +193,34 @@ export default function TemplatesAdmin() {
                     <div className="border-t border-gray-100 my-2"></div>
                     <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">基于类别模板创建</div>
                     
-                    {systemTemplates.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => {
-                          handleCreateFromTemplate(template.id);
-                          setShowCreateMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900">{template.schoolName}</div>
-                            <div className="text-sm text-gray-500">{template.description}</div>
+                    {systemTemplates.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-500">
+                        暂无系统模板，请先在数据库中导入主模板
+                      </div>
+                    ) : (
+                      systemTemplates.map((template) => (
+                        <button
+                          key={template.id}
+                          onClick={() => {
+                            handleCreateFromTemplate(template.id);
+                            setShowCreateMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{template.schoolName}</div>
+                              <div className="text-sm text-gray-500">{template.description}</div>
+                            </div>
+                            {template.category && (
+                              <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${CATEGORY_COLORS[template.category]}`}>
+                                {template.category}
+                              </span>
+                            )}
                           </div>
-                          {template.category && (
-                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${CATEGORY_COLORS[template.category]}`}>
-                              {template.category}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
