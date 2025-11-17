@@ -40,6 +40,7 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
 
   useEffect(() => {
     fetchGuidance();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchGuidance]);
 
   const generateContent = async () => {

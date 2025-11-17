@@ -77,6 +77,7 @@ export default function TemplatesAdmin() {
 
   useEffect(() => {
     fetchTemplates();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchTemplates]);
 
   const handleCreateNew = () => {

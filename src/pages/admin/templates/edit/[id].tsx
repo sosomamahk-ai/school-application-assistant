@@ -42,6 +42,7 @@ export default function EditTemplate() {
     if (id) {
       fetchTemplate();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, fetchTemplate]);
 
   const handleSave = async () => {

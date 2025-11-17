@@ -41,6 +41,7 @@ export default function PreviewTemplate() {
     if (id) {
       fetchTemplate();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, fetchTemplate]);
 
   if (loading) {
