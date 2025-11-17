@@ -44,15 +44,17 @@ export default async function handler(
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user and profile
-    // Try to create with role, but handle if column doesn't exist yet
+    // Handle case where role column doesn't exist in database yet
     let user;
+    let userRole = 'user'; // Default role
+    
     try {
-      // Try creating with role field
+      // Try creating with role field first (if column exists in DB)
       user = await prisma.user.create({
         data: {
           email,
           password: hashedPassword,
-          role: 'user', // 默认角色为用户
+          role: 'user', // Default role for new users
           profile: {
             create: {
               fullName: fullName || null
@@ -63,31 +65,51 @@ export default async function handler(
           profile: true
         }
       });
+      
+      // If successful, get role from created user
+      userRole = (user as any).role || 'user';
     } catch (error: any) {
-      // If role column doesn't exist, create without it
-      if (error?.code === 'P2022' || error?.message?.includes('role')) {
-        console.warn('Role column does not exist, creating user without role field');
-        user = await prisma.user.create({
-          data: {
-            email,
-            password: hashedPassword,
-            profile: {
-              create: {
-                fullName: fullName || null
+      // Check if error is about role column not existing
+      const isRoleColumnError = 
+        error?.code === 'P2022' || 
+        (error?.message && (
+          error.message.includes('role') || 
+          error.message.includes('column') ||
+          error.message.includes('does not exist')
+        ));
+      
+      if (isRoleColumnError) {
+        console.warn('⚠️ Role column does not exist in database');
+        console.warn('Please run this SQL in Supabase:');
+        console.warn('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT \'user\';');
+        
+        // Create user without role field
+        try {
+          user = await prisma.user.create({
+            data: {
+              email,
+              password: hashedPassword,
+              profile: {
+                create: {
+                  fullName: fullName || null
+                }
               }
+            },
+            include: {
+              profile: true
             }
-          },
-          include: {
-            profile: true
-          }
-        });
+          });
+          // Role will default to 'user' in our code
+        } catch (retryError: any) {
+          console.error('Failed to create user even without role field:', retryError);
+          throw retryError;
+        }
       } else {
+        // Re-throw other errors (like unique constraint, etc.)
+        console.error('Registration error (not related to role):', error);
         throw error;
       }
     }
-
-    // Get user role (handle case where role field doesn't exist in DB yet)
-    const userRole = (user as any).role || 'user';
 
     // Generate JWT token (include role in token)
     const token = jwt.sign(
