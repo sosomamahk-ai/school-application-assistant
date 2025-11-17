@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { GraduationCap, User, FileText, LogOut, Settings } from 'lucide-react';
+import { GraduationCap, User, FileText, LogOut, Settings, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitch from './LanguageSwitch';
 
@@ -63,13 +63,21 @@ export default function Layout({ children }: LayoutProps) {
                 <span className="font-medium">{t.profile.title}</span>
               </Link>
 
+              <Link 
+                href="/settings" 
+                className={`flex items-center space-x-1 ${router.pathname === '/settings' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
+              >
+                <Settings className="h-5 w-5" />
+                <span className="font-medium">账户设置</span>
+              </Link>
+
               {/* 只有管理员才能看到管理模板链接 */}
               {isAdmin && (
                 <Link 
                   href="/admin/templates" 
                   className={`flex items-center space-x-1 ${router.pathname.startsWith('/admin') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
                 >
-                  <Settings className="h-5 w-5" />
+                  <Shield className="h-5 w-5" />
                   <span className="font-medium">管理模板</span>
                 </Link>
               )}
