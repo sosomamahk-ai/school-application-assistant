@@ -70,10 +70,18 @@ export interface Translations {
       name: string;
       email: string;
       password: string;
+      confirmPassword: string;
       button: string;
       registering: string;
       hasAccount: string;
       signIn: string;
+      alreadyHaveAccount: string;
+    };
+    errors: {
+      passwordMismatch: string;
+      passwordTooShort: string;
+      registrationFailed: string;
+      loginFailed: string;
     };
   };
   profile: {
@@ -230,10 +238,18 @@ export const translations: Record<Language, Translations> = {
         name: '姓名',
         email: '邮箱地址',
         password: '密码',
+        confirmPassword: '确认密码',
         button: '注册',
         registering: '注册中...',
         hasAccount: '已有账户？',
-        signIn: '登录'
+        signIn: '登录',
+        alreadyHaveAccount: '已有账户？',
+      },
+      errors: {
+        passwordMismatch: '两次输入的密码不一致',
+        passwordTooShort: '密码至少需要6个字符',
+        registrationFailed: '注册失败',
+        loginFailed: '登录失败',
       }
     },
     profile: {
@@ -389,10 +405,18 @@ export const translations: Record<Language, Translations> = {
         name: 'Full Name',
         email: 'Email address',
         password: 'Password',
-        button: 'Sign up',
-        registering: 'Signing up...',
+        confirmPassword: 'Confirm Password',
+        button: 'Create account',
+        registering: 'Creating account...',
         hasAccount: 'Already have an account?',
-        signIn: 'Sign in'
+        signIn: 'Sign in',
+        alreadyHaveAccount: 'Already have an account?',
+      },
+      errors: {
+        passwordMismatch: 'Passwords do not match',
+        passwordTooShort: 'Password must be at least 6 characters',
+        registrationFailed: 'Registration failed',
+        loginFailed: 'Login failed',
       }
     },
     profile: {

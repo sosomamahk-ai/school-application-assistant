@@ -3,9 +3,12 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GraduationCap } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import LanguageSwitch from '@/components/LanguageSwitch';
 
 export default function Register() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,12 +23,12 @@ export default function Register() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t.auth.errors.passwordMismatch);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t.auth.errors.passwordTooShort);
       return;
     }
 
@@ -45,7 +48,7 @@ export default function Register() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        throw new Error(data.error || t.auth.errors.registrationFailed);
       }
 
       // Save token to localStorage
@@ -68,18 +71,21 @@ export default function Register() {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="absolute top-4 right-4">
+          <LanguageSwitch variant="minimal" />
+        </div>
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <Link href="/" className="flex items-center justify-center space-x-2">
             <GraduationCap className="h-12 w-12 text-primary-600" />
-            <span className="text-2xl font-bold text-gray-900">Application Assistant</span>
+            <span className="text-2xl font-bold text-gray-900">{t.common.appNameShort}</span>
           </Link>
           <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            Create your account
+            {t.auth.register.title}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Already have an account?{' '}
+            {t.auth.register.alreadyHaveAccount}{' '}
             <Link href="/auth/login" className="font-medium text-primary-600 hover:text-primary-500">
-              Sign in
+              {t.auth.register.signIn}
             </Link>
           </p>
         </div>
@@ -95,7 +101,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                  Full Name
+                  {t.auth.register.name}
                 </label>
                 <div className="mt-1">
                   <input
@@ -112,7 +118,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
+                  {t.auth.register.email}
                 </label>
                 <div className="mt-1">
                   <input
@@ -130,7 +136,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
+                  {t.auth.register.password}
                 </label>
                 <div className="mt-1">
                   <input
@@ -148,7 +154,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirm Password
+                  {t.auth.register.confirmPassword}
                 </label>
                 <div className="mt-1">
                   <input
@@ -170,7 +176,7 @@ export default function Register() {
                   disabled={loading}
                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Creating account...' : 'Create account'}
+                  {loading ? t.auth.register.registering : t.auth.register.button}
                 </button>
               </div>
             </form>
