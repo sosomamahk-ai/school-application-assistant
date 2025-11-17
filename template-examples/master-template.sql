@@ -4,7 +4,11 @@
 -- 此模板包含系统中所有可用字段，可以在此基础上删减
 -- ============================================
 
--- 插入主模板（包含所有字段）
+-- 第1步：添加 category 字段（如果不存在）
+ALTER TABLE "SchoolFormTemplate" 
+ADD COLUMN IF NOT EXISTS "category" TEXT DEFAULT '国际学校';
+
+-- 第2步：插入主模板（包含所有字段）
 INSERT INTO "SchoolFormTemplate" (
   "id",
   "schoolId",
