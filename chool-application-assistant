@@ -1,0 +1,58 @@
+[1mdiff --git a/src/pages/admin/templates.tsx b/src/pages/admin/templates.tsx[m
+[1mindex 1625293..24788d3 100644[m
+[1m--- a/src/pages/admin/templates.tsx[m
+[1m+++ b/src/pages/admin/templates.tsx[m
+[36m@@ -1,8 +1,12 @@[m
+ import { useState, useEffect, useCallback } from 'react';[m
+[32m+[m[32mimport type { GetServerSideProps } from 'next';[m
+ import { useRouter } from 'next/router';[m
+ import Head from 'next/head';[m
+ import Layout from '@/components/Layout';[m
+ import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter } from 'lucide-react';[m
+[32m+[m[32mimport jwt from 'jsonwebtoken';[m
+[32m+[m[32mimport type { JWTPayload } from '@/utils/auth';[m
+[32m+[m[32mimport { getTokenFromCookieHeader } from '@/utils/token';[m
+ [m
+ interface SchoolTemplate {[m
+   id: string;[m
+[36m@@ -338,6 +342,40 @@[m [mexport default function TemplatesAdmin() {[m
+   );[m
+ }[m
+ [m
+[32m+[m[32mexport const getServerSideProps: GetServerSideProps = async ({ req }) => {[m
+[32m+[m[32m  const token = getTokenFromCookieHeader(req.headers.cookie);[m
+[32m+[m
+[32m+[m[32m  if (!token) {[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      redirect: {[m
+[32m+[m[32m        destination: '/',[m
+[32m+[m[32m        permanent: false[m
+[32m+[m[32m      }[m
+[32m+[m[32m    };[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;[m
+[32m+[m[32m    if (decoded.role !== 'admin') {[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        redirect: {[m
+[32m+[m[32m          destination: '/',[m
+[32m+[m[32m          permanent: false[m
+[32m+[m[32m        }[m
+[32m+[m[32m      };[m
+[32m+[m[32m    }[m
+[32m+[m[32m  } catch {[m
+[32m+[m[32m    return {[m
+[32m+[m[32m      redirect: {[m
+[32m+[m[32m        destination: '/',[m
+[32m+[m[32m        permanent: false[m
+[32m+[m[32m      }[m
+[32m+[m[32m    };[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return { props: {} };[m
+[32m+[m[32m};[m
+[32m+[m
+ // Template Card Component[m
+ function TemplateCard({ [m
+   template, [m

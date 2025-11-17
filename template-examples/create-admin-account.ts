@@ -8,16 +8,26 @@
 
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
-import { ensureUserRoleColumn } from '../src/lib/prisma-role-column';
-
 const prisma = new PrismaClient();
+
+async function ensureUserRoleColumnLocal() {
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'user';
+  `);
+  await prisma.$executeRawUnsafe(`
+    UPDATE "User" SET "role" = 'user' WHERE "role" IS NULL;
+  `);
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "User" ALTER COLUMN "role" SET NOT NULL;
+  `);
+}
 
 async function createAdminAccount() {
   try {
     const adminEmail = 'sosomamahk@gmail.com';
     const adminPassword = 'admin-sosomama';
 
-    await ensureUserRoleColumn(prisma);
+    await ensureUserRoleColumnLocal();
 
     // 检查管理员账号是否已存在
     const existingAdmin = await prisma.user.findUnique({
