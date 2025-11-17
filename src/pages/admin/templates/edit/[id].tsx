@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
@@ -12,13 +12,8 @@ export default function EditTemplate() {
   const [saving, setSaving] = useState(false);
   const [template, setTemplate] = useState<any>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchTemplate();
-    }
-  }, [id]);
-
-  const fetchTemplate = async () => {
+  const fetchTemplate = useCallback(async () => {
+    if (!id || typeof id !== 'string') return;
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/templates/${id}`, {
@@ -41,7 +36,13 @@ export default function EditTemplate() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
+
+  useEffect(() => {
+    if (id) {
+      fetchTemplate();
+    }
+  }, [id, fetchTemplate]);
 
   const handleSave = async () => {
     if (!template) return;

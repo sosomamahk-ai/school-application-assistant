@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Sparkles, Loader2, ThumbsUp, RefreshCw } from 'lucide-react';
 import { FormField, AIGuidance } from '@/types';
 
@@ -14,11 +14,7 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
   const [generatingContent, setGeneratingContent] = useState(false);
   const [improvingSuggestions, setImprovingSuggestions] = useState<{ suggestions: string[]; improvedVersion: string } | null>(null);
 
-  useEffect(() => {
-    fetchGuidance();
-  }, [field.id]);
-
-  const fetchGuidance = async () => {
+  const fetchGuidance = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -40,7 +36,11 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
     } finally {
       setLoading(false);
     }
-  };
+  }, [field]);
+
+  useEffect(() => {
+    fetchGuidance();
+  }, [fetchGuidance]);
 
   const generateContent = async () => {
     setGeneratingContent(true);

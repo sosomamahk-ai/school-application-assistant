@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
@@ -44,11 +44,7 @@ export default function TemplatesAdmin() {
   const [selectedCategory, setSelectedCategory] = useState('全部');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       // 使用管理员专用API，获取所有模板（包括禁用的）
@@ -77,7 +73,11 @@ export default function TemplatesAdmin() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   const handleCreateNew = () => {
     router.push('/admin/templates/new');
