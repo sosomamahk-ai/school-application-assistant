@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { Lock, Mail, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { setAuthTokenCookie } from '@/utils/token';
 
 export default function Settings() {
   const router = useRouter();
@@ -157,6 +158,7 @@ export default function Settings() {
         localStorage.setItem('user', JSON.stringify(updatedUser));
         if (data.token) {
           localStorage.setItem('token', data.token);
+          setAuthTokenCookie(data.token);
         }
         setCurrentUser(updatedUser);
         setEmailForm({ ...emailForm, currentPassword: '' });

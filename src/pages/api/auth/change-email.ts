@@ -37,7 +37,8 @@ export default async function handler(
       select: {
         id: true,
         email: true,
-        password: true
+        password: true,
+        role: true
       }
     });
 
@@ -89,7 +90,7 @@ export default async function handler(
       user: {
         id: user.id,
         email: newEmail,
-        role: (user as any).role || 'user'
+        role: user.role || 'user'
       }
     });
   } catch (error: any) {

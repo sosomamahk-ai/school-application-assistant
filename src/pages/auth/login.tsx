@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { GraduationCap } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitch from '@/components/LanguageSwitch';
+import { setAuthTokenCookie } from '@/utils/token';
 
 export default function Login() {
   const router = useRouter();
@@ -34,9 +35,10 @@ export default function Login() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Save token to localStorage
+      // Save token
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      setAuthTokenCookie(data.token);
 
       // Redirect to dashboard
       router.push('/dashboard');

@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { GraduationCap } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitch from '@/components/LanguageSwitch';
+import { setAuthTokenCookie } from '@/utils/token';
 
 export default function Register() {
   const router = useRouter();
@@ -51,9 +52,10 @@ export default function Register() {
         throw new Error(data.error || t.auth.errors.registrationFailed);
       }
 
-      // Save token to localStorage
+      // Save token
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      setAuthTokenCookie(data.token);
 
       // Redirect to profile setup
       router.push('/profile/setup');

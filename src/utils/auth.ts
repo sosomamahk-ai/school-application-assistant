@@ -1,5 +1,6 @@
 import type { NextApiRequest } from 'next';
 import jwt from 'jsonwebtoken';
+import { getTokenFromCookieHeader } from './token';
 
 export interface JWTPayload {
   userId: string;
@@ -7,16 +8,19 @@ export interface JWTPayload {
   role?: string;
 }
 
+function extractToken(req: NextApiRequest): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return getTokenFromCookieHeader(req.headers.cookie);
+}
+
 export async function authenticate(req: NextApiRequest): Promise<string | null> {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
-    }
+    const token = extractToken(req);
+    if (!token) return null;
 
-    const token = authHeader.substring(7);
-    
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
     
     return decoded.userId;
@@ -28,14 +32,9 @@ export async function authenticate(req: NextApiRequest): Promise<string | null> 
 
 export async function authenticateAdmin(req: NextApiRequest): Promise<{ userId: string; role: string } | null> {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
-    }
+    const token = extractToken(req);
+    if (!token) return null;
 
-    const token = authHeader.substring(7);
-    
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
     
     // 检查是否是管理员

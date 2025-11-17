@@ -1,9 +1,10 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { GraduationCap, User, FileText, LogOut, Settings, Shield } from 'lucide-react';
+import { GraduationCap, User, FileText, LogOut, Settings, Shield, Users } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageSwitch from './LanguageSwitch';
+import { clearAuthTokenCookie } from '@/utils/token';
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,6 +31,7 @@ export default function Layout({ children }: LayoutProps) {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    clearAuthTokenCookie();
     router.push('/');
   };
 
@@ -71,15 +73,24 @@ export default function Layout({ children }: LayoutProps) {
                 <span className="font-medium">账户设置</span>
               </Link>
 
-              {/* 只有管理员才能看到管理模板链接 */}
+              {/* 只有管理员才能看到管理后台链接 */}
               {isAdmin && (
-                <Link 
-                  href="/admin/templates" 
-                  className={`flex items-center space-x-1 ${router.pathname.startsWith('/admin') ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-                >
-                  <Shield className="h-5 w-5" />
-                  <span className="font-medium">管理模板</span>
-                </Link>
+                <div className="flex items-center space-x-4">
+                  <Link 
+                    href="/admin/templates" 
+                    className={`flex items-center space-x-1 ${router.pathname === '/admin/templates' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
+                  >
+                    <Shield className="h-5 w-5" />
+                    <span className="font-medium">模板管理</span>
+                  </Link>
+                  <Link 
+                    href="/admin/users" 
+                    className={`flex items-center space-x-1 ${router.pathname === '/admin/users' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
+                  >
+                    <Users className="h-5 w-5" />
+                    <span className="font-medium">用户管理</span>
+                  </Link>
+                </div>
               )}
 
               <LanguageSwitch variant="minimal" />

@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter } from 'lucide-react';
+import jwt from 'jsonwebtoken';
+import type { JWTPayload } from '@/utils/auth';
+import { getTokenFromCookieHeader } from '@/utils/token';
 
 interface SchoolTemplate {
   id: string;
@@ -337,6 +341,40 @@ export default function TemplatesAdmin() {
     </Layout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async ({ req }) => {
+  const token = getTokenFromCookieHeader(req.headers.cookie);
+
+  if (!token) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false
+      }
+    };
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    if (decoded.role !== 'admin') {
+      return {
+        redirect: {
+          destination: '/',
+          permanent: false
+        }
+      };
+    }
+  } catch {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false
+      }
+    };
+  }
+
+  return { props: {} };
+};
 
 // Template Card Component
 function TemplateCard({ 

@@ -24,12 +24,13 @@ export default async function handler(
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user (don't select role if column doesn't exist)
+    // Find user (role is required for RBAC)
     const user = await prisma.user.findUnique({
       where: { email },
       select: {
         id: true,
         email: true,
+        role: true,
         password: true,
         createdAt: true,
         updatedAt: true,
@@ -52,8 +53,7 @@ export default async function handler(
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Get user role (handle case where role field doesn't exist in DB yet)
-    const userRole = (user as any).role || 'user';
+    const userRole = user.role || 'user';
 
     // Generate JWT token (include role in token)
     const token = jwt.sign(
