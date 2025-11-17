@@ -3,13 +3,13 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { GraduationCap } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from '@/contexts/TranslationContext';
 import LanguageSwitch from '@/components/LanguageSwitch';
 import { setAuthTokenCookie } from '@/utils/token';
 
 export default function Login() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -62,15 +62,15 @@ export default function Login() {
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <Link href="/" className="flex items-center justify-center space-x-2">
             <GraduationCap className="h-12 w-12 text-primary-600" />
-            <span className="text-2xl font-bold text-gray-900">{t.common.appNameShort}</span>
+            <span className="text-2xl font-bold text-gray-900">{t('common.appNameShort')}</span>
           </Link>
           <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            {t.auth.login.title}
+            {t('auth.login.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {t.auth.login.orText}{' '}
+            {t('auth.login.orText')}{' '}
             <Link href="/auth/register" className="font-medium text-primary-600 hover:text-primary-500">
-              {t.auth.login.createAccount}
+              {t('auth.login.createAccount')}
             </Link>
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function Login() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  {t.auth.login.email}
+                  {t('auth.login.email')}
                 </label>
                 <div className="mt-1">
                   <input
@@ -104,7 +104,7 @@ export default function Login() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  {t.auth.login.password}
+                  {t('auth.login.password')}
                 </label>
                 <div className="mt-1">
                   <input
@@ -126,7 +126,7 @@ export default function Login() {
                   disabled={loading}
                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? t.auth.login.signingIn : t.auth.login.button}
+                  {loading ? t('auth.login.signingIn') : t('auth.login.button')}
                 </button>
               </div>
             </form>

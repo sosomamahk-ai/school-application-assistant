@@ -4,11 +4,11 @@ import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { Save, Plus, Trash2 } from 'lucide-react';
 import { Education, Experience } from '@/types';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslation } from '@/contexts/TranslationContext';
 
 export default function Profile() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,11 +54,11 @@ export default function Profile() {
       });
 
       if (response.ok) {
-        alert(t.profile.saveSuccess);
+        alert(t('profile.saveSuccess'));
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert(t.profile.saveError);
+      alert(t('profile.saveError'));
     } finally {
       setSaving(false);
     }
@@ -121,7 +121,7 @@ export default function Profile() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg text-gray-600">{t.common.loading}</div>
+          <div className="text-lg text-gray-600">{t('common.loading')}</div>
         </div>
       </Layout>
     );
@@ -130,7 +130,7 @@ export default function Profile() {
   return (
     <>
       <Head>
-        <title>{t.profile.title} - {t.common.appName}</title>
+        <title>{t('profile.title')} - {t('common.appName')}</title>
       </Head>
 
       <Layout>
@@ -138,8 +138,8 @@ export default function Profile() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{t.profile.title}</h1>
-              <p className="text-gray-600 mt-2">{t.profile.manageInfo}</p>
+              <h1 className="text-3xl font-bold text-gray-900">{t('profile.title')}</h1>
+              <p className="text-gray-600 mt-2">{t('profile.manageInfo')}</p>
             </div>
             <button
               onClick={saveProfile}
@@ -147,17 +147,17 @@ export default function Profile() {
               className="btn-primary flex items-center space-x-2 disabled:opacity-50"
             >
               <Save className="h-5 w-5" />
-              <span>{saving ? t.common.saving : t.profile.saveChanges}</span>
+              <span>{saving ? t('common.saving') : t('profile.saveChanges')}</span>
             </button>
           </div>
 
           {/* Basic Information */}
           <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">{t.profile.basicInfo}</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('profile.basicInfo')}</h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.profile.fullName}
+                  {t('profile.fullName')}
                 </label>
                 <input
                   type="text"
@@ -169,7 +169,7 @@ export default function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.profile.phone}
+                  {t('profile.phone')}
                 </label>
                 <input
                   type="tel"
@@ -181,7 +181,7 @@ export default function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.profile.birthday}
+                  {t('profile.birthday')}
                 </label>
                 <input
                   type="date"
@@ -193,7 +193,7 @@ export default function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.profile.nationality}
+                  {t('profile.nationality')}
                 </label>
                 <input
                   type="text"
@@ -208,10 +208,10 @@ export default function Profile() {
           {/* Education */}
           <div className="card">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">{t.profile.education}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{t('profile.education')}</h2>
               <button onClick={addEducation} className="btn-secondary flex items-center space-x-2">
                 <Plus className="h-5 w-5" />
-                <span>{t.profile.addEducation}</span>
+                <span>{t('profile.addEducation')}</span>
               </button>
             </div>
 
@@ -219,7 +219,7 @@ export default function Profile() {
               {profile?.education?.map((edu: Education, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-medium text-gray-900">{t.profile.educationItem} {index + 1}</h3>
+                    <h3 className="font-medium text-gray-900">{t('profile.educationItem')} {index + 1}</h3>
                     <button
                       onClick={() => removeEducation(index)}
                       className="text-red-600 hover:text-red-700"
@@ -231,7 +231,7 @@ export default function Profile() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.schoolName}
+                        {t('profile.schoolName')}
                       </label>
                       <input
                         type="text"
@@ -243,7 +243,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.degree}
+                        {t('profile.degree')}
                       </label>
                       <input
                         type="text"
@@ -255,7 +255,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.major}
+                        {t('profile.major')}
                       </label>
                       <input
                         type="text"
@@ -267,7 +267,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.gpa}
+                        {t('profile.gpa')}
                       </label>
                       <input
                         type="text"
@@ -279,7 +279,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.startDate}
+                        {t('profile.startDate')}
                       </label>
                       <input
                         type="date"
@@ -291,7 +291,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.endDate}
+                        {t('profile.endDate')}
                       </label>
                       <input
                         type="date"
@@ -309,10 +309,10 @@ export default function Profile() {
           {/* Experiences */}
           <div className="card">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">{t.profile.experiences}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{t('profile.experiences')}</h2>
               <button onClick={addExperience} className="btn-secondary flex items-center space-x-2">
                 <Plus className="h-5 w-5" />
-                <span>{t.profile.addExperience}</span>
+                <span>{t('profile.addExperience')}</span>
               </button>
             </div>
 
@@ -320,7 +320,7 @@ export default function Profile() {
               {profile?.experiences?.map((exp: Experience, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-medium text-gray-900">{t.profile.experienceItem} {index + 1}</h3>
+                    <h3 className="font-medium text-gray-900">{t('profile.experienceItem')} {index + 1}</h3>
                     <button
                       onClick={() => removeExperience(index)}
                       className="text-red-600 hover:text-red-700"
@@ -332,7 +332,7 @@ export default function Profile() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.jobTitle}
+                        {t('profile.jobTitle')}
                       </label>
                       <input
                         type="text"
@@ -344,7 +344,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.organization}
+                        {t('profile.organization')}
                       </label>
                       <input
                         type="text"
@@ -356,7 +356,7 @@ export default function Profile() {
 
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.jobDescription}
+                        {t('profile.jobDescription')}
                       </label>
                       <textarea
                         value={exp.description}
@@ -368,7 +368,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.startDate}
+                        {t('profile.startDate')}
                       </label>
                       <input
                         type="date"
@@ -380,7 +380,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t.profile.endDate}
+                        {t('profile.endDate')}
                       </label>
                       <input
                         type="date"

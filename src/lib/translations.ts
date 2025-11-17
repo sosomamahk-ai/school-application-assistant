@@ -1,0 +1,817 @@
+/**
+ * Unified Translation System
+ * Flat key structure: "section.item" format
+ * Example: "login.button", "navbar.home", "form.submit"
+ */
+
+export type Language = 'en' | 'zh-CN' | 'zh-TW';
+
+export interface TranslationData {
+  [key: string]: {
+    en: string;
+    'zh-CN': string;
+    'zh-TW': string;
+  };
+}
+
+// Master translations - this will be loaded from JSON file or API
+export const translations: TranslationData = {
+  // Common
+  'common.appName': {
+    en: 'School Application Assistant',
+    'zh-CN': '学校申请助手',
+    'zh-TW': '學校申請助手',
+  },
+  'common.appNameShort': {
+    en: 'Application Assistant',
+    'zh-CN': '申请助手',
+    'zh-TW': '申請助手',
+  },
+  'common.loading': {
+    en: 'Loading...',
+    'zh-CN': '加载中...',
+    'zh-TW': '載入中...',
+  },
+  'common.saving': {
+    en: 'Saving...',
+    'zh-CN': '保存中...',
+    'zh-TW': '儲存中...',
+  },
+  'common.save': {
+    en: 'Save',
+    'zh-CN': '保存',
+    'zh-TW': '儲存',
+  },
+  'common.cancel': {
+    en: 'Cancel',
+    'zh-CN': '取消',
+    'zh-TW': '取消',
+  },
+  'common.submit': {
+    en: 'Submit',
+    'zh-CN': '提交',
+    'zh-TW': '提交',
+  },
+  'common.delete': {
+    en: 'Delete',
+    'zh-CN': '删除',
+    'zh-TW': '刪除',
+  },
+  'common.edit': {
+    en: 'Edit',
+    'zh-CN': '编辑',
+    'zh-TW': '編輯',
+  },
+  'common.view': {
+    en: 'View',
+    'zh-CN': '查看',
+    'zh-TW': '查看',
+  },
+  'common.back': {
+    en: 'Back',
+    'zh-CN': '返回',
+    'zh-TW': '返回',
+  },
+  'common.next': {
+    en: 'Next',
+    'zh-CN': '下一步',
+    'zh-TW': '下一步',
+  },
+  'common.previous': {
+    en: 'Previous',
+    'zh-CN': '上一个',
+    'zh-TW': '上一個',
+  },
+  'common.continue': {
+    en: 'Continue',
+    'zh-CN': '继续',
+    'zh-TW': '繼續',
+  },
+  'common.error': {
+    en: 'Error',
+    'zh-CN': '错误',
+    'zh-TW': '錯誤',
+  },
+  'common.success': {
+    en: 'Success',
+    'zh-CN': '成功',
+    'zh-TW': '成功',
+  },
+
+  // Navigation
+  'navbar.home': {
+    en: 'Home',
+    'zh-CN': '首页',
+    'zh-TW': '首頁',
+  },
+  'navbar.dashboard': {
+    en: 'Dashboard',
+    'zh-CN': '控制台',
+    'zh-TW': '控制台',
+  },
+  'navbar.profile': {
+    en: 'Profile',
+    'zh-CN': '个人资料',
+    'zh-TW': '個人資料',
+  },
+  'navbar.settings': {
+    en: 'Settings',
+    'zh-CN': '设置',
+    'zh-TW': '設定',
+  },
+  'navbar.logout': {
+    en: 'Logout',
+    'zh-CN': '退出',
+    'zh-TW': '登出',
+  },
+
+  // Auth
+  'auth.login.title': {
+    en: 'Sign in to your account',
+    'zh-CN': '登录到您的账户',
+    'zh-TW': '登入您的帳戶',
+  },
+  'auth.login.email': {
+    en: 'Email address',
+    'zh-CN': '邮箱地址',
+    'zh-TW': '電子郵件地址',
+  },
+  'auth.login.password': {
+    en: 'Password',
+    'zh-CN': '密码',
+    'zh-TW': '密碼',
+  },
+  'auth.login.button': {
+    en: 'Sign in',
+    'zh-CN': '登录',
+    'zh-TW': '登入',
+  },
+  'auth.login.signingIn': {
+    en: 'Signing in...',
+    'zh-CN': '登录中...',
+    'zh-TW': '登入中...',
+  },
+  'auth.login.noAccount': {
+    en: "Don't have an account?",
+    'zh-CN': '还没有账户？',
+    'zh-TW': '還沒有帳戶？',
+  },
+  'auth.login.signUp': {
+    en: 'Sign up',
+    'zh-CN': '注册',
+    'zh-TW': '註冊',
+  },
+  'auth.register.title': {
+    en: 'Create your account',
+    'zh-CN': '创建您的账户',
+    'zh-TW': '創建您的帳戶',
+  },
+  'auth.register.name': {
+    en: 'Full Name',
+    'zh-CN': '姓名',
+    'zh-TW': '姓名',
+  },
+  'auth.register.confirmPassword': {
+    en: 'Confirm Password',
+    'zh-CN': '确认密码',
+    'zh-TW': '確認密碼',
+  },
+  'auth.register.button': {
+    en: 'Create account',
+    'zh-CN': '注册',
+    'zh-TW': '註冊',
+  },
+  'auth.register.registering': {
+    en: 'Creating account...',
+    'zh-CN': '注册中...',
+    'zh-TW': '註冊中...',
+  },
+  'auth.register.hasAccount': {
+    en: 'Already have an account?',
+    'zh-CN': '已有账户？',
+    'zh-TW': '已有帳戶？',
+  },
+  'auth.register.signIn': {
+    en: 'Sign in',
+    'zh-CN': '登录',
+    'zh-TW': '登入',
+  },
+  'auth.errors.passwordMismatch': {
+    en: 'Passwords do not match',
+    'zh-CN': '两次输入的密码不一致',
+    'zh-TW': '兩次輸入的密碼不一致',
+  },
+  'auth.errors.passwordTooShort': {
+    en: 'Password must be at least 6 characters',
+    'zh-CN': '密码至少需要6个字符',
+    'zh-TW': '密碼至少需要6個字元',
+  },
+  'auth.errors.loginFailed': {
+    en: 'Login failed',
+    'zh-CN': '登录失败',
+    'zh-TW': '登入失敗',
+  },
+  'auth.errors.registrationFailed': {
+    en: 'Registration failed',
+    'zh-CN': '注册失败',
+    'zh-TW': '註冊失敗',
+  },
+
+  // Home
+  'home.title': {
+    en: 'Your AI-Powered School Application Assistant',
+    'zh-CN': 'AI 驱动的学校申请助手',
+    'zh-TW': 'AI 驅動的學校申請助手',
+  },
+  'home.subtitle': {
+    en: 'Simplify the application process with intelligent form filling, personalized guidance, and AI-generated essays.',
+    'zh-CN': '通过智能表单填写、个性化指导和 AI 生成的文书，简化申请流程。',
+    'zh-TW': '透過智能表單填寫、個人化指導和 AI 生成的文書，簡化申請流程。',
+  },
+  'home.startApplication': {
+    en: 'Start Your Application',
+    'zh-CN': '开始申请',
+    'zh-TW': '開始申請',
+  },
+  'home.learnMore': {
+    en: 'Learn More',
+    'zh-CN': '了解更多',
+    'zh-TW': '了解更多',
+  },
+  'home.getStarted': {
+    en: 'Get Started',
+    'zh-CN': '开始使用',
+    'zh-TW': '開始使用',
+  },
+  'home.whyChoose': {
+    en: 'Why Choose Our Platform?',
+    'zh-CN': '为什么选择我们？',
+    'zh-TW': '為什麼選擇我們？',
+  },
+  'home.features.autoFill.title': {
+    en: 'Smart Auto-Fill',
+    'zh-CN': '智能自动填充',
+    'zh-TW': '智能自動填充',
+  },
+  'home.features.autoFill.description': {
+    en: 'Automatically populate application forms with your saved profile information',
+    'zh-CN': '使用保存的个人资料自动填充申请表单',
+    'zh-TW': '使用儲存的個人資料自動填充申請表單',
+  },
+  'home.features.aiGuidance.title': {
+    en: 'AI Guidance',
+    'zh-CN': 'AI 智能指导',
+    'zh-TW': 'AI 智能指導',
+  },
+  'home.features.aiGuidance.description': {
+    en: 'Get real-time assistance and explanations for every field you need to fill',
+    'zh-CN': '为每个需要填写的字段提供实时帮助和说明',
+    'zh-TW': '為每個需要填寫的欄位提供即時幫助和說明',
+  },
+  'home.features.essayGeneration.title': {
+    en: 'Essay Generation',
+    'zh-CN': '文书生成',
+    'zh-TW': '文書生成',
+  },
+  'home.features.essayGeneration.description': {
+    en: 'Create compelling essays and personal statements with AI-powered drafts',
+    'zh-CN': '使用 AI 创建引人注目的个人陈述和申请文书',
+    'zh-TW': '使用 AI 創建引人注目的個人陳述和申請文書',
+  },
+  'home.features.multipleSchools.title': {
+    en: 'Multiple Schools',
+    'zh-CN': '多所学校管理',
+    'zh-TW': '多所學校管理',
+  },
+  'home.features.multipleSchools.description': {
+    en: 'Apply to multiple schools efficiently with reusable profile data',
+    'zh-CN': '通过可重复使用的资料数据高效申请多所学校',
+    'zh-TW': '透過可重複使用的資料數據高效申請多所學校',
+  },
+  'home.howItWorks.title': {
+    en: 'How It Works',
+    'zh-CN': '如何使用',
+    'zh-TW': '如何使用',
+  },
+  'home.howItWorks.step1.title': {
+    en: 'Create Your Profile',
+    'zh-CN': '创建您的资料',
+    'zh-TW': '創建您的資料',
+  },
+  'home.howItWorks.step1.description': {
+    en: 'Fill in your basic information, education history, and experiences once',
+    'zh-CN': '一次性填写基本信息、教育经历和工作经验',
+    'zh-TW': '一次性填寫基本信息、教育經歷和工作經驗',
+  },
+  'home.howItWorks.step2.title': {
+    en: 'Select Your Schools',
+    'zh-CN': '选择学校',
+    'zh-TW': '選擇學校',
+  },
+  'home.howItWorks.step2.description': {
+    en: 'Choose the schools and programs you want to apply to from our templates',
+    'zh-CN': '从我们的模板中选择您想申请的学校和项目',
+    'zh-TW': '從我們的範本中選擇您想申請的學校和項目',
+  },
+  'home.howItWorks.step3.title': {
+    en: 'Complete with AI Help',
+    'zh-CN': '在 AI 帮助下完成',
+    'zh-TW': '在 AI 幫助下完成',
+  },
+  'home.howItWorks.step3.description': {
+    en: 'Let AI guide you through each field and generate compelling content',
+    'zh-CN': '让 AI 指导您完成每个字段并生成出色的内容',
+    'zh-TW': '讓 AI 指導您完成每個欄位並生成出色的內容',
+  },
+  'home.cta.title': {
+    en: 'Ready to Get Started?',
+    'zh-CN': '准备开始了吗？',
+    'zh-TW': '準備開始了嗎？',
+  },
+  'home.cta.subtitle': {
+    en: 'Join thousands of students who have simplified their application process',
+    'zh-CN': '加入成千上万简化申请流程的学生',
+    'zh-TW': '加入成千上萬簡化申請流程的學生',
+  },
+  'home.cta.button': {
+    en: 'Create Free Account',
+    'zh-CN': '免费创建账户',
+    'zh-TW': '免費創建帳戶',
+  },
+  'home.footer.copyright': {
+    en: '© 2024 School Application Assistant. All rights reserved.',
+    'zh-CN': '© 2024 学校申请助手。保留所有权利。',
+    'zh-TW': '© 2024 學校申請助手。保留所有權利。',
+  },
+  'common.login': {
+    en: 'Login',
+    'zh-CN': '登录',
+    'zh-TW': '登入',
+  },
+
+  // Dashboard
+  'dashboard.title': {
+    en: 'My Applications',
+    'zh-CN': '我的申请',
+    'zh-TW': '我的申請',
+  },
+  'dashboard.subtitle': {
+    en: 'Manage and track your school applications',
+    'zh-CN': '管理和跟踪您的学校申请',
+    'zh-TW': '管理和追蹤您的學校申請',
+  },
+  'dashboard.noApplications': {
+    en: 'No applications yet',
+    'zh-CN': '还没有申请',
+    'zh-TW': '還沒有申請',
+  },
+  'dashboard.noApplicationsDesc': {
+    en: 'Start your first application to get going!',
+    'zh-CN': '开始您的第一个申请吧！',
+    'zh-TW': '開始您的第一個申請吧！',
+  },
+  'dashboard.newApplication': {
+    en: 'New Application',
+    'zh-CN': '新建申请',
+    'zh-TW': '新建申請',
+  },
+  'dashboard.continueApplication': {
+    en: 'Continue Application',
+    'zh-CN': '继续申请',
+    'zh-TW': '繼續申請',
+  },
+  'dashboard.viewApplication': {
+    en: 'View Application',
+    'zh-CN': '查看申请',
+    'zh-TW': '查看申請',
+  },
+  'dashboard.deleteConfirm': {
+    en: 'Are you sure you want to delete this application?',
+    'zh-CN': '确定要删除这个申请吗？',
+    'zh-TW': '確定要刪除這個申請嗎？',
+  },
+  'dashboard.chooseSchool': {
+    en: 'Choose a School to Apply',
+    'zh-CN': '选择要申请的学校',
+    'zh-TW': '選擇要申請的學校',
+  },
+  'dashboard.manageTemplates': {
+    en: 'Manage Templates',
+    'zh-CN': '管理模板',
+    'zh-TW': '管理範本',
+  },
+
+  // Profile
+  'profile.title': {
+    en: 'Profile',
+    'zh-CN': '个人资料',
+    'zh-TW': '個人資料',
+  },
+  'profile.manageInfo': {
+    en: 'Manage your personal information for applications',
+    'zh-CN': '管理您的个人信息以用于申请',
+    'zh-TW': '管理您的個人信息以用於申請',
+  },
+  'profile.saveChanges': {
+    en: 'Save Changes',
+    'zh-CN': '保存更改',
+    'zh-TW': '儲存更改',
+  },
+  'profile.saveSuccess': {
+    en: 'Profile saved successfully!',
+    'zh-CN': '个人资料保存成功！',
+    'zh-TW': '個人資料儲存成功！',
+  },
+  'profile.saveError': {
+    en: 'Failed to save, please try again',
+    'zh-CN': '保存失败，请重试',
+    'zh-TW': '儲存失敗，請重試',
+  },
+  'profile.basicInfo': {
+    en: 'Basic Information',
+    'zh-CN': '基本信息',
+    'zh-TW': '基本信息',
+  },
+  'profile.fullName': {
+    en: 'Full Name',
+    'zh-CN': '全名',
+    'zh-TW': '全名',
+  },
+  'profile.phone': {
+    en: 'Phone',
+    'zh-CN': '电话',
+    'zh-TW': '電話',
+  },
+  'profile.birthday': {
+    en: 'Birthday',
+    'zh-CN': '生日',
+    'zh-TW': '生日',
+  },
+  'profile.nationality': {
+    en: 'Nationality',
+    'zh-CN': '国籍',
+    'zh-TW': '國籍',
+  },
+  'profile.education': {
+    en: 'Education',
+    'zh-CN': '教育背景',
+    'zh-TW': '教育背景',
+  },
+  'profile.addEducation': {
+    en: 'Add Education',
+    'zh-CN': '添加教育经历',
+    'zh-TW': '新增教育經歷',
+  },
+  'profile.educationItem': {
+    en: 'Education',
+    'zh-CN': '教育经历',
+    'zh-TW': '教育經歷',
+  },
+  'profile.schoolName': {
+    en: 'School Name',
+    'zh-CN': '学校名称',
+    'zh-TW': '學校名稱',
+  },
+  'profile.degree': {
+    en: 'Degree',
+    'zh-CN': '学位',
+    'zh-TW': '學位',
+  },
+  'profile.major': {
+    en: 'Major',
+    'zh-CN': '专业',
+    'zh-TW': '專業',
+  },
+  'profile.gpa': {
+    en: 'GPA',
+    'zh-CN': 'GPA',
+    'zh-TW': 'GPA',
+  },
+  'profile.startDate': {
+    en: 'Start Date',
+    'zh-CN': '开始日期',
+    'zh-TW': '開始日期',
+  },
+  'profile.endDate': {
+    en: 'End Date',
+    'zh-CN': '结束日期',
+    'zh-TW': '結束日期',
+  },
+  'profile.experiences': {
+    en: 'Work/Internship Experience',
+    'zh-CN': '工作/实习经历',
+    'zh-TW': '工作/實習經歷',
+  },
+  'profile.addExperience': {
+    en: 'Add Experience',
+    'zh-CN': '添加经历',
+    'zh-TW': '新增經歷',
+  },
+  'profile.experienceItem': {
+    en: 'Experience',
+    'zh-CN': '经历',
+    'zh-TW': '經歷',
+  },
+  'profile.jobTitle': {
+    en: 'Job Title',
+    'zh-CN': '职位名称',
+    'zh-TW': '職位名稱',
+  },
+  'profile.organization': {
+    en: 'Company/Organization',
+    'zh-CN': '公司/组织',
+    'zh-TW': '公司/組織',
+  },
+  'profile.jobDescription': {
+    en: 'Job Description',
+    'zh-CN': '工作描述',
+    'zh-TW': '工作描述',
+  },
+
+  // Application
+  'application.title': {
+    en: 'Application Form',
+    'zh-CN': '申请表单',
+    'zh-TW': '申請表單',
+  },
+  'application.saveProgress': {
+    en: 'Save Progress',
+    'zh-CN': '保存进度',
+    'zh-TW': '儲存進度',
+  },
+  'application.submitApplication': {
+    en: 'Submit Application',
+    'zh-CN': '提交申请',
+    'zh-TW': '提交申請',
+  },
+  'application.export': {
+    en: 'Export',
+    'zh-CN': '导出',
+    'zh-TW': '匯出',
+  },
+  'application.progress': {
+    en: 'Progress',
+    'zh-CN': '完成进度',
+    'zh-TW': '完成進度',
+  },
+  'application.completed': {
+    en: 'Completed',
+    'zh-CN': '已完成',
+    'zh-TW': '已完成',
+  },
+  'application.viewAllFields': {
+    en: 'View All Fields',
+    'zh-CN': '查看所有字段',
+    'zh-TW': '查看所有欄位',
+  },
+  'application.stepByStepMode': {
+    en: 'Switch to Step-by-Step Mode',
+    'zh-CN': '切换到逐步填写模式',
+    'zh-TW': '切換到逐步填寫模式',
+  },
+  'application.allFields': {
+    en: 'All Application Fields',
+    'zh-CN': '所有申请字段',
+    'zh-TW': '所有申請欄位',
+  },
+  'application.notFound': {
+    en: 'Application not found',
+    'zh-CN': '申请未找到',
+    'zh-TW': '申請未找到',
+  },
+  'application.submitSuccess': {
+    en: 'Application submitted successfully!',
+    'zh-CN': '申请提交成功！',
+    'zh-TW': '申請提交成功！',
+  },
+  'application.saveSuccess': {
+    en: 'Progress saved!',
+    'zh-CN': '进度已保存！',
+    'zh-TW': '進度已儲存！',
+  },
+  'application.saveError': {
+    en: 'Error saving application',
+    'zh-CN': '保存申请时出错',
+    'zh-TW': '儲存申請時出錯',
+  },
+
+  // AI Guidance
+  'ai.guidance.title': {
+    en: 'AI Guidance',
+    'zh-CN': 'AI 智能指导',
+    'zh-TW': 'AI 智能指導',
+  },
+  'ai.guidance.whatIsThis': {
+    en: 'What this field requires:',
+    'zh-CN': '此字段要求填写：',
+    'zh-TW': '此欄位要求填寫：',
+  },
+  'ai.guidance.requirements': {
+    en: 'Requirements:',
+    'zh-CN': '填写要求：',
+    'zh-TW': '填寫要求：',
+  },
+  'ai.guidance.examples': {
+    en: 'Tips and Examples:',
+    'zh-CN': '提示与示例：',
+    'zh-TW': '提示與範例：',
+  },
+  'ai.guidance.suggestion': {
+    en: 'AI Suggestion:',
+    'zh-CN': 'AI 建议：',
+    'zh-TW': 'AI 建議：',
+  },
+  'ai.guidance.useThis': {
+    en: 'Use This Suggestion',
+    'zh-CN': '使用此建议',
+    'zh-TW': '使用此建議',
+  },
+  'ai.guidance.generating': {
+    en: 'Generating...',
+    'zh-CN': '生成中...',
+    'zh-TW': '生成中...',
+  },
+  'ai.guidance.analyzing': {
+    en: 'Analyzing...',
+    'zh-CN': '分析中...',
+    'zh-TW': '分析中...',
+  },
+  'ai.guidance.generateContent': {
+    en: 'Generate Content with AI',
+    'zh-CN': '使用 AI 生成内容',
+    'zh-TW': '使用 AI 生成內容',
+  },
+  'ai.guidance.improvements': {
+    en: 'Improvement Suggestions',
+    'zh-CN': '改进建议',
+    'zh-TW': '改進建議',
+  },
+  'ai.guidance.improvedVersion': {
+    en: 'Improved Version:',
+    'zh-CN': '改进版本：',
+    'zh-TW': '改進版本：',
+  },
+  'ai.guidance.useThisVersion': {
+    en: 'Use This Version',
+    'zh-CN': '使用此版本',
+    'zh-TW': '使用此版本',
+  },
+
+  // Settings
+  'settings.title': {
+    en: 'Account Settings',
+    'zh-CN': '账户设置',
+    'zh-TW': '帳戶設定',
+  },
+  'settings.subtitle': {
+    en: 'Manage your account information and security settings',
+    'zh-CN': '管理您的账户信息和安全设置',
+    'zh-TW': '管理您的帳戶信息和安全設定',
+  },
+  'settings.changePassword': {
+    en: 'Change Password',
+    'zh-CN': '修改密码',
+    'zh-TW': '修改密碼',
+  },
+  'settings.changeEmail': {
+    en: 'Change Email',
+    'zh-CN': '修改邮箱',
+    'zh-TW': '修改電子郵件',
+  },
+  'settings.currentPassword': {
+    en: 'Current Password',
+    'zh-CN': '当前密码',
+    'zh-TW': '當前密碼',
+  },
+  'settings.newPassword': {
+    en: 'New Password',
+    'zh-CN': '新密码',
+    'zh-TW': '新密碼',
+  },
+  'settings.confirmNewPassword': {
+    en: 'Confirm New Password',
+    'zh-CN': '确认新密码',
+    'zh-TW': '確認新密碼',
+  },
+  'settings.passwordChanged': {
+    en: 'Password changed successfully!',
+    'zh-CN': '密码修改成功！',
+    'zh-TW': '密碼修改成功！',
+  },
+  'settings.emailChanged': {
+    en: 'Email changed successfully!',
+    'zh-CN': '邮箱修改成功！',
+    'zh-TW': '電子郵件修改成功！',
+  },
+
+  // Admin
+  'admin.templates.title': {
+    en: 'Template Management',
+    'zh-CN': '模板管理',
+    'zh-TW': '範本管理',
+  },
+  'admin.templates.createNew': {
+    en: 'Create New Template',
+    'zh-CN': '创建新模板',
+    'zh-TW': '創建新範本',
+  },
+  'admin.templates.import': {
+    en: 'Import Template',
+    'zh-CN': '导入模板',
+    'zh-TW': '匯入範本',
+  },
+  'admin.translations.title': {
+    en: 'Translation Management',
+    'zh-CN': '翻译管理',
+    'zh-TW': '翻譯管理',
+  },
+  'admin.translations.description': {
+    en: 'Manage all translations for the application',
+    'zh-CN': '管理应用程序的所有翻译',
+    'zh-TW': '管理應用程式的所有翻譯',
+  },
+  'admin.translations.key': {
+    en: 'Key',
+    'zh-CN': '键',
+    'zh-TW': '鍵',
+  },
+  'admin.translations.english': {
+    en: 'English',
+    'zh-CN': '英文',
+    'zh-TW': '英文',
+  },
+  'admin.translations.simplifiedChinese': {
+    en: 'Simplified Chinese',
+    'zh-CN': '简体中文',
+    'zh-TW': '簡體中文',
+  },
+  'admin.translations.traditionalChinese': {
+    en: 'Traditional Chinese',
+    'zh-CN': '繁体中文',
+    'zh-TW': '繁體中文',
+  },
+  'admin.translations.save': {
+    en: 'Save Translations',
+    'zh-CN': '保存翻译',
+    'zh-TW': '儲存翻譯',
+  },
+  'admin.translations.saving': {
+    en: 'Saving...',
+    'zh-CN': '保存中...',
+    'zh-TW': '儲存中...',
+  },
+  'admin.translations.saveSuccess': {
+    en: 'Translations saved successfully!',
+    'zh-CN': '翻译保存成功！',
+    'zh-TW': '翻譯儲存成功！',
+  },
+  'admin.translations.saveError': {
+    en: 'Failed to save translations',
+    'zh-CN': '保存翻译失败',
+    'zh-TW': '儲存翻譯失敗',
+  },
+  'admin.translations.addNew': {
+    en: 'Add New Translation',
+    'zh-CN': '添加新翻译',
+    'zh-TW': '新增翻譯',
+  },
+  'admin.translations.search': {
+    en: 'Search translations...',
+    'zh-CN': '搜索翻译...',
+    'zh-TW': '搜尋翻譯...',
+  },
+};
+
+// Helper function to get translation with fallback
+export function getTranslation(
+  key: string,
+  language: Language,
+  translations: TranslationData
+): string {
+  const translation = translations[key];
+  if (!translation) {
+    console.warn(`Translation key not found: ${key}`);
+    return key; // Fallback to key if not found
+  }
+  return translation[language] || translation.en || key;
+}
+
+// Load translations from file or API
+export async function loadTranslations(): Promise<TranslationData> {
+  try {
+    // Try to load from API first (for admin updates)
+    if (typeof window !== 'undefined') {
+      const response = await fetch('/api/translations');
+      if (response.ok) {
+        const data = await response.json();
+        const apiTranslations = data.translations || {};
+        // Merge with defaults (API translations override defaults)
+        return { ...translations, ...apiTranslations };
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load translations from API, using defaults');
+  }
+  return translations;
+}
+
