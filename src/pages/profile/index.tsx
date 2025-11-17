@@ -52,11 +52,11 @@ export default function Profile() {
       });
 
       if (response.ok) {
-        alert('Profile saved successfully!');
+        alert('个人资料保存成功！');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Error saving profile');
+      alert('保存失败，请重试');
     } finally {
       setSaving(false);
     }
@@ -119,7 +119,7 @@ export default function Profile() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg text-gray-600">Loading...</div>
+          <div className="text-lg text-gray-600">加载中...</div>
         </div>
       </Layout>
     );
@@ -128,7 +128,7 @@ export default function Profile() {
   return (
     <>
       <Head>
-        <title>My Profile - School Application Assistant</title>
+        <title>我的资料 - 学校申请助手</title>
       </Head>
 
       <Layout>
@@ -136,8 +136,8 @@ export default function Profile() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-              <p className="text-gray-600 mt-2">Manage your personal information for applications</p>
+              <h1 className="text-3xl font-bold text-gray-900">我的资料</h1>
+              <p className="text-gray-600 mt-2">管理您的个人信息以用于申请</p>
             </div>
             <button
               onClick={saveProfile}
@@ -145,17 +145,17 @@ export default function Profile() {
               className="btn-primary flex items-center space-x-2 disabled:opacity-50"
             >
               <Save className="h-5 w-5" />
-              <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+              <span>{saving ? '保存中...' : '保存更改'}</span>
             </button>
           </div>
 
           {/* Basic Information */}
           <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">基本信息</h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
+                  全名
                 </label>
                 <input
                   type="text"
@@ -167,7 +167,7 @@ export default function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
+                  电话
                 </label>
                 <input
                   type="tel"
@@ -179,7 +179,7 @@ export default function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Birthday
+                  生日
                 </label>
                 <input
                   type="date"
@@ -191,7 +191,7 @@ export default function Profile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nationality
+                  国籍
                 </label>
                 <input
                   type="text"
@@ -206,10 +206,10 @@ export default function Profile() {
           {/* Education */}
           <div className="card">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Education</h2>
+              <h2 className="text-xl font-semibold text-gray-900">教育背景</h2>
               <button onClick={addEducation} className="btn-secondary flex items-center space-x-2">
                 <Plus className="h-5 w-5" />
-                <span>Add Education</span>
+                <span>添加教育经历</span>
               </button>
             </div>
 
@@ -217,7 +217,7 @@ export default function Profile() {
               {profile?.education?.map((edu: Education, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-medium text-gray-900">Education {index + 1}</h3>
+                    <h3 className="font-medium text-gray-900">教育经历 {index + 1}</h3>
                     <button
                       onClick={() => removeEducation(index)}
                       className="text-red-600 hover:text-red-700"
@@ -229,7 +229,7 @@ export default function Profile() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        School Name
+                        学校名称
                       </label>
                       <input
                         type="text"
@@ -241,7 +241,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Degree
+                        学位
                       </label>
                       <input
                         type="text"
@@ -253,7 +253,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Major
+                        专业
                       </label>
                       <input
                         type="text"
@@ -277,7 +277,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Start Date
+                        开始日期
                       </label>
                       <input
                         type="date"
@@ -289,7 +289,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        End Date
+                        结束日期
                       </label>
                       <input
                         type="date"
@@ -307,10 +307,10 @@ export default function Profile() {
           {/* Experiences */}
           <div className="card">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Experiences</h2>
+              <h2 className="text-xl font-semibold text-gray-900">工作/实习经历</h2>
               <button onClick={addExperience} className="btn-secondary flex items-center space-x-2">
                 <Plus className="h-5 w-5" />
-                <span>Add Experience</span>
+                <span>添加经历</span>
               </button>
             </div>
 
@@ -318,7 +318,7 @@ export default function Profile() {
               {profile?.experiences?.map((exp: Experience, index: number) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-medium text-gray-900">Experience {index + 1}</h3>
+                    <h3 className="font-medium text-gray-900">经历 {index + 1}</h3>
                     <button
                       onClick={() => removeExperience(index)}
                       className="text-red-600 hover:text-red-700"
@@ -330,7 +330,7 @@ export default function Profile() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Title/Position
+                        职位名称
                       </label>
                       <input
                         type="text"
@@ -342,7 +342,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Organization
+                        公司/组织
                       </label>
                       <input
                         type="text"
@@ -354,7 +354,7 @@ export default function Profile() {
 
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description
+                        工作描述
                       </label>
                       <textarea
                         value={exp.description}
@@ -366,7 +366,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Start Date
+                        开始日期
                       </label>
                       <input
                         type="date"
@@ -378,7 +378,7 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        End Date
+                        结束日期
                       </label>
                       <input
                         type="date"
