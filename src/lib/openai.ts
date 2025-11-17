@@ -1,12 +1,13 @@
 import OpenAI from 'openai';
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing OPENAI_API_KEY environment variable');
-}
+// Allow the app to run without API key (will use mock mode)
+const apiKey = process.env.OPENAI_API_KEY || 'mock-api-key';
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  : null as any; // Mock client when API key is not available
 
 export default openai;
 
