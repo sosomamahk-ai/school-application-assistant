@@ -2,12 +2,38 @@ import { openai } from '@/lib/openai';
 import { FormField, UserProfileData, AIGuidance } from '@/types';
 
 /**
+ * Check if we should use mock mode (when API key is missing or API fails)
+ */
+const USE_MOCK_MODE = !process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === '';
+
+/**
  * Generates AI guidance for a specific form field
  */
 export async function generateFieldGuidance(
   field: FormField,
   userProfile: Partial<UserProfileData>
 ): Promise<AIGuidance> {
+  // Mock mode: return simulated guidance
+  if (USE_MOCK_MODE) {
+    return {
+      fieldId: field.id,
+      explanation: `This field asks for your ${field.label.toLowerCase()}. It's an important part of your application that helps admissions officers understand your background and qualifications.`,
+      requirements: [
+        field.required ? 'This field is required' : 'This field is optional',
+        'Be specific and provide concrete details',
+        'Keep your response clear and well-organized'
+      ],
+      examples: [
+        'Use specific examples from your experience',
+        'Show your unique perspective and voice',
+        'Connect your response to your goals and aspirations'
+      ],
+      suggestedContent: userProfile.basicInfo?.fullName 
+        ? `Consider highlighting aspects that showcase your strengths and align with your goals.` 
+        : undefined
+    };
+  }
+
   const prompt = `You are an expert college application advisor. Help the user understand and fill out this application field.
 
 Field Label: ${field.label}
@@ -79,6 +105,20 @@ export async function generateEssayContent(
   userProfile: Partial<UserProfileData>,
   additionalPrompt?: string
 ): Promise<string> {
+  // Mock mode: return simulated essay
+  if (USE_MOCK_MODE) {
+    const userName = userProfile.basicInfo?.fullName || 'the applicant';
+    return `Throughout my academic journey, I have always been driven by a deep curiosity and passion for learning. This essay explores my experiences and aspirations for ${field.label.toLowerCase()}.
+
+Growing up, I discovered that challenges are opportunities for growth. Each obstacle I've faced has shaped my perspective and strengthened my determination to make a meaningful impact. Whether through academic pursuits, extracurricular activities, or community involvement, I've learned the value of perseverance and dedication.
+
+My experiences have taught me the importance of collaboration and diverse perspectives. Working with peers from different backgrounds has enriched my understanding and helped me develop strong communication and leadership skills. These experiences have prepared me to contribute meaningfully to a vibrant academic community.
+
+Looking forward, I am excited about the opportunities to expand my knowledge and pursue my goals. I am committed to making the most of every learning opportunity and contributing positively to the community. This next chapter represents not just personal growth, but a chance to create lasting impact through dedication and innovation.
+
+[This is a simulated AI response. Add your OpenAI API key for personalized content generation.]`;
+  }
+
   const prompt = `You are an expert essay writer for college applications. Generate a high-quality essay draft.
 
 Essay Prompt: ${field.label}
@@ -133,6 +173,20 @@ export async function improveContent(
   currentContent: string,
   userProfile: Partial<UserProfileData>
 ): Promise<{ suggestions: string[]; improvedVersion: string }> {
+  // Mock mode: return simulated improvements
+  if (USE_MOCK_MODE) {
+    return {
+      suggestions: [
+        'Consider adding more specific examples to illustrate your points',
+        'Strengthen the introduction to better hook the reader',
+        'Connect your experiences more explicitly to your future goals',
+        'Vary sentence structure for better flow and readability',
+        'Add more descriptive details to make your story more vivid'
+      ],
+      improvedVersion: currentContent + '\n\n[Enhanced version with improved clarity, stronger examples, and better flow. This is a simulated improvement. Add your OpenAI API key for personalized content enhancement.]'
+    };
+  }
+
   const prompt = `You are an expert college application advisor reviewing an essay or response.
 
 Field: ${field.label}
@@ -188,6 +242,20 @@ export async function chatWithAI(
     applicationData?: any;
   }
 ): Promise<string> {
+  // Mock mode: return simulated chat response
+  if (USE_MOCK_MODE) {
+    const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
+    return `Thank you for your question! I'm here to help you with your application. ${
+      context.currentField 
+        ? `For the "${context.currentField.label}" field, I recommend being specific and authentic in your response.` 
+        : 'Feel free to ask me anything about filling out your application.'
+    } 
+
+Remember to showcase your unique experiences and perspective. Is there anything specific about this section you'd like help with?
+
+[This is a simulated AI response. Add your OpenAI API key for personalized guidance.]`;
+  }
+
   const systemMessage = `You are a helpful and knowledgeable college application assistant. Your role is to:
 1. Guide users through filling out their application forms
 2. Explain what information is needed for each field
