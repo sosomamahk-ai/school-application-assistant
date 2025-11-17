@@ -12,6 +12,12 @@ export default async function handler(
   }
 
   try {
+    // 检查环境变量
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not set');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -35,9 +41,12 @@ export default async function handler(
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Get user role (handle case where role field doesn't exist in DB yet)
+    const userRole = (user as any).role || 'user';
+
     // Generate JWT token (include role in token)
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role || 'user' },
+      { userId: user.id, email: user.email, role: userRole },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -48,13 +57,21 @@ export default async function handler(
       user: {
         id: user.id,
         email: user.email,
-        role: user.role || 'user',
+        role: userRole,
         profileId: user.profile?.id
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack
+    });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    });
   }
 }
 

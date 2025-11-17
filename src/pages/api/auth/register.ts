@@ -12,6 +12,12 @@ export default async function handler(
   }
 
   try {
+    // 检查环境变量
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not set');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
     const { email, password, fullName } = req.body;
 
     if (!email || !password) {
@@ -35,6 +41,7 @@ export default async function handler(
       data: {
         email,
         password: hashedPassword,
+        role: 'user', // 默认角色为用户
         profile: {
           create: {
             fullName: fullName || null
@@ -46,9 +53,12 @@ export default async function handler(
       }
     });
 
+    // Get user role (handle case where role field doesn't exist in DB yet)
+    const userRole = (user as any).role || 'user';
+
     // Generate JWT token (include role in token)
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role || 'user' },
+      { userId: user.id, email: user.email, role: userRole },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -59,13 +69,27 @@ export default async function handler(
       user: {
         id: user.id,
         email: user.email,
-        role: user.role || 'user',
+        role: userRole,
         profileId: user.profile?.id
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack
+    });
+    
+    // 处理唯一约束冲突（用户已存在）
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    });
   }
 }
 
