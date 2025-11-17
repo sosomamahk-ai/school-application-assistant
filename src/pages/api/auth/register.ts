@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
+import { ensureUserRoleColumn, isRoleColumnMissingError } from '@/lib/prisma-role-column';
 
 export default async function handler(
   req: NextApiRequest,
@@ -69,26 +70,15 @@ export default async function handler(
       // If successful, get role from created user
       userRole = (user as any).role || 'user';
     } catch (error: any) {
-      // Check if error is about role column not existing
-      const isRoleColumnError = 
-        error?.code === 'P2022' || 
-        (error?.message && (
-          error.message.includes('role') || 
-          error.message.includes('column') ||
-          error.message.includes('does not exist')
-        ));
-      
-      if (isRoleColumnError) {
-        console.warn('⚠️ Role column does not exist in database');
-        console.warn('Please run this SQL in Supabase:');
-        console.warn('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT \'user\';');
-        
-        // Create user without role field
+      if (isRoleColumnMissingError(error)) {
+        console.warn('⚠️ Role column does not exist in database. Attempting in-app fix...');
         try {
+          await ensureUserRoleColumn(prisma);
           user = await prisma.user.create({
             data: {
               email,
               password: hashedPassword,
+              role: 'user',
               profile: {
                 create: {
                   fullName: fullName || null
@@ -99,9 +89,9 @@ export default async function handler(
               profile: true
             }
           });
-          // Role will default to 'user' in our code
+          userRole = (user as any).role || 'user';
         } catch (retryError: any) {
-          console.error('Failed to create user even without role field:', retryError);
+          console.error('Failed to auto-create role column or create user after fix:', retryError);
           throw retryError;
         }
       } else {

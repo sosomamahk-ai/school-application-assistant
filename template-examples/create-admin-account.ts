@@ -8,6 +8,7 @@
 
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
+import { ensureUserRoleColumn } from '../src/lib/prisma-role-column';
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,8 @@ async function createAdminAccount() {
   try {
     const adminEmail = 'sosomamahk@gmail.com';
     const adminPassword = 'admin-sosomama';
+
+    await ensureUserRoleColumn(prisma);
 
     // 检查管理员账号是否已存在
     const existingAdmin = await prisma.user.findUnique({
