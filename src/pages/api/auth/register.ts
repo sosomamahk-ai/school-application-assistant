@@ -24,9 +24,16 @@ export default async function handler(
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Check if user already exists
+    // Check if user already exists (don't select role if column doesn't exist)
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        createdAt: true,
+        updatedAt: true
+      }
     });
 
     if (existingUser) {
@@ -37,21 +44,47 @@ export default async function handler(
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user and profile
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        role: 'user', // 默认角色为用户
-        profile: {
-          create: {
-            fullName: fullName || null
+    // Try to create with role, but handle if column doesn't exist yet
+    let user;
+    try {
+      // Try creating with role field
+      user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          role: 'user', // 默认角色为用户
+          profile: {
+            create: {
+              fullName: fullName || null
+            }
           }
+        },
+        include: {
+          profile: true
         }
-      },
-      include: {
-        profile: true
+      });
+    } catch (error: any) {
+      // If role column doesn't exist, create without it
+      if (error?.code === 'P2022' || error?.message?.includes('role')) {
+        console.warn('Role column does not exist, creating user without role field');
+        user = await prisma.user.create({
+          data: {
+            email,
+            password: hashedPassword,
+            profile: {
+              create: {
+                fullName: fullName || null
+              }
+            }
+          },
+          include: {
+            profile: true
+          }
+        });
+      } else {
+        throw error;
       }
-    });
+    }
 
     // Get user role (handle case where role field doesn't exist in DB yet)
     const userRole = (user as any).role || 'user';

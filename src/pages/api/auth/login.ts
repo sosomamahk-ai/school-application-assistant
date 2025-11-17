@@ -24,11 +24,22 @@ export default async function handler(
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user
+    // Find user (don't select role if column doesn't exist)
     const user = await prisma.user.findUnique({
       where: { email },
-      include: { profile: true }
-    });
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        createdAt: true,
+        updatedAt: true,
+        profile: {
+          select: {
+            id: true
+          }
+        }
+      }
+    }) as any;
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
