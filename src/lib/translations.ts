@@ -728,6 +728,111 @@ export const translations: TranslationData = {
     'zh-CN': '邮箱修改成功！',
     'zh-TW': '電子郵件修改成功！',
   },
+  'settings.currentEmail': {
+    en: 'Current Email',
+    'zh-CN': '当前邮箱',
+    'zh-TW': '當前電子郵件',
+  },
+  'settings.newEmail': {
+    en: 'New Email',
+    'zh-CN': '新邮箱',
+    'zh-TW': '新電子郵件',
+  },
+  'settings.currentEmailDescription': {
+    en: 'This is your current email address',
+    'zh-CN': '这是您当前使用的邮箱地址',
+    'zh-TW': '這是您當前使用的電子郵件地址',
+  },
+  'settings.emailPassword': {
+    en: 'Current Password (for verification)',
+    'zh-CN': '当前密码（验证身份）',
+    'zh-TW': '當前密碼（驗證身份）',
+  },
+  'settings.emailPasswordPlaceholder': {
+    en: 'Enter your current password to verify identity',
+    'zh-CN': '请输入当前密码以验证身份',
+    'zh-TW': '請輸入當前密碼以驗證身份',
+  },
+  'settings.currentPasswordPlaceholder': {
+    en: 'Enter your current password',
+    'zh-CN': '请输入当前密码',
+    'zh-TW': '請輸入當前密碼',
+  },
+  'settings.newPasswordPlaceholder': {
+    en: 'Enter new password (at least 6 characters)',
+    'zh-CN': '请输入新密码（至少6个字符）',
+    'zh-TW': '請輸入新密碼（至少6個字元）',
+  },
+  'settings.confirmPasswordPlaceholder': {
+    en: 'Re-enter new password',
+    'zh-CN': '请再次输入新密码',
+    'zh-TW': '請再次輸入新密碼',
+  },
+  'settings.newEmailPlaceholder': {
+    en: 'Enter new email address',
+    'zh-CN': '请输入新邮箱地址',
+    'zh-TW': '請輸入新電子郵件地址',
+  },
+  'settings.changePasswordButton': {
+    en: 'Change Password',
+    'zh-CN': '修改密码',
+    'zh-TW': '修改密碼',
+  },
+  'settings.changeEmailButton': {
+    en: 'Change Email',
+    'zh-CN': '修改邮箱',
+    'zh-TW': '修改電子郵件',
+  },
+  'settings.fillAllFields': {
+    en: 'Please fill in all fields',
+    'zh-CN': '请填写所有字段',
+    'zh-TW': '請填寫所有欄位',
+  },
+  'settings.passwordTooShort': {
+    en: 'New password must be at least 6 characters',
+    'zh-CN': '新密码至少需要6个字符',
+    'zh-TW': '新密碼至少需要6個字元',
+  },
+  'settings.passwordMismatch': {
+    en: 'New password and confirm password do not match',
+    'zh-CN': '新密码和确认密码不匹配',
+    'zh-TW': '新密碼和確認密碼不匹配',
+  },
+  'settings.passwordSame': {
+    en: 'New password cannot be the same as current password',
+    'zh-CN': '新密码不能与当前密码相同',
+    'zh-TW': '新密碼不能與當前密碼相同',
+  },
+  'settings.invalidEmail': {
+    en: 'Please enter a valid email address',
+    'zh-CN': '请输入有效的邮箱地址',
+    'zh-TW': '請輸入有效的電子郵件地址',
+  },
+  'settings.emailSame': {
+    en: 'New email cannot be the same as current email',
+    'zh-CN': '新邮箱不能与当前邮箱相同',
+    'zh-TW': '新電子郵件不能與當前電子郵件相同',
+  },
+  'settings.changePasswordFailed': {
+    en: 'Failed to change password',
+    'zh-CN': '修改密码失败',
+    'zh-TW': '修改密碼失敗',
+  },
+  'settings.changeEmailFailed': {
+    en: 'Failed to change email',
+    'zh-CN': '修改邮箱失败',
+    'zh-TW': '修改電子郵件失敗',
+  },
+  'settings.changePasswordError': {
+    en: 'An error occurred while changing password, please try again',
+    'zh-CN': '修改密码时发生错误，请重试',
+    'zh-TW': '修改密碼時發生錯誤，請重試',
+  },
+  'settings.changeEmailError': {
+    en: 'An error occurred while changing email, please try again',
+    'zh-CN': '修改邮箱时发生错误，请重试',
+    'zh-TW': '修改電子郵件時發生錯誤，請重試',
+  },
 
   // Admin
   'admin.templates.title': {
@@ -804,6 +909,176 @@ export const translations: TranslationData = {
     en: 'Search translations...',
     'zh-CN': '搜索翻译...',
     'zh-TW': '搜尋翻譯...',
+  },
+  'admin.userManagement': {
+    en: 'User Management',
+    'zh-CN': '用户管理',
+    'zh-TW': '用戶管理',
+  },
+  'admin.users.title': {
+    en: 'User Management',
+    'zh-CN': '用户管理',
+    'zh-TW': '用戶管理',
+  },
+  'admin.users.subtitle': {
+    en: 'View, search and manage all user accounts in the system',
+    'zh-CN': '查看、搜索并管理系统中的所有用户账号',
+    'zh-TW': '查看、搜尋並管理系統中的所有用戶帳號',
+  },
+  'admin.users.totalUsers': {
+    en: 'Total Users',
+    'zh-CN': '用户总数',
+    'zh-TW': '用戶總數',
+  },
+  'admin.users.admins': {
+    en: 'Admins',
+    'zh-CN': '管理员',
+    'zh-TW': '管理員',
+  },
+  'admin.users.normalUsers': {
+    en: 'Regular Users',
+    'zh-CN': '普通用户',
+    'zh-TW': '普通用戶',
+  },
+  'admin.users.search': {
+    en: 'Search',
+    'zh-CN': '搜索',
+    'zh-TW': '搜尋',
+  },
+  'admin.users.searchLabel': {
+    en: 'Search (Email / Name)',
+    'zh-CN': '搜索（邮箱 / 姓名）',
+    'zh-TW': '搜尋（電子郵件 / 姓名）',
+  },
+  'admin.users.searchPlaceholder': {
+    en: 'Enter email or name keyword',
+    'zh-CN': '输入邮箱或姓名关键字',
+    'zh-TW': '輸入電子郵件或姓名關鍵字',
+  },
+  'admin.users.roleFilter': {
+    en: 'Role Filter',
+    'zh-CN': '角色筛选',
+    'zh-TW': '角色篩選',
+  },
+  'admin.users.all': {
+    en: 'All',
+    'zh-CN': '全部',
+    'zh-TW': '全部',
+  },
+  'admin.users.admin': {
+    en: 'Admin',
+    'zh-CN': '管理员',
+    'zh-TW': '管理員',
+  },
+  'admin.users.user': {
+    en: 'Regular User',
+    'zh-CN': '普通用户',
+    'zh-TW': '普通用戶',
+  },
+  'admin.users.refresh': {
+    en: 'Refresh',
+    'zh-CN': '刷新',
+    'zh-TW': '重新整理',
+  },
+  'admin.users.refreshTitle': {
+    en: 'Refresh list',
+    'zh-CN': '刷新列表',
+    'zh-TW': '重新整理列表',
+  },
+  'admin.users.reset': {
+    en: 'Reset',
+    'zh-CN': '重置',
+    'zh-TW': '重置',
+  },
+  'admin.users.resetTitle': {
+    en: 'Clear filters',
+    'zh-CN': '清除筛选',
+    'zh-TW': '清除篩選',
+  },
+  'admin.users.name': {
+    en: 'Name',
+    'zh-CN': '姓名',
+    'zh-TW': '姓名',
+  },
+  'admin.users.email': {
+    en: 'Email',
+    'zh-CN': '邮箱',
+    'zh-TW': '電子郵件',
+  },
+  'admin.users.role': {
+    en: 'Role',
+    'zh-CN': '角色',
+    'zh-TW': '角色',
+  },
+  'admin.users.registeredAt': {
+    en: 'Registered At',
+    'zh-CN': '注册时间',
+    'zh-TW': '註冊時間',
+  },
+  'admin.users.actions': {
+    en: 'Actions',
+    'zh-CN': '操作',
+    'zh-TW': '操作',
+  },
+  'admin.users.loading': {
+    en: 'Loading user data...',
+    'zh-CN': '正在加载用户数据...',
+    'zh-TW': '正在載入用戶資料...',
+  },
+  'admin.users.noUsers': {
+    en: 'No user data available',
+    'zh-CN': '暂无用户数据',
+    'zh-TW': '暫無用戶資料',
+  },
+  'admin.users.downgrade': {
+    en: 'Downgrade',
+    'zh-CN': '降级',
+    'zh-TW': '降級',
+  },
+  'admin.users.upgradeToAdmin': {
+    en: 'Upgrade to Admin',
+    'zh-CN': '升级为管理员',
+    'zh-TW': '升級為管理員',
+  },
+  'admin.users.delete': {
+    en: 'Delete',
+    'zh-CN': '删除',
+    'zh-TW': '刪除',
+  },
+  'admin.users.confirmDowngrade': {
+    en: 'Are you sure you want to downgrade {email} to a regular user?',
+    'zh-CN': '确定要将 {email} 降级为普通用户吗？',
+    'zh-TW': '確定要將 {email} 降級為普通用戶嗎？',
+  },
+  'admin.users.confirmUpgrade': {
+    en: 'Are you sure you want to upgrade {email} to an administrator?',
+    'zh-CN': '确定要将 {email} 升级为管理员吗？',
+    'zh-TW': '確定要將 {email} 升級為管理員嗎？',
+  },
+  'admin.users.confirmDelete': {
+    en: 'Are you sure you want to permanently delete {email}? This action cannot be undone.',
+    'zh-CN': '确定要永久删除 {email} 吗？此操作不可恢复。',
+    'zh-TW': '確定要永久刪除 {email} 嗎？此操作無法復原。',
+  },
+  'admin.users.loadFailed': {
+    en: 'Failed to load user list',
+    'zh-CN': '加载用户列表失败',
+    'zh-TW': '載入用戶列表失敗',
+  },
+  'admin.users.loadError': {
+    en: 'Load failed',
+    'zh-CN': '加载失败',
+    'zh-TW': '載入失敗',
+  },
+  'admin.users.updateRoleFailed': {
+    en: 'Failed to update role',
+    'zh-CN': '更新角色失败',
+    'zh-TW': '更新角色失敗',
+  },
+  'admin.users.deleteFailed': {
+    en: 'Failed to delete user',
+    'zh-CN': '删除用户失败',
+    'zh-TW': '刪除用戶失敗',
   },
 };
 

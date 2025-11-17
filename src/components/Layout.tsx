@@ -81,13 +81,13 @@ export default function Layout({ children }: LayoutProps) {
                     <Shield className="h-5 w-5" />
                     <span className="font-medium">{t('admin.templates.title')}</span>
                   </Link>
-                  <Link 
-                    href="/admin/users" 
-                    className={`flex items-center space-x-1 ${router.pathname === '/admin/users' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-                  >
-                    <Users className="h-5 w-5" />
-                    <span className="font-medium">用户管理</span>
-                  </Link>
+                    <Link
+                      href="/admin/users"
+                      className={`flex items-center space-x-1 ${router.pathname === '/admin/users' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
+                    >
+                      <Users className="h-5 w-5" />
+                      <span className="font-medium">{t('admin.userManagement')}</span>
+                    </Link>
                   <Link 
                     href="/admin/translations" 
                     className={`flex items-center space-x-1 ${router.pathname === '/admin/translations' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}

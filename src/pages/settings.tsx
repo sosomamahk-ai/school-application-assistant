@@ -4,9 +4,11 @@ import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { Lock, Mail, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { setAuthTokenCookie } from '@/utils/token';
+import { useTranslation } from '@/contexts/TranslationContext';
 
 export default function Settings() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -54,22 +56,22 @@ export default function Settings() {
 
     // 验证表单
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError('请填写所有字段');
+      setPasswordError(t('settings.fillAllFields'));
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      setPasswordError('新密码至少需要6个字符');
+      setPasswordError(t('settings.passwordTooShort'));
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError('新密码和确认密码不匹配');
+      setPasswordError(t('settings.passwordMismatch'));
       return;
     }
 
     if (passwordForm.currentPassword === passwordForm.newPassword) {
-      setPasswordError('新密码不能与当前密码相同');
+      setPasswordError(t('settings.passwordSame'));
       return;
     }
 
@@ -100,11 +102,11 @@ export default function Settings() {
         });
         setTimeout(() => setPasswordSuccess(false), 5000);
       } else {
-        setPasswordError(data.error || '修改密码失败');
+        setPasswordError(data.error || t('settings.changePasswordFailed'));
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      setPasswordError('修改密码时发生错误，请重试');
+      setPasswordError(t('settings.changePasswordError'));
     } finally {
       setLoading(false);
     }
@@ -117,19 +119,19 @@ export default function Settings() {
 
     // 验证表单
     if (!emailForm.newEmail || !emailForm.currentPassword) {
-      setEmailError('请填写所有字段');
+      setEmailError(t('settings.fillAllFields'));
       return;
     }
 
     // 验证邮箱格式
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(emailForm.newEmail)) {
-      setEmailError('请输入有效的邮箱地址');
+      setEmailError(t('settings.invalidEmail'));
       return;
     }
 
     if (emailForm.newEmail === currentUser?.email) {
-      setEmailError('新邮箱不能与当前邮箱相同');
+      setEmailError(t('settings.emailSame'));
       return;
     }
 
@@ -165,11 +167,11 @@ export default function Settings() {
         
         setTimeout(() => setEmailSuccess(false), 5000);
       } else {
-        setEmailError(data.error || '修改邮箱失败');
+        setEmailError(data.error || t('settings.changeEmailFailed'));
       }
     } catch (error) {
       console.error('Error changing email:', error);
-      setEmailError('修改邮箱时发生错误，请重试');
+      setEmailError(t('settings.changeEmailError'));
     } finally {
       setLoading(false);
     }
@@ -178,26 +180,26 @@ export default function Settings() {
   return (
     <Layout>
       <Head>
-        <title>账户设置 - 学校申请助手</title>
+        <title>{t('settings.title')} - {t('common.appName')}</title>
       </Head>
 
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">账户设置</h1>
-          <p className="text-gray-600 mt-2">管理您的账户信息和安全设置</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('settings.title')}</h1>
+          <p className="text-gray-600 mt-2">{t('settings.subtitle')}</p>
         </div>
 
         {/* 修改密码 */}
         <div className="card mb-6">
           <div className="flex items-center space-x-2 mb-6">
             <Lock className="h-6 w-6 text-primary-600" />
-            <h2 className="text-xl font-semibold text-gray-900">修改密码</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t('settings.changePassword')}</h2>
           </div>
 
           {passwordSuccess && (
             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-green-800">密码修改成功！</span>
+              <span className="text-green-800">{t('settings.passwordChanged')}</span>
             </div>
           )}
 
@@ -211,7 +213,7 @@ export default function Settings() {
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div>
               <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                当前密码
+                {t('settings.currentPassword')}
               </label>
               <input
                 id="currentPassword"
@@ -219,14 +221,14 @@ export default function Settings() {
                 value={passwordForm.currentPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                 className="input-field"
-                placeholder="请输入当前密码"
+                placeholder={t('settings.currentPasswordPlaceholder')}
                 required
               />
             </div>
 
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                新密码
+                {t('settings.newPassword')}
               </label>
               <input
                 id="newPassword"
@@ -234,7 +236,7 @@ export default function Settings() {
                 value={passwordForm.newPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                 className="input-field"
-                placeholder="请输入新密码（至少6个字符）"
+                placeholder={t('settings.newPasswordPlaceholder')}
                 required
                 minLength={6}
               />
@@ -242,7 +244,7 @@ export default function Settings() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                确认新密码
+                {t('settings.confirmNewPassword')}
               </label>
               <input
                 id="confirmPassword"
@@ -250,7 +252,7 @@ export default function Settings() {
                 value={passwordForm.confirmPassword}
                 onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                 className="input-field"
-                placeholder="请再次输入新密码"
+                placeholder={t('settings.confirmPasswordPlaceholder')}
                 required
                 minLength={6}
               />
@@ -262,7 +264,7 @@ export default function Settings() {
               className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="h-5 w-5" />
-              <span>{loading ? '保存中...' : '修改密码'}</span>
+              <span>{loading ? t('common.saving') : t('settings.changePasswordButton')}</span>
             </button>
           </form>
         </div>
@@ -271,13 +273,13 @@ export default function Settings() {
         <div className="card">
           <div className="flex items-center space-x-2 mb-6">
             <Mail className="h-6 w-6 text-primary-600" />
-            <h2 className="text-xl font-semibold text-gray-900">修改邮箱</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t('settings.changeEmail')}</h2>
           </div>
 
           {emailSuccess && (
             <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-green-800">邮箱修改成功！</span>
+              <span className="text-green-800">{t('settings.emailChanged')}</span>
             </div>
           )}
 
@@ -291,7 +293,7 @@ export default function Settings() {
           <form onSubmit={handleChangeEmail} className="space-y-4">
             <div>
               <label htmlFor="currentEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                当前邮箱
+                {t('settings.currentEmail')}
               </label>
               <input
                 id="currentEmail"
@@ -300,12 +302,12 @@ export default function Settings() {
                 className="input-field bg-gray-50"
                 disabled
               />
-              <p className="text-sm text-gray-500 mt-1">这是您当前使用的邮箱地址</p>
+              <p className="text-sm text-gray-500 mt-1">{t('settings.currentEmailDescription')}</p>
             </div>
 
             <div>
               <label htmlFor="newEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                新邮箱
+                {t('settings.newEmail')}
               </label>
               <input
                 id="newEmail"
@@ -313,14 +315,14 @@ export default function Settings() {
                 value={emailForm.newEmail}
                 onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
                 className="input-field"
-                placeholder="请输入新邮箱地址"
+                placeholder={t('settings.newEmailPlaceholder')}
                 required
               />
             </div>
 
             <div>
               <label htmlFor="emailPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                当前密码（验证身份）
+                {t('settings.emailPassword')}
               </label>
               <input
                 id="emailPassword"
@@ -328,7 +330,7 @@ export default function Settings() {
                 value={emailForm.currentPassword}
                 onChange={(e) => setEmailForm({ ...emailForm, currentPassword: e.target.value })}
                 className="input-field"
-                placeholder="请输入当前密码以验证身份"
+                placeholder={t('settings.emailPasswordPlaceholder')}
                 required
               />
             </div>
@@ -339,7 +341,7 @@ export default function Settings() {
               className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="h-5 w-5" />
-              <span>{loading ? '保存中...' : '修改邮箱'}</span>
+              <span>{loading ? t('common.saving') : t('settings.changeEmailButton')}</span>
             </button>
           </form>
         </div>
