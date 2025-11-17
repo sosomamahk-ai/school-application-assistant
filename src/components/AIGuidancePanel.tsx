@@ -109,21 +109,21 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
       {/* Header */}
       <div className="flex items-center space-x-2 border-b border-gray-200 pb-4">
         <Sparkles className="h-6 w-6 text-primary-600" />
-        <h3 className="text-lg font-semibold text-gray-900">AI Guidance</h3>
+        <h3 className="text-lg font-semibold text-gray-900">AI 智能指导</h3>
       </div>
 
       {/* Field Explanation */}
       {guidance && (
         <>
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">What this field is asking for:</h4>
+            <h4 className="font-medium text-gray-900 mb-2">此字段要求填写：</h4>
             <p className="text-gray-700">{guidance.explanation}</p>
           </div>
 
           {/* Requirements */}
           {guidance.requirements && guidance.requirements.length > 0 && (
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Requirements:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">填写要求：</h4>
               <ul className="list-disc list-inside space-y-1 text-gray-700">
                 {guidance.requirements.map((req, index) => (
                   <li key={index}>{req}</li>
@@ -135,7 +135,7 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
           {/* Examples */}
           {guidance.examples && guidance.examples.length > 0 && (
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Tips & Examples:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">提示与示例：</h4>
               <ul className="list-disc list-inside space-y-1 text-gray-700">
                 {guidance.examples.map((example, index) => (
                   <li key={index}>{example}</li>
@@ -148,13 +148,13 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
           {guidance.suggestedContent && !currentValue && (
             <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
               <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-primary-900">AI Suggestion:</h4>
+                <h4 className="font-medium text-primary-900">AI 建议：</h4>
                 <button
                   onClick={() => onSuggestionAccept && onSuggestionAccept(guidance.suggestedContent!)}
                   className="text-primary-600 hover:text-primary-700 flex items-center space-x-1 text-sm"
                 >
                   <ThumbsUp className="h-4 w-4" />
-                  <span>Use this</span>
+                  <span>使用此建议</span>
                 </button>
               </div>
               <p className="text-gray-700">{guidance.suggestedContent}</p>
@@ -176,12 +176,12 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
                 {generatingContent ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Generating...</span>
+                    <span>生成中...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-5 w-5" />
-                    <span>Generate Content with AI</span>
+                    <span>使用 AI 生成内容</span>
                   </>
                 )}
               </button>
@@ -196,12 +196,12 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
                 {generatingContent ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Analyzing...</span>
+                    <span>分析中...</span>
                   </>
                 ) : (
                   <>
                     <RefreshCw className="h-5 w-5" />
-                    <span>Get Improvement Suggestions</span>
+                    <span>获取改进建议</span>
                   </>
                 )}
               </button>
@@ -214,7 +214,7 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
       {improvingSuggestions && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
           <div>
-            <h4 className="font-medium text-green-900 mb-2">Suggestions for improvement:</h4>
+            <h4 className="font-medium text-green-900 mb-2">改进建议：</h4>
             <ul className="list-disc list-inside space-y-1 text-gray-700">
               {improvingSuggestions.suggestions.map((suggestion, index) => (
                 <li key={index}>{suggestion}</li>
@@ -224,13 +224,13 @@ export default function AIGuidancePanel({ field, currentValue, onSuggestionAccep
 
           <div>
             <div className="flex items-start justify-between mb-2">
-              <h4 className="font-medium text-green-900">Improved Version:</h4>
+              <h4 className="font-medium text-green-900">改进后的版本：</h4>
               <button
                 onClick={() => onSuggestionAccept && onSuggestionAccept(improvingSuggestions.improvedVersion)}
                 className="text-green-600 hover:text-green-700 flex items-center space-x-1 text-sm"
               >
                 <ThumbsUp className="h-4 w-4" />
-                <span>Use this</span>
+                <span>使用此版本</span>
               </button>
             </div>
             <p className="text-gray-700 whitespace-pre-wrap">{improvingSuggestions.improvedVersion}</p>

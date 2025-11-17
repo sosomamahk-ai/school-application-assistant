@@ -287,7 +287,7 @@ export default function ApplicationForm() {
                   className="btn-secondary flex items-center space-x-2"
                 >
                   <Save className="h-5 w-5" />
-                  <span>Save Progress</span>
+                  <span>保存进度</span>
                 </button>
                 <button
                   onClick={() => saveApplication('submitted')}
@@ -295,7 +295,7 @@ export default function ApplicationForm() {
                   className="btn-primary flex items-center space-x-2 disabled:opacity-50"
                 >
                   <Send className="h-5 w-5" />
-                  <span>Submit</span>
+                  <span>提交申请</span>
                 </button>
               </div>
             </div>
@@ -303,8 +303,8 @@ export default function ApplicationForm() {
             {/* Progress Bar */}
             <div className="mt-4">
               <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Progress</span>
-                <span>{progress}% Complete</span>
+                <span>完成进度</span>
+                <span>{progress}% 已完成</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
@@ -320,7 +320,7 @@ export default function ApplicationForm() {
                 onClick={() => setShowAllFields(!showAllFields)}
                 className="text-primary-600 hover:text-primary-700 text-sm font-medium"
               >
-                {showAllFields ? 'Switch to Step-by-Step Mode' : 'View All Fields'}
+                {showAllFields ? '切换到逐步填写模式' : '查看所有字段'}
               </button>
             </div>
           </div>
@@ -333,7 +333,7 @@ export default function ApplicationForm() {
                 <div className="card">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-sm text-gray-600">
-                      Field {currentFieldIndex + 1} of {application.template.fields.length}
+                      字段 {currentFieldIndex + 1} / {application.template.fields.length}
                     </span>
                     <div className="flex space-x-2">
                       <button
@@ -342,14 +342,14 @@ export default function ApplicationForm() {
                         className="btn-secondary disabled:opacity-50 flex items-center space-x-1"
                       >
                         <ChevronLeft className="h-4 w-4" />
-                        <span>Previous</span>
+                        <span>上一个</span>
                       </button>
                       <button
                         onClick={goToNextField}
                         disabled={currentFieldIndex === application.template.fields.length - 1}
                         className="btn-primary disabled:opacity-50 flex items-center space-x-1"
                       >
-                        <span>Next</span>
+                        <span>下一个</span>
                         <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>
@@ -377,11 +377,11 @@ export default function ApplicationForm() {
           {/* All Fields Mode */}
           {showAllFields && (
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">All Application Fields</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">所有申请字段</h2>
               <div className="space-y-6">
                 {application.template.fields.map((field, index) => (
                   <div key={field.id} className="border-b border-gray-200 pb-6 last:border-0">
-                    <div className="text-sm text-gray-500 mb-2">Field {index + 1}</div>
+                    <div className="text-sm text-gray-500 mb-2">字段 {index + 1}</div>
                     <FormFieldInput
                       field={field}
                       value={formData[field.id]}
