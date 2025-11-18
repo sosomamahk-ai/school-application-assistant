@@ -32,7 +32,7 @@ export default function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error || t('auth.errors.loginFailed'));
       }
 
       // Save token
@@ -52,7 +52,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>Login - School Application Assistant</title>
+        <title>{t('auth.login.title')} - {t('common.appName')}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">

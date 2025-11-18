@@ -99,12 +99,16 @@ export default function TranslationsAdmin() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched translations:', Object.keys(data.translations || {}).length, 'keys');
         setTranslations(data.translations || {});
       } else {
-        console.error('Failed to fetch translations');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to fetch translations:', response.status, errorData);
+        alert(`加载翻译失败: ${errorData.error || response.statusText}`);
       }
     } catch (error) {
       console.error('Error fetching translations:', error);
+      alert(`加载翻译出错: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -122,12 +126,20 @@ export default function TranslationsAdmin() {
 
       if (response.ok) {
         const data = await response.json();
-        setScanResult(data.data);
+        console.log('Scan response:', data);
+        if (data.success && data.data) {
+          setScanResult(data.data);
+        } else {
+          console.error('Invalid scan response format:', data);
+        }
       } else {
-        console.error('Failed to scan translations');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to scan translations:', response.status, errorData);
+        alert(`扫描失败: ${errorData.error || response.statusText}`);
       }
     } catch (error) {
       console.error('Error scanning translations:', error);
+      alert(`扫描出错: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setScanning(false);
     }
@@ -214,8 +226,15 @@ export default function TranslationsAdmin() {
 
   // Get pages from scan result
   const pages = useMemo(() => {
-    if (!scanResult) return [];
+    if (!scanResult || !scanResult.byPage) return [];
     return scanResult.byPage.map((p) => p.page).sort();
+  }, [scanResult]);
+
+  // Debug: Log scan result
+  useEffect(() => {
+    if (scanResult) {
+      console.log('Scan result:', scanResult);
+    }
   }, [scanResult]);
 
   // Filter keys based on selected page and search
@@ -223,12 +242,20 @@ export default function TranslationsAdmin() {
     let keys: string[] = [];
 
     if (selectedPage === 'all') {
+      // Show all translation keys
       keys = Object.keys(translations);
-    } else if (scanResult) {
+    } else if (scanResult && scanResult.byPage) {
+      // Show keys for selected page
       const pageData = scanResult.byPage.find((p) => p.page === selectedPage);
       if (pageData) {
         keys = pageData.keys.map((k) => k.key);
+      } else {
+        // Page not found in scan result, return empty
+        keys = [];
       }
+    } else {
+      // No scan result, but show all keys if "all" is selected
+      keys = Object.keys(translations);
     }
 
     // Filter by search query
@@ -243,7 +270,7 @@ export default function TranslationsAdmin() {
     }
 
     // Filter missing keys
-    if (showMissingOnly && scanResult) {
+    if (showMissingOnly && scanResult && scanResult.missingKeys) {
       keys = keys.filter((key) => scanResult.missingKeys.includes(key));
     }
 
@@ -456,8 +483,12 @@ export default function TranslationsAdmin() {
                   {filteredKeys.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                        {searchQuery || showMissingOnly
+                        {Object.keys(translations).length === 0
+                          ? 'No translations loaded. Please check the console for errors.'
+                          : searchQuery || showMissingOnly
                           ? 'No translations found matching your filters'
+                          : selectedPage !== 'all' && (!scanResult || !scanResult.byPage)
+                          ? 'Please click "Scan Keys" first to load page information, or select "All Pages" to view all translations.'
                           : 'No translations found. Click "Scan Keys" to find translation keys in your code.'}
                       </td>
                     </tr>

@@ -161,6 +161,16 @@ export const translations: TranslationData = {
     'zh-CN': '注册',
     'zh-TW': '註冊',
   },
+  'auth.login.orText': {
+    en: 'Or',
+    'zh-CN': '或',
+    'zh-TW': '或',
+  },
+  'auth.login.createAccount': {
+    en: 'create an account',
+    'zh-CN': '创建账户',
+    'zh-TW': '創建帳戶',
+  },
   'auth.register.title': {
     en: 'Create your account',
     'zh-CN': '创建您的账户',

@@ -4,6 +4,7 @@ import { getTokenFromCookieHeader } from '@/utils/token';
 import type { JWTPayload } from '@/utils/auth';
 import fs from 'fs';
 import path from 'path';
+import { translations as defaultTranslations } from '@/lib/translations';
 
 interface TranslationData {
   [key: string]: {
@@ -13,20 +14,23 @@ interface TranslationData {
   };
 }
 
-// Path to translations file
-const TRANSLATIONS_FILE = path.join(process.cwd(), 'src', 'lib', 'translations.json');
+// Path to translations file (optional override file)
+const TRANSLATIONS_FILE = path.join(process.cwd(), 'public', 'translations.json');
 
-// Load translations from file
+// Load translations from file or use defaults
 function loadTranslationsFromFile(): TranslationData {
   try {
     if (fs.existsSync(TRANSLATIONS_FILE)) {
       const fileContent = fs.readFileSync(TRANSLATIONS_FILE, 'utf-8');
-      return JSON.parse(fileContent);
+      const fileTranslations = JSON.parse(fileContent);
+      // Merge with defaults (file overrides defaults)
+      return { ...defaultTranslations, ...fileTranslations };
     }
   } catch (error) {
     console.error('Error loading translations file:', error);
   }
-  return {};
+  // Return default translations from TypeScript file
+  return defaultTranslations;
 }
 
 // Save translations to file
