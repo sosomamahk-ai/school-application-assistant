@@ -266,6 +266,15 @@ export interface Translations {
     templateId: string;
     fieldCount: string;
     updatedAt: string;
+    searchLabel: string;
+    searchPlaceholder: string;
+    clearSearch: string;
+    searchHint: string;
+    searchResults: string;
+    searching: string;
+    noTemplatesSearch: string;
+    noDescription: string;
+    tagSystem: string;
     active: string;
     inactive: string;
     preview: string;
