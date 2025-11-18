@@ -7,8 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 import { MASTER_TEMPLATE_SCHOOL_ID } from '@/constants/templates';
-import fs from 'fs';
-import path from 'path';
+import { MASTER_TEMPLATE_DATA } from '@/data/master-template';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,30 +24,16 @@ export default async function handler(
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
-    // 读取主模板 JSON 文件
-    const templatePath = path.join(process.cwd(), 'template-examples', 'master-template-all-fields.json');
-    let masterTemplateData: any;
-    
-    try {
-      const fileContent = fs.readFileSync(templatePath, 'utf-8');
-      masterTemplateData = JSON.parse(fileContent);
-    } catch (error) {
-      console.error('Error reading master template file:', error);
-      return res.status(500).json({ 
-        error: 'Failed to read master template file',
-        message: 'Master template JSON file not found or invalid'
-      });
-    }
-
     // 准备主模板数据
     const templateData = {
-      schoolId: masterTemplateData.schoolId,
-      schoolName: masterTemplateData.schoolName,
-      program: masterTemplateData.program,
-      description: masterTemplateData.description,
-      category: masterTemplateData.category,
-      fieldsData: masterTemplateData.fieldsData,
-      isActive: masterTemplateData.isActive !== undefined ? masterTemplateData.isActive : false
+      schoolId: MASTER_TEMPLATE_DATA.schoolId,
+      schoolName: MASTER_TEMPLATE_DATA.schoolName,
+      program: MASTER_TEMPLATE_DATA.program,
+      description: MASTER_TEMPLATE_DATA.description,
+      category: MASTER_TEMPLATE_DATA.category,
+      fieldsData: MASTER_TEMPLATE_DATA.fieldsData,
+      isActive:
+        MASTER_TEMPLATE_DATA.isActive !== undefined ? MASTER_TEMPLATE_DATA.isActive : false
     };
 
     // 使用 upsert 来恢复或更新主模板
