@@ -46,14 +46,15 @@ function detectLanguage(): Language {
 }
 
 export function TranslationProvider({ children }: TranslationProviderProps) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      return detectLanguage();
-    }
-    return 'en';
-  });
+  const [language, setLanguageState] = useState<Language>('en');
 
   const [translations, setTranslations] = useState<TranslationData>(defaultTranslations);
+
+  // Detect preferred language once we're on the client to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setLanguageState(detectLanguage());
+  }, []);
 
   // Load translations on mount
   useEffect(() => {
