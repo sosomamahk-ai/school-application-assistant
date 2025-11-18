@@ -17,33 +17,39 @@ export default async function handler(
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
-    const templateData = req.body;
+    let templateData = req.body;
+
+    // 移除不应该被导入的字段（如 id, createdAt, updatedAt）
+    const { id, createdAt, updatedAt, ...cleanTemplateData } = templateData as any;
 
     // 验证必需字段
-    if (!templateData.schoolId || !templateData.schoolName || !templateData.program) {
+    if (!cleanTemplateData.schoolId || !cleanTemplateData.schoolName || !cleanTemplateData.program) {
       return res.status(400).json({ error: 'Missing required fields: schoolId, schoolName, program' });
     }
 
+    // 确保 fieldsData 是数组
+    const fieldsData = cleanTemplateData.fieldsData || cleanTemplateData.fields || [];
+
     // 如果存在相同 schoolId，则更新；否则创建新记录
     const template = await prisma.schoolFormTemplate.upsert({
-      where: { schoolId: templateData.schoolId },
+      where: { schoolId: cleanTemplateData.schoolId },
       update: {
-        schoolName: templateData.schoolName,
-        program: templateData.program,
-        description: templateData.description || null,
-        category: templateData.category || null,
-        fieldsData: templateData.fieldsData || templateData.fields || [],
-        isActive: templateData.isActive !== undefined ? templateData.isActive : true,
+        schoolName: cleanTemplateData.schoolName,
+        program: cleanTemplateData.program,
+        description: cleanTemplateData.description || null,
+        category: cleanTemplateData.category || null,
+        fieldsData: fieldsData as any,
+        isActive: cleanTemplateData.isActive !== undefined ? cleanTemplateData.isActive : true,
         updatedAt: new Date()
       },
       create: {
-        schoolId: templateData.schoolId,
-        schoolName: templateData.schoolName,
-        program: templateData.program,
-        description: templateData.description || null,
-        category: templateData.category || null,
-        fieldsData: templateData.fieldsData || templateData.fields || [],
-        isActive: templateData.isActive !== undefined ? templateData.isActive : true
+        schoolId: cleanTemplateData.schoolId,
+        schoolName: cleanTemplateData.schoolName,
+        program: cleanTemplateData.program,
+        description: cleanTemplateData.description || null,
+        category: cleanTemplateData.category || null,
+        fieldsData: fieldsData as any,
+        isActive: cleanTemplateData.isActive !== undefined ? cleanTemplateData.isActive : true
       }
     });
 

@@ -304,12 +304,12 @@ export default function TemplatesAdmin() {
     setShowImportModal(true);
   };
 
-  const handleRestoreMaster = async () => {
-    if (!confirm(t('admin.templates.confirmRestoreMaster'))) return;
+  const handleCreateDGS = async () => {
+    if (!confirm(t('admin.templates.confirmCreateDGS'))) return;
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/templates/restore-master', {
+      const response = await fetch('/api/admin/templates/create-dgs', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -319,16 +319,16 @@ export default function TemplatesAdmin() {
 
       if (response.ok) {
         const data = await response.json();
-        alert(t('admin.templates.success.restoreMaster'));
+        alert(t('admin.templates.success.createDGS'));
         fetchTemplates();
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMessage = errorData.message || errorData.error || 'Failed to restore master template';
-        alert(t('admin.templates.error.restoreMaster') + ': ' + errorMessage);
+        const errorMessage = errorData.message || errorData.error || 'Failed to create DGS template';
+        alert(t('admin.templates.error.createDGS') + ': ' + errorMessage);
       }
     } catch (error) {
-      console.error('Error restoring master template:', error);
-      alert(t('admin.templates.error.restoreMaster'));
+      console.error('Error creating DGS template:', error);
+      alert(t('admin.templates.error.createDGS'));
     }
   };
 
@@ -379,12 +379,12 @@ export default function TemplatesAdmin() {
           </div>
           <div className="flex space-x-3">
             <button
-              onClick={handleRestoreMaster}
+              onClick={handleCreateDGS}
               className="btn-secondary flex items-center space-x-2"
-              title={t('admin.templates.action.restoreMaster')}
+              title={t('admin.templates.action.createDGS')}
             >
               <Save className="h-5 w-5" />
-              <span>{t('admin.templates.action.restoreMaster')}</span>
+              <span>{t('admin.templates.action.createDGS')}</span>
             </button>
             <button
               onClick={handleImport}
@@ -695,7 +695,7 @@ export default function TemplatesAdmin() {
             onClose={() => setShowImportModal(false)}
             onSuccess={() => {
               setShowImportModal(false);
-              fetchTemplates();
+              fetchTemplates(); // Refresh templates list after successful import
             }}
           />
         )}
