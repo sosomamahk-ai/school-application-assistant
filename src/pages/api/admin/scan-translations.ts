@@ -122,10 +122,56 @@ function scanDirectory(dirPath: string, extensions: string[] = ['.tsx', '.ts', '
   return files;
 }
 
+function getAllPages(srcDir: string = path.join(process.cwd(), 'src')): string[] {
+  const pagesDir = path.join(srcDir, 'pages');
+  const allPages = new Set<string>();
+  
+  if (!fs.existsSync(pagesDir)) {
+    return [];
+  }
+  
+  // Helper function to recursively get all page files
+  const getPageFiles = (dir: string): void => {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        
+        // Skip API routes, special files, and hidden files
+        if (entry.name === 'api' || entry.name.startsWith('_') || entry.name.startsWith('.')) {
+          continue;
+        }
+        
+        if (entry.isDirectory()) {
+          getPageFiles(fullPath);
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name);
+          if (['.tsx', '.ts', '.jsx', '.js'].includes(ext)) {
+            // Extract page route from file path
+            // Normalize path separators for cross-platform compatibility
+            const normalizedPath = fullPath.replace(/\\/g, '/');
+            const pageRoute = extractPageName(normalizedPath);
+            if (pageRoute && !pageRoute.includes('/api/')) {
+              allPages.add(pageRoute);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`Error reading directory ${dir}:`, error);
+    }
+  };
+  
+  getPageFiles(pagesDir);
+  return Array.from(allPages).sort();
+}
+
 function scanAllTranslations(srcDir: string = path.join(process.cwd(), 'src')): {
   allKeys: TranslationKeyInfo[];
   byPage: PageGroup[];
   uniqueKeys: Set<string>;
+  allPages: string[];
 } {
   const allKeys: TranslationKeyInfo[] = [];
   const uniqueKeys = new Set<string>();
@@ -134,6 +180,10 @@ function scanAllTranslations(srcDir: string = path.join(process.cwd(), 'src')): 
   if (fs.existsSync(pagesDir)) {
     const pageFiles = scanDirectory(pagesDir);
     pageFiles.forEach(file => {
+      // Skip API routes
+      if (file.includes('/api/')) {
+        return;
+      }
       const keys = scanFile(file);
       keys.forEach(key => {
         allKeys.push(key);
@@ -170,10 +220,14 @@ function scanAllTranslations(srcDir: string = path.join(process.cwd(), 'src')): 
     }))
     .sort((a, b) => a.page.localeCompare(b.page));
   
+  // Get all pages from the routing structure
+  const allPages = getAllPages(srcDir);
+  
   return {
     allKeys,
     byPage,
     uniqueKeys,
+    allPages,
   };
 }
 
@@ -205,6 +259,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         uniqueKeys: Array.from(scanResult.uniqueKeys),
         byPage: scanResult.byPage,
         missingKeys: uniqueMissing,
+        allPages: scanResult.allPages,
       },
     });
   } catch (error) {

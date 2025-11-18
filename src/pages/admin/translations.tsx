@@ -33,6 +33,7 @@ interface ScanResult {
     }>;
   }>;
   missingKeys: string[];
+  allPages?: string[];
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => {
@@ -224,10 +225,18 @@ export default function TranslationsAdmin() {
     }));
   };
 
-  // Get pages from scan result
+  // Get pages from scan result - use allPages if available, otherwise fall back to byPage
   const pages = useMemo(() => {
-    if (!scanResult || !scanResult.byPage) return [];
-    return scanResult.byPage.map((p) => p.page).sort();
+    if (!scanResult) return [];
+    // Prefer allPages (all pages from routing structure) over byPage (only pages with translation keys)
+    if (scanResult.allPages && scanResult.allPages.length > 0) {
+      return scanResult.allPages;
+    }
+    // Fallback to pages with translation keys
+    if (scanResult.byPage) {
+      return scanResult.byPage.map((p) => p.page).sort();
+    }
+    return [];
   }, [scanResult]);
 
   // Debug: Log scan result

@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from '@/contexts/TranslationContext';
+import type { TranslationData } from '@/lib/translations';
 
 interface Field {
   id: string;
@@ -31,6 +33,7 @@ export default function NewTemplate() {
   const { baseTemplate } = router.query;
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [translationsData, setTranslationsData] = useState<TranslationData>({});
   const [template, setTemplate] = useState({
     schoolId: '',
     schoolName: '',
@@ -40,6 +43,29 @@ export default function NewTemplate() {
     isActive: true,
   });
   const [fields, setFields] = useState<Field[]>([]);
+
+  // Fetch translations data
+  useEffect(() => {
+    fetchTranslations();
+  }, []);
+
+  const fetchTranslations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/translations', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTranslationsData(data.translations || {});
+      }
+    } catch (error) {
+      console.error('Error fetching translations:', error);
+    }
+  };
 
   // 如果有 baseTemplate 参数，加载该模板数据
   useEffect(() => {
@@ -290,6 +316,68 @@ export default function NewTemplate() {
             </div>
           </div>
         </div>
+
+        {/* Translation Keys Management */}
+        {fields.length > 0 && (
+          <div className="card mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">字段标签翻译管理</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              管理模板字段标签的多语言翻译。Key 列显示翻译键字符串。
+            </p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      Key
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      Simplified Chinese
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      Traditional Chinese
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      English
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {getAllFieldLabels(fields).map((labelKey) => {
+                    const translation = translationsData[labelKey] || {
+                      en: '',
+                      'zh-CN': '',
+                      'zh-TW': '',
+                    };
+                    
+                    return (
+                      <tr key={labelKey} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <code className="text-sm font-mono text-gray-900">{labelKey}</code>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">
+                            {translation['zh-CN'] || <span className="text-gray-400">-</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">
+                            {translation['zh-TW'] || <span className="text-gray-400">-</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">
+                            {translation.en || <span className="text-gray-400">-</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Fields Configuration */}
         <div className="card mb-6">
@@ -542,5 +630,28 @@ function FieldEditor({
       )}
     </div>
   );
+}
+
+// Helper function to extract all field label keys from fields
+function getAllFieldLabels(fields: Field[]): string[] {
+  const keys = new Set<string>();
+  
+  const processField = (field: Field) => {
+    if (field.label) {
+      // Generate translation key from field label
+      // Format: template.field.{fieldId}
+      const key = `template.field.${field.id}`;
+      keys.add(key);
+    }
+    
+    // Process nested fields in sections
+    if (field.fields && Array.isArray(field.fields)) {
+      field.fields.forEach(processField);
+    }
+  };
+  
+  fields.forEach(processField);
+  
+  return Array.from(keys).sort();
 }
 
