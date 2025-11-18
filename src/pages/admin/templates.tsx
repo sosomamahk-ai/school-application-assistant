@@ -304,6 +304,34 @@ export default function TemplatesAdmin() {
     setShowImportModal(true);
   };
 
+  const handleRestoreMaster = async () => {
+    if (!confirm(t('admin.templates.confirmRestoreMaster'))) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/templates/restore-master', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(t('admin.templates.success.restoreMaster'));
+        fetchTemplates();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorMessage = errorData.message || errorData.error || 'Failed to restore master template';
+        alert(t('admin.templates.error.restoreMaster') + ': ' + errorMessage);
+      }
+    } catch (error) {
+      console.error('Error restoring master template:', error);
+      alert(t('admin.templates.error.restoreMaster'));
+    }
+  };
+
   // Helper function to get category translation
   const getCategoryTranslation = (categoryKey: string) => {
     return t(`admin.templates.category.${categoryKey}` as any);
@@ -350,6 +378,14 @@ export default function TemplatesAdmin() {
             <p className="text-gray-600 mt-2">{t('admin.templates.description')}</p>
           </div>
           <div className="flex space-x-3">
+            <button
+              onClick={handleRestoreMaster}
+              className="btn-secondary flex items-center space-x-2"
+              title={t('admin.templates.action.restoreMaster')}
+            >
+              <Save className="h-5 w-5" />
+              <span>{t('admin.templates.action.restoreMaster')}</span>
+            </button>
             <button
               onClick={handleImport}
               className="btn-secondary flex items-center space-x-2"

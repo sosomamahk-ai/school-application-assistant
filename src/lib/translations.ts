@@ -1055,6 +1055,26 @@ export const translations: TranslationData = {
     'zh-CN': '无法删除主模板（系统模板）',
     'zh-TW': '無法刪除主模板（系統範本）',
   },
+  'admin.templates.action.restoreMaster': {
+    en: 'Restore Master Template',
+    'zh-CN': '恢复主模板',
+    'zh-TW': '恢復主模板',
+  },
+  'admin.templates.confirmRestoreMaster': {
+    en: 'Are you sure you want to restore the master template? This will restore the master template with all available fields.',
+    'zh-CN': '确定要恢复主模板吗？这将恢复包含所有可用字段的主模板。',
+    'zh-TW': '確定要恢復主模板嗎？這將恢復包含所有可用欄位的主模板。',
+  },
+  'admin.templates.success.restoreMaster': {
+    en: 'Master template restored successfully!',
+    'zh-CN': '主模板恢复成功！',
+    'zh-TW': '主模板恢復成功！',
+  },
+  'admin.templates.error.restoreMaster': {
+    en: 'Failed to restore master template',
+    'zh-CN': '恢复主模板失败',
+    'zh-TW': '恢復主模板失敗',
+  },
   'admin.templates.import.title': {
     en: 'Import School Template',
     'zh-CN': '导入学校模板',
