@@ -212,6 +212,77 @@ function renderMappings() {
 }
 
 /**
+ * 加载学校列表到下拉菜单
+ */
+async function loadSchoolList() {
+  try {
+    const apiUrl = await getApiBaseUrl();
+    const response = await fetch(`${apiUrl}/api/templates`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const templates = data.templates || data || [];
+      
+      // 清空现有选项（保留第一个默认选项）
+      elements.schoolSelect.innerHTML = '<option value="">请选择学校...</option>';
+      
+      // 添加学校选项
+      templates.forEach(template => {
+        const option = document.createElement('option');
+        option.value = template.schoolId;
+        option.textContent = `${template.schoolName || template.schoolId} - ${template.program || ''}`;
+        elements.schoolSelect.appendChild(option);
+      });
+      
+      // 如果没有学校，显示提示
+      if (templates.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '暂无学校模板';
+        option.disabled = true;
+        elements.schoolSelect.appendChild(option);
+      }
+    } else {
+      // API 请求失败，使用预定义的学校列表
+      loadDefaultSchoolList();
+    }
+  } catch (error) {
+    console.error('Load school list error:', error);
+    // 出错时使用预定义的学校列表
+    loadDefaultSchoolList();
+  }
+}
+
+/**
+ * 加载默认学校列表（当 API 不可用时）
+ */
+function loadDefaultSchoolList() {
+  const defaultSchools = [
+    { schoolId: 'oxford', name: 'Oxford University' },
+    { schoolId: 'cambridge', name: 'Cambridge University' },
+    { schoolId: 'harvard_graduate', name: 'Harvard University - Graduate' },
+    { schoolId: 'stanford_graduate', name: 'Stanford University - Graduate' },
+    { schoolId: 'mit_graduate', name: 'MIT - Graduate' },
+    { schoolId: 'oxford_msc_cs', name: 'Oxford - MSc Computer Science' },
+    { schoolId: 'mit_meche', name: 'MIT - Mechanical Engineering' },
+  ];
+  
+  elements.schoolSelect.innerHTML = '<option value="">请选择学校...</option>';
+  
+  defaultSchools.forEach(school => {
+    const option = document.createElement('option');
+    option.value = school.schoolId;
+    option.textContent = school.name;
+    elements.schoolSelect.appendChild(option);
+  });
+}
+
+/**
  * 检测学校 ID
  */
 async function detectSchool() {
@@ -233,7 +304,8 @@ async function detectSchool() {
       elements.schoolSection.style.display = 'block';
       elements.currentSchoolId.textContent = '未识别';
       elements.schoolSelect.style.display = 'block';
-      // 可以在这里加载学校列表
+      // 加载学校列表
+      await loadSchoolList();
     }
   } catch (error) {
     console.error('Detect school error:', error);
@@ -330,6 +402,11 @@ async function handleScan() {
 
       renderFields();
       updateStatus('ready', `找到 ${currentFields.length} 个字段`);
+      
+      // 如果已识别学校，自动显示上传按钮
+      if (currentSchoolId) {
+        elements.pushFieldsBtn.style.display = 'inline-block';
+      }
     }
   } catch (error) {
     console.error('Scan error:', error);
@@ -349,8 +426,18 @@ async function handlePushFields() {
       throw new Error('请先选择或识别学校');
     }
 
+    // 如果字段为空，自动触发扫描
     if (currentFields.length === 0) {
-      throw new Error('请先扫描表单字段');
+      updateStatus('loading', '正在扫描表单字段...');
+      elements.pushFieldsBtn.disabled = true;
+      
+      // 自动触发扫描
+      await handleScan();
+      
+      // 扫描后再次检查
+      if (currentFields.length === 0) {
+        throw new Error('未找到表单字段，请确保当前页面包含表单元素');
+      }
     }
 
     updateStatus('loading', '上传模板中...');
@@ -363,7 +450,7 @@ async function handlePushFields() {
     });
 
     if (response && response.success) {
-      updateStatus('ready', '模板上传成功');
+      updateStatus('ready', `模板上传成功！已上传 ${currentFields.length} 个字段`);
     } else {
       throw new Error(response?.error || '上传失败');
     }

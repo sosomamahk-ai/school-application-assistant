@@ -6,53 +6,169 @@
   <title>字段管理 - School Application Autofill</title>
   <link rel="stylesheet" href="popup.css">
   <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+    }
     body {
-      width: 600px;
-      min-height: 500px;
+      background: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    .container {
+      width: 100%;
+      max-width: 1600px;
+      height: 100vh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
       padding: 20px;
+      overflow: hidden;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      margin: 0;
+      color: #1f2937;
+      font-size: 24px;
+    }
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+    @media (max-width: 1200px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
     }
     .field-editor {
       background: white;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
     }
     .field-editor h3 {
       margin-top: 0;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       color: #1f2937;
+      font-size: 18px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .field-editor-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    .field-editor-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .field-editor-content::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    .field-editor-content::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+    .field-editor-content::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+    .fields-container {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+    .fields-container h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: #1f2937;
+      font-size: 18px;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 8px;
+      flex-shrink: 0;
     }
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 18px;
     }
     .form-group label {
       display: block;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 600;
       color: #374151;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
+      white-space: nowrap;
     }
     .form-group input {
       width: 100%;
-      padding: 8px;
+      padding: 12px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .form-group input:focus {
       outline: none;
       border-color: #667eea;
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
+    .form-group small {
+      display: block;
+      color: #6b7280;
+      font-size: 11px;
+      margin-top: 4px;
+    }
     .btn-group {
       display: flex;
       gap: 8px;
-      margin-top: 12px;
+      margin-top: 16px;
     }
     .fields-list {
-      max-height: 400px;
+      flex: 1;
       overflow-y: auto;
+      padding-right: 8px;
+      min-height: 0;
+    }
+    .fields-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .fields-list::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    .fields-list::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+    .fields-list::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
     }
     .field-item {
       display: flex;
@@ -63,41 +179,76 @@
       border: 1px solid #e5e7eb;
       border-radius: 6px;
       margin-bottom: 8px;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .field-item:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
     }
     .field-item-info {
       flex: 1;
+      min-width: 0;
     }
     .field-item-key {
       font-weight: 600;
       color: #1f2937;
       font-family: 'Monaco', 'Courier New', monospace;
       font-size: 13px;
+      word-break: break-all;
     }
     .field-item-label {
       color: #6b7280;
       font-size: 12px;
       margin-top: 4px;
     }
+    .field-item-category {
+      color: #9ca3af;
+      font-size: 11px;
+      margin-top: 2px;
+      font-style: italic;
+    }
     .field-item-actions {
       display: flex;
-      gap: 4px;
+      gap: 6px;
+      margin-left: 12px;
+      flex-shrink: 0;
     }
     .btn-small {
-      padding: 4px 8px;
+      padding: 6px 12px;
       font-size: 12px;
+      white-space: nowrap;
     }
     .category-header {
       font-weight: 600;
       color: #667eea;
-      margin-top: 16px;
-      margin-bottom: 8px;
-      padding-bottom: 4px;
+      margin-top: 20px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
       border-bottom: 2px solid #667eea;
+      font-size: 14px;
+    }
+    .category-header:first-child {
+      margin-top: 0;
     }
     .empty-state {
       text-align: center;
-      padding: 40px;
+      padding: 60px 20px;
       color: #9ca3af;
+    }
+    .footer-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-shrink: 0;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer-actions .btn {
+      flex: 1;
+      max-width: 300px;
+      padding: 12px 24px;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -107,41 +258,47 @@
       <h1>📝 字段管理</h1>
     </header>
 
-    <!-- 添加新字段 -->
-    <div class="field-editor">
-      <h3>添加新字段</h3>
-      <div class="form-group">
-        <label>字段键 (Key) *</label>
-        <input type="text" id="fieldKey" placeholder="例如: custom_field_name" />
-        <small style="color: #6b7280; font-size: 11px;">用于代码中引用，使用小写字母和下划线</small>
+    <!-- 主要内容：左右并列布局 -->
+    <div class="main-content">
+      <!-- 左侧：添加新字段 -->
+      <div class="field-editor">
+        <h3>➕ 添加新字段</h3>
+        <div class="field-editor-content">
+          <div class="form-group">
+            <label>字段键 (Key) *</label>
+            <input type="text" id="fieldKey" placeholder="例如: custom_field_name" />
+            <small>用于代码中引用，使用小写字母和下划线</small>
+          </div>
+          <div class="form-group">
+            <label>显示标签 (Label) *</label>
+            <input type="text" id="fieldLabel" placeholder="例如: 自定义字段 (Custom Field)" />
+            <small>在右键菜单中显示的文本</small>
+          </div>
+          <div class="form-group">
+            <label>分类 (Category)</label>
+            <input type="text" id="fieldCategory" placeholder="例如: 自定义" />
+            <small>可选，用于分组显示</small>
+          </div>
+          <div class="btn-group">
+            <button id="addFieldBtn" class="btn btn-primary">添加字段</button>
+            <button id="resetBtn" class="btn btn-secondary">重置为默认</button>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label>显示标签 (Label) *</label>
-        <input type="text" id="fieldLabel" placeholder="例如: 自定义字段 (Custom Field)" />
-        <small style="color: #6b7280; font-size: 11px;">在右键菜单中显示的文本</small>
-      </div>
-      <div class="form-group">
-        <label>分类 (Category)</label>
-        <input type="text" id="fieldCategory" placeholder="例如: 自定义" />
-        <small style="color: #6b7280; font-size: 11px;">可选，用于分组显示</small>
-      </div>
-      <div class="btn-group">
-        <button id="addFieldBtn" class="btn btn-primary">添加字段</button>
-        <button id="resetBtn" class="btn btn-secondary">重置为默认</button>
+
+      <!-- 右侧：已配置的字段列表 -->
+      <div class="fields-container">
+        <h3>📋 已配置的字段</h3>
+        <div class="fields-list" id="fieldsList">
+          <!-- 动态生成 -->
+        </div>
       </div>
     </div>
 
-    <!-- 字段列表 -->
-    <div class="section">
-      <h3>已配置的字段</h3>
-      <div class="fields-list" id="fieldsList">
-        <!-- 动态生成 -->
-      </div>
-    </div>
-
-    <div class="section">
-      <button id="saveBtn" class="btn btn-primary" style="width: 100%;">保存更改</button>
-      <button id="backBtn" class="btn btn-link" style="width: 100%; margin-top: 8px;">返回 Popup</button>
+    <!-- 底部操作按钮 -->
+    <div class="footer-actions">
+      <button id="saveBtn" class="btn btn-primary">保存更改</button>
+      <button id="backBtn" class="btn btn-secondary">返回 Popup</button>
     </div>
   </div>
 

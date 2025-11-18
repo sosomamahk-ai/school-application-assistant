@@ -152,6 +152,7 @@ function renderFields() {
         <div class="field-item-info">
           <div class="field-item-key">${field.key}</div>
           <div class="field-item-label">${field.label}</div>
+          ${field.category ? `<div class="field-item-category">分类: ${field.category}</div>` : ''}
         </div>
         <div class="field-item-actions">
           <button class="btn btn-secondary btn-small" data-action="edit" data-key="${field.key}">编辑</button>
