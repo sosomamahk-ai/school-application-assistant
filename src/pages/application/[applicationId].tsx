@@ -1,15 +1,20 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import AIGuidancePanel from '@/components/AIGuidancePanel';
-import FormFieldInput from '@/components/FormFieldInput';
-import { FormField, ApplicationFormData } from '@/types';
-import { ChevronLeft, ChevronRight, Save, Send, Loader2, Download, FileText, Code } from 'lucide-react';
+import { Save, Send, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
+import ApplicationForm, {
+  ApplicationFormState,
+  ApplicationField,
+  ApplicationTab
+} from '@/components/ApplicationForm';
+import type { FormField } from '@/types';
+import type { StructuredFormData, TemplateNode } from '@/utils/templates';
+import { TEMPLATE_CHILD_COLLECTION_KEYS } from '@/utils/templates';
 
-interface ApplicationData {
+interface ApiApplication {
   id: string;
   template: {
     id: string;
@@ -18,389 +23,334 @@ interface ApplicationData {
     description?: string;
     fields: FormField[];
   };
-  formData: ApplicationFormData;
+  formData: StructuredFormData;
   status: string;
 }
 
-export default function ApplicationForm() {
+type StructuredFormDataState = StructuredFormData | Record<string, any>;
+const FALLBACK_TAB_TITLE = '申请内容';
+
+function getChildNodes(node?: TemplateNode): TemplateNode[] {
+  if (!node) {
+    return [];
+  }
+  const children: TemplateNode[] = [];
+  TEMPLATE_CHILD_COLLECTION_KEYS.forEach((key) => {
+    const value = node[key];
+    if (Array.isArray(value)) {
+      children.push(...value);
+    }
+  });
+  return children;
+}
+
+function mapFieldType(nodeType?: string): ApplicationField['type'] {
+  switch (nodeType) {
+    case 'textarea':
+    case 'essay':
+      return 'textarea';
+    case 'select':
+      return 'select';
+    case 'checkbox':
+      return 'checkbox';
+    case 'date':
+      return 'date';
+    case 'number':
+      return 'number';
+    case 'text':
+    default:
+      return 'text';
+  }
+}
+
+function collectLeafFields(
+  node: TemplateNode,
+  values: StructuredFormDataState,
+  accumulator: ApplicationField[]
+): void {
+  const children = getChildNodes(node);
+  if (children.length === 0 && node.id) {
+    accumulator.push({
+      id: node.id,
+      label: node.label || node.id,
+      type: mapFieldType(node.type),
+      value: values[node.id] ?? ''
+    });
+    return;
+  }
+
+  children.forEach((child) => collectLeafFields(child, values, accumulator));
+}
+
+function buildTabsFromStructure(
+  structureInput: TemplateNode[] | TemplateNode | undefined,
+  values: StructuredFormDataState,
+  fallbackFields?: FormField[]
+): ApplicationTab[] {
+  const structureArray: TemplateNode[] = Array.isArray(structureInput)
+    ? structureInput
+    : structureInput
+      ? [structureInput]
+      : [];
+
+  const resolvedTabs: TemplateNode[] = [];
+
+  structureArray.forEach((node) => {
+    if (node.tabs && Array.isArray(node.tabs) && node.tabs.length > 0) {
+      resolvedTabs.push(...node.tabs);
+    } else {
+      resolvedTabs.push(node);
+    }
+  });
+
+  const tabs: ApplicationTab[] = resolvedTabs
+    .map((node, index) => {
+      const fields: ApplicationField[] = [];
+      collectLeafFields(node, values, fields);
+      return {
+        id: node.id || `tab-${index + 1}`,
+        title: node.label || `Tab ${index + 1}`,
+        fields
+      };
+    })
+    .filter((tab) => tab.fields.length > 0);
+
+  if (tabs.length === 0 && fallbackFields && fallbackFields.length > 0) {
+    return [
+      {
+        id: 'tab-default',
+        title: FALLBACK_TAB_TITLE,
+        fields: fallbackFields.map<ApplicationField>((field) => ({
+          id: field.id,
+          label: field.label,
+          type: mapFieldType(field.type),
+          value: values[field.id] ?? ''
+        }))
+      }
+    ];
+  }
+
+  return tabs;
+}
+
+export default function ApplicationPage() {
   const router = useRouter();
   const { applicationId } = router.query;
   const { language } = useTranslation();
-  
-  const [application, setApplication] = useState<ApplicationData | null>(null);
-  const [formData, setFormData] = useState<ApplicationFormData>({});
-  const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
+
+  const [application, setApplication] = useState<ApiApplication | null>(null);
+  const [formData, setFormData] = useState<StructuredFormDataState>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showAllFields, setShowAllFields] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-
-  const fetchApplication = useCallback(async () => {
-    if (!applicationId || typeof applicationId !== 'string') return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/applications/${applicationId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setApplication(data.application);
-        setFormData(data.application.formData || {});
-      }
-    } catch (error) {
-      console.error('Error fetching application:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [applicationId]);
-
-  const checkAutoFill = useCallback(async () => {
-    if (!applicationId || typeof applicationId !== 'string') return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      
-      // First, get the application to get its fields
-      const appResponse = await fetch(`/api/applications/${applicationId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!appResponse.ok) return;
-      
-      const appData = await appResponse.json();
-      const fields = appData.application.template.fields;
-      
-      // Then auto-fill based on user profile
-      const response = await fetch('/api/ai/auto-fill', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ fields })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setFormData(prev => ({ ...data.formData, ...prev }));
-      }
-    } catch (error) {
-      console.error('Error auto-filling:', error);
-    }
-  }, [applicationId]);
 
   useEffect(() => {
-    if (applicationId) {
-      fetchApplication();
-      checkAutoFill();
+    if (!applicationId || typeof applicationId !== 'string') {
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicationId, fetchApplication, checkAutoFill]);
 
-  const saveApplication = async (updateStatus?: string) => {
-    setSaving(true);
-    try {
+    let cancelled = false;
+
+    const fetchApplication = async () => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch(`/api/applications/${applicationId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch application');
+        }
+
+        const data = await response.json();
+        if (cancelled) {
+          return;
+        }
+
+        setApplication(data.application);
+        setFormData(data.application.formData || {});
+      } catch (error) {
+        console.error('Error fetching application:', error);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchApplication();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId, router]);
+
+  const handleApplicationChange = (nextApplication: ApplicationFormState) => {
+    setFormData((previous) => {
+      const base: StructuredFormDataState =
+        previous && typeof previous === 'object' ? { ...previous } : {};
+      nextApplication.tabs.forEach((tab) => {
+        tab.fields.forEach((field) => {
+          base[field.id] = field.value ?? '';
+        });
+      });
+      base.__structure = previous?.__structure;
+      return base;
+    });
+  };
+
+  const formTabs = useMemo<ApplicationTab[]>(() => {
+    if (!application) {
+      return [];
+    }
+    const structure = formData.__structure as TemplateNode[] | TemplateNode | undefined;
+    return buildTabsFromStructure(structure, formData, application.template.fields);
+  }, [application, formData]);
+
+  const formState = useMemo<ApplicationFormState | null>(() => {
+    if (!application) {
+      return null;
+    }
+    return {
+      id: application.id,
+      name: getLocalizedSchoolName(application.template.schoolName, language),
+      tabs: formTabs
+    };
+  }, [application, formTabs, language]);
+
+  const completion = useMemo(() => {
+    if (formTabs.length === 0) {
+      return 0;
+    }
+
+    const allFields = formTabs.flatMap((tab) => tab.fields);
+    if (allFields.length === 0) {
+      return 0;
+    }
+
+    const filled = allFields.filter((field) => {
+      if (field.type === 'checkbox') {
+        return Boolean(field.value);
+      }
+      return field.value !== undefined && field.value !== null && field.value !== '';
+    }).length;
+
+    return Math.round((filled / allFields.length) * 100);
+  }, [formTabs]);
+
+  const handleSave = async (nextStatus?: 'submitted') => {
+    if (!applicationId || typeof applicationId !== 'string') {
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
       const response = await fetch(`/api/applications/${applicationId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           formData,
-          status: updateStatus || application?.status
+          status: nextStatus ?? application?.status
         })
       });
 
-      if (response.ok) {
-        if (updateStatus === 'submitted') {
-          alert('Application submitted successfully!');
-          router.push('/dashboard');
-        } else {
-          alert('Progress saved!');
-        }
+      if (!response.ok) {
+        throw new Error('Failed to save application');
+      }
+
+      if (nextStatus === 'submitted') {
+        router.push('/dashboard');
       }
     } catch (error) {
       console.error('Error saving application:', error);
-      alert('Error saving application');
+      alert('保存失败，请稍后再试。');
     } finally {
       setSaving(false);
     }
   };
 
-  const updateFieldValue = (fieldId: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldId]: value
-    }));
-  };
-
-  const handleExport = async (format: 'html' | 'txt' | 'json') => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/applications/${applicationId}/export?format=${format}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const schoolName = application?.template.schoolName 
-          ? getLocalizedSchoolName(application.template.schoolName, language) 
-          : 'application';
-        a.download = `application-${schoolName}-${format}.${format === 'json' ? 'json' : format === 'html' ? 'html' : 'txt'}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        setShowExportMenu(false);
-        
-        if (format === 'html') {
-          alert('HTML 文件已下载！\n\n您可以：\n1. 在浏览器中打开 HTML 文件\n2. 按 Ctrl+P 打印\n3. 选择"另存为 PDF"\n4. 保存 PDF 文件');
-        }
-      } else {
-        alert('导出失败，请重试');
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      alert('导出失败，请重试');
-    }
-  };
-
-  const goToNextField = () => {
-    if (application && currentFieldIndex < application.template.fields.length - 1) {
-      setCurrentFieldIndex(currentFieldIndex + 1);
-    }
-  };
-
-  const goToPreviousField = () => {
-    if (currentFieldIndex > 0) {
-      setCurrentFieldIndex(currentFieldIndex - 1);
-    }
-  };
-
-  const calculateProgress = () => {
-    if (!application) return 0;
-    const filledFields = application.template.fields.filter(field => {
-      const value = formData[field.id];
-      return value !== undefined && value !== null && value !== '';
-    });
-    return Math.round((filledFields.length / application.template.fields.length) * 100);
-  };
-
   if (loading) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-64">
+        <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
         </div>
       </Layout>
     );
   }
 
-  if (!application) {
+  if (!application || !formState) {
     return (
       <Layout>
-        <div className="text-center py-12">
-          <p className="text-xl text-gray-600">Application not found</p>
-        </div>
+        <div className="py-12 text-center text-gray-600">无法加载申请内容。</div>
       </Layout>
     );
   }
 
-  const currentField = application.template.fields[currentFieldIndex];
-  const progress = calculateProgress();
-
   return (
     <>
       <Head>
-        <title>{getLocalizedSchoolName(application.template.schoolName, language)} Application - School Application Assistant</title>
+        <title>
+          {getLocalizedSchoolName(application.template.schoolName, language)} Application - School Application Assistant
+        </title>
       </Head>
 
       <Layout>
         <div className="space-y-6">
-          {/* Header */}
-          <div className="card">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {getLocalizedSchoolName(application.template.schoolName, language)}
-                </h1>
-                <p className="text-gray-600">{application.template.program}</p>
-              </div>
-              <div className="flex space-x-2">
-                {/* Export Button with Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setShowExportMenu(!showExportMenu)}
-                    className="btn-secondary flex items-center space-x-2"
-                  >
-                    <Download className="h-5 w-5" />
-                    <span>导出</span>
-                  </button>
-                  
-                  {showExportMenu && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-10" 
-                        onClick={() => setShowExportMenu(false)}
-                      />
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                        <div className="py-1">
-                          <button
-                            onClick={() => handleExport('html')}
-                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <FileText className="h-5 w-5 text-primary-600" />
-                            <div>
-                              <div className="font-medium text-gray-900">导出为 HTML</div>
-                              <div className="text-xs text-gray-500">可打印为 PDF</div>
-                            </div>
-                          </button>
-                          <button
-                            onClick={() => handleExport('txt')}
-                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <FileText className="h-5 w-5 text-gray-600" />
-                            <div>
-                              <div className="font-medium text-gray-900">导出为 TXT</div>
-                              <div className="text-xs text-gray-500">纯文本格式</div>
-                            </div>
-                          </button>
-                          <button
-                            onClick={() => handleExport('json')}
-                            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-3"
-                          >
-                            <Code className="h-5 w-5 text-green-600" />
-                            <div>
-                              <div className="font-medium text-gray-900">导出为 JSON</div>
-                              <div className="text-xs text-gray-500">数据备份</div>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                
-                <button
-                  onClick={() => saveApplication()}
-                  disabled={saving}
-                  className="btn-secondary flex items-center space-x-2"
-                >
-                  <Save className="h-5 w-5" />
-                  <span>保存进度</span>
-                </button>
-                <button
-                  onClick={() => saveApplication('submitted')}
-                  disabled={saving || progress < 100}
-                  className="btn-primary flex items-center space-x-2 disabled:opacity-50"
-                >
-                  <Send className="h-5 w-5" />
-                  <span>提交申请</span>
-                </button>
-              </div>
+          <div className="flex flex-col justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{formState.name}</h1>
+              <p className="text-gray-600">{application.template.program}</p>
+              <p className="mt-2 text-sm text-gray-500">完成进度：{completion}%</p>
             </div>
-
-            {/* Progress Bar */}
-            <div className="mt-4">
-              <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>完成进度</span>
-                <span>{progress}% 已完成</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-
-            {/* View Mode Toggle */}
-            <div className="mt-4 flex justify-center">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={() => setShowAllFields(!showAllFields)}
-                className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                type="button"
+                onClick={() => handleSave()}
+                disabled={saving}
+                className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
               >
-                {showAllFields ? '切换到逐步填写模式' : '查看所有字段'}
+                <Save className="h-5 w-5" />
+                <span>保存进度</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSave('submitted')}
+                disabled={saving || completion < 100}
+                className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                <Send className="h-5 w-5" />
+                <span>提交申请</span>
               </button>
             </div>
           </div>
 
-          {/* Step-by-Step Mode */}
-          {!showAllFields && (
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Main Form Area */}
-              <div className="lg:col-span-2 space-y-4">
-                <div className="card">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm text-gray-600">
-                      字段 {currentFieldIndex + 1} / {application.template.fields.length}
-                    </span>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={goToPreviousField}
-                        disabled={currentFieldIndex === 0}
-                        className="btn-secondary disabled:opacity-50 flex items-center space-x-1"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        <span>上一个</span>
-                      </button>
-                      <button
-                        onClick={goToNextField}
-                        disabled={currentFieldIndex === application.template.fields.length - 1}
-                        className="btn-primary disabled:opacity-50 flex items-center space-x-1"
-                      >
-                        <span>下一个</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <FormFieldInput
-                    field={currentField}
-                    value={formData[currentField.id]}
-                    onChange={(value) => updateFieldValue(currentField.id, value)}
-                  />
-                </div>
-              </div>
-
-              {/* AI Guidance Panel */}
-              <div className="lg:col-span-1">
-                <AIGuidancePanel
-                  field={currentField}
-                  currentValue={formData[currentField.id]}
-                  onSuggestionAccept={(value) => updateFieldValue(currentField.id, value)}
-                />
-              </div>
+          {formTabs.length > 0 ? (
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
+              <ApplicationForm
+                application={formState}
+                onApplicationChange={handleApplicationChange}
+              />
             </div>
-          )}
-
-          {/* All Fields Mode */}
-          {showAllFields && (
-            <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">所有申请字段</h2>
-              <div className="space-y-6">
-                {application.template.fields.map((field, index) => (
-                  <div key={field.id} className="border-b border-gray-200 pb-6 last:border-0">
-                    <div className="text-sm text-gray-500 mb-2">字段 {index + 1}</div>
-                    <FormFieldInput
-                      field={field}
-                      value={formData[field.id]}
-                      onChange={(value) => updateFieldValue(field.id, value)}
-                    />
-                  </div>
-                ))}
-              </div>
+          ) : (
+            <div className="rounded-2xl bg-white p-6 text-center text-gray-600 shadow-sm">
+              当前申请没有可填写的字段。
             </div>
           )}
         </div>
@@ -408,4 +358,3 @@ export default function ApplicationForm() {
     </>
   );
 }
-

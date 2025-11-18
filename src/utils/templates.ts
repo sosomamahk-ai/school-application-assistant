@@ -2,7 +2,41 @@ import { LocalizedText } from './i18n';
 
 type SchoolNameInput = string | LocalizedText | null | undefined;
 
-const CHILD_COLLECTION_KEYS = ['fields', 'items', 'sections', 'tabs', 'children', 'rows', 'columns', 'steps', 'groups'];
+export const TEMPLATE_CHILD_COLLECTION_KEYS = [
+  'fields',
+  'items',
+  'sections',
+  'tabs',
+  'children',
+  'rows',
+  'columns',
+  'steps',
+  'groups'
+] as const;
+
+export type TemplateChildKey = (typeof TEMPLATE_CHILD_COLLECTION_KEYS)[number];
+
+export interface TemplateNode {
+  id: string;
+  label?: string;
+  type?: string;
+  value?: string | number | boolean | null;
+  fields?: TemplateNode[];
+  items?: TemplateNode[];
+  sections?: TemplateNode[];
+  tabs?: TemplateNode[];
+  children?: TemplateNode[];
+  rows?: TemplateNode[];
+  columns?: TemplateNode[];
+  steps?: TemplateNode[];
+  groups?: TemplateNode[];
+  [key: string]: unknown;
+}
+
+export interface StructuredFormData {
+  __structure?: TemplateNode[] | TemplateNode;
+  [fieldId: string]: any;
+}
 
 export function serializeSchoolName(value: SchoolNameInput): string {
   if (!value) {
@@ -42,22 +76,30 @@ export function deserializeSchoolName(value: unknown): string | LocalizedText {
   return '';
 }
 
-function cloneTemplateNode(node: any, valueMap: Record<string, any>): any {
-  if (Array.isArray(node)) {
-    return node.map((child) => cloneTemplateNode(child, valueMap));
+function normalizeStructureInput(
+  fieldsData?: TemplateNode[] | TemplateNode | null
+): TemplateNode[] {
+  if (!fieldsData) {
+    return [];
   }
-
-  if (!node || typeof node !== 'object') {
-    return node;
+  if (Array.isArray(fieldsData)) {
+    return fieldsData;
   }
+  return [fieldsData];
+}
 
-  const cloned: any = { ...node };
+function cloneTemplateNode(
+  node: TemplateNode,
+  valueMap: Record<string, string | number | boolean | null>
+): TemplateNode {
+  const cloned: TemplateNode = { ...node };
   let hasChildren = false;
 
-  CHILD_COLLECTION_KEYS.forEach((key) => {
-    if (Array.isArray(cloned[key])) {
+  TEMPLATE_CHILD_COLLECTION_KEYS.forEach((key) => {
+    const children = cloned[key];
+    if (Array.isArray(children)) {
       hasChildren = true;
-      cloned[key] = cloned[key].map((child: any) => cloneTemplateNode(child, valueMap));
+      cloned[key] = children.map((child) => cloneTemplateNode(child, valueMap));
     }
   });
 
@@ -71,28 +113,31 @@ function cloneTemplateNode(node: any, valueMap: Record<string, any>): any {
   return cloned;
 }
 
-export function buildInitialApplicationFormData(fieldsData: any): {
-  structure: any;
-  values: Record<string, any>;
-  formData: Record<string, any>;
+export function buildInitialApplicationFormData(
+  fieldsData?: TemplateNode[] | TemplateNode | null
+): {
+  structure: TemplateNode[];
+  values: Record<string, string | number | boolean | null>;
+  formData: StructuredFormData;
 } {
-  const values: Record<string, any> = {};
-  const baseStructure = Array.isArray(fieldsData)
-    ? fieldsData.map((node) => cloneTemplateNode(node, values))
-    : fieldsData && typeof fieldsData === 'object'
-      ? cloneTemplateNode(fieldsData, values)
-      : [];
+  const values: Record<string, string | number | boolean | null> = {};
+  const normalizedInput = normalizeStructureInput(fieldsData);
+  const structure = normalizedInput.map((node) => cloneTemplateNode(node, values));
 
-  const formData = {
-    __structure: baseStructure,
+  const formData: StructuredFormData = {
+    __structure: structure,
     ...values
   };
 
-  return { structure: baseStructure, values, formData };
+  return { structure, values, formData };
 }
 
-export function ensureFormDataStructure(formData: any, fieldsData: any) {
-  const safeFormData = formData && typeof formData === 'object' ? formData : {};
+export function ensureFormDataStructure(
+  formData: StructuredFormData | undefined,
+  fieldsData?: TemplateNode[] | TemplateNode | null
+): StructuredFormData {
+  const safeFormData: StructuredFormData =
+    formData && typeof formData === 'object' ? formData : {};
   if (safeFormData.__structure || !fieldsData) {
     return safeFormData;
   }
