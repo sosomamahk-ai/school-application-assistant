@@ -528,7 +528,7 @@ export default function TemplatesAdmin() {
                   <span className="inline-block w-1 h-6 bg-blue-600 mr-3 rounded"></span>
                   {t('admin.templates.systemTemplates')}
                 </h2>
-                <div className="grid gap-4">
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {systemTemplates
                     .filter(template => {
                       if (selectedCategory === 'all') return true;
@@ -563,7 +563,7 @@ export default function TemplatesAdmin() {
                   <span className="inline-block w-1 h-6 bg-green-600 mr-3 rounded"></span>
                   {t('admin.templates.myTemplates')}
                 </h2>
-                <div className="grid gap-4">
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {userTemplates.map((template) => (
                     <TemplateCard 
                       key={template.id}
@@ -820,7 +820,7 @@ function TemplateCard({
   };
 
   return (
-    <div className="card hover:shadow-lg transition-shadow">
+    <div className="card flex flex-col h-full hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">

@@ -5,6 +5,7 @@ import { getTokenFromCookieHeader } from './token';
 export interface JWTPayload {
   userId: string;
   email: string;
+  username?: string;
   role?: string;
 }
 

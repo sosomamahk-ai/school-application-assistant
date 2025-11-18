@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { GraduationCap, User, FileText, LogOut, Settings, Shield, Users } from 'lucide-react';
+import { GraduationCap, User, FileText, LogOut, Settings, Shield, Users, Menu, X } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import LanguageSwitch from './LanguageSwitch';
 import { clearAuthTokenCookie } from '@/utils/token';
@@ -14,6 +14,7 @@ export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const { t, language } = useTranslation();
   const [userRole, setUserRole] = useState<string>('user');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -34,7 +35,61 @@ export default function Layout({ children }: LayoutProps) {
     router.push('/');
   };
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [router.pathname]);
+
   const isAdmin = userRole === 'admin';
+
+  const primaryLinks = [
+    {
+      href: '/dashboard',
+      label: t('dashboard.title'),
+      icon: FileText
+    },
+    {
+      href: '/profile',
+      label: t('profile.title'),
+      icon: User
+    },
+    {
+      href: '/settings',
+      label: t('settings.title'),
+      icon: Settings
+    }
+  ];
+
+  const adminLinks = [
+    {
+      href: '/admin/templates',
+      label: t('admin.templates.title'),
+      icon: Shield
+    },
+    {
+      href: '/admin/users',
+      label: t('admin.userManagement'),
+      icon: Users
+    },
+    {
+      href: '/admin/translations',
+      label: t('admin.translations.title'),
+      icon: Settings
+    }
+  ];
+
+  const renderLinks = (links: typeof primaryLinks, isMobile = false) =>
+    links.map(({ href, label, icon: Icon }) => (
+      <Link
+        key={href}
+        href={href}
+        className={`flex items-center space-x-2 py-2 ${
+          router.pathname === href ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
+        } ${isMobile ? 'px-2' : ''}`}
+      >
+        <Icon className="h-5 w-5" />
+        <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{label}</span>
+      </Link>
+    ));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,70 +102,61 @@ export default function Layout({ children }: LayoutProps) {
               <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
             </Link>
             
-            <div className={`flex items-center ${language === 'en' ? 'space-x-4' : 'space-x-6'}`}>
-              <Link 
-                href="/dashboard" 
-                className={`flex items-center space-x-1 ${router.pathname === '/dashboard' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-              >
-                <FileText className="h-5 w-5" />
-                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('dashboard.title')}</span>
-              </Link>
-              
-              <Link 
-                href="/profile" 
-                className={`flex items-center space-x-1 ${router.pathname === '/profile' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-              >
-                <User className="h-5 w-5" />
-                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('profile.title')}</span>
-              </Link>
+            <div className="flex items-center space-x-3">
+              <div className={`hidden md:flex items-center ${language === 'en' ? 'space-x-4' : 'space-x-6'}`}>
+                {renderLinks(primaryLinks)}
+                {isAdmin && (
+                  <div className={`flex items-center ${language === 'en' ? 'space-x-3' : 'space-x-4'}`}>
+                    {renderLinks(adminLinks)}
+                  </div>
+                )}
+                <LanguageSwitch variant="minimal" />
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+                </button>
+              </div>
 
-              <Link 
-                href="/settings" 
-                className={`flex items-center space-x-1 ${router.pathname === '/settings' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-              >
-                <Settings className="h-5 w-5" />
-                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('settings.title')}</span>
-              </Link>
-
-              {isAdmin && (
-                <div className={`flex items-center ${language === 'en' ? 'space-x-3' : 'space-x-4'}`}>
-                  <Link 
-                    href="/admin/templates" 
-                    className={`flex items-center space-x-1 ${router.pathname === '/admin/templates' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-                  >
-                    <Shield className="h-5 w-5" />
-                    <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('admin.templates.title')}</span>
-                  </Link>
-                    <Link
-                      href="/admin/users"
-                      className={`flex items-center space-x-1 ${router.pathname === '/admin/users' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-                    >
-                      <Users className="h-5 w-5" />
-                      <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('admin.userManagement')}</span>
-                    </Link>
-                  <Link 
-                    href="/admin/translations" 
-                    className={`flex items-center space-x-1 ${router.pathname === '/admin/translations' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
-                  >
-                    <Settings className="h-5 w-5" />
-                    <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('admin.translations.title')}</span>
-                  </Link>
-                </div>
-              )}
-
-              <LanguageSwitch variant="minimal" />
-              
               <button
-                onClick={handleLogout}
-                className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
+                className="md:hidden p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
+                onClick={() => setMobileMenuOpen((prev) => !prev)}
+                aria-label="Toggle navigation menu"
               >
-                <LogOut className="h-5 w-5" />
-                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
           </div>
         </div>
       </nav>
+
+      {/* Mobile Navigation */}
+      <div className={`md:hidden bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'}`}>
+        <div className="px-4 sm:px-6 py-4 space-y-4">
+          <div className="space-y-2">
+            {renderLinks(primaryLinks, true)}
+          </div>
+
+          {isAdmin && (
+            <div className="pt-3 border-t border-gray-100 space-y-2">
+              {renderLinks(adminLinks, true)}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+            <LanguageSwitch variant="minimal" />
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-2 text-gray-700 hover:text-red-600"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

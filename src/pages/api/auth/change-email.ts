@@ -31,12 +31,15 @@ export default async function handler(
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
+    const normalizedEmail = newEmail.trim().toLowerCase();
+
     // 获取用户信息
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         email: true,
+        username: true,
         password: true,
         role: true
       }
@@ -47,7 +50,7 @@ export default async function handler(
     }
 
     // 检查新邮箱是否与当前邮箱相同
-    if (user.email === newEmail) {
+    if (user.email === normalizedEmail) {
       return res.status(400).json({ error: 'New email must be different from current email' });
     }
 
@@ -60,7 +63,7 @@ export default async function handler(
 
     // 检查新邮箱是否已被使用
     const existingUser = await prisma.user.findUnique({
-      where: { email: newEmail }
+      where: { email: normalizedEmail }
     });
 
     if (existingUser) {
@@ -71,14 +74,14 @@ export default async function handler(
     await prisma.user.update({
       where: { id: userId },
       data: {
-        email: newEmail,
+        email: normalizedEmail,
         updatedAt: new Date()
       }
     });
 
     // 生成新的 JWT token（包含新邮箱）
     const token = jwt.sign(
-      { userId: user.id, email: newEmail, role: (user as any).role || 'user' },
+      { userId: user.id, email: normalizedEmail, username: user.username, role: (user as any).role || 'user' },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -89,7 +92,8 @@ export default async function handler(
       token, // 返回新token
       user: {
         id: user.id,
-        email: newEmail,
+        email: normalizedEmail,
+        username: user.username,
         role: user.role || 'user'
       }
     });

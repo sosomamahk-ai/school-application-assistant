@@ -13,6 +13,7 @@ function buildUserWhere(query: NextApiRequest['query']): Prisma.UserWhereInput {
   if (searchValue && searchValue.trim().length > 0) {
     where.OR = [
       { email: { contains: searchValue.trim(), mode: 'insensitive' } },
+      { username: { contains: searchValue.trim(), mode: 'insensitive' } },
       { profile: { fullName: { contains: searchValue.trim(), mode: 'insensitive' } } }
     ];
   }
@@ -59,6 +60,7 @@ export default async function handler(
       users: users.map((user) => ({
         id: user.id,
         email: user.email,
+        username: user.username,
         role: user.role,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),

@@ -19,15 +19,23 @@ export default async function handler(
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    const { email, password, fullName } = req.body;
+    const { email, password, fullName, username } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    if (!email || !password || !username) {
+      return res.status(400).json({ error: 'Email, username, and password are required' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedUsername = username.trim().toLowerCase();
+
+    const usernameRegex = /^[a-z0-9_]{3,20}$/;
+    if (!usernameRegex.test(normalizedUsername)) {
+      return res.status(400).json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' });
     }
 
     // Check if user already exists (don't select role if column doesn't exist)
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: {
         id: true,
         email: true,
@@ -39,6 +47,15 @@ export default async function handler(
 
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
+    }
+
+    const existingUsername = await prisma.user.findUnique({
+      where: { username: normalizedUsername },
+      select: { id: true }
+    });
+
+    if (existingUsername) {
+      return res.status(400).json({ error: 'Username already taken' });
     }
 
     // Hash password
@@ -53,7 +70,8 @@ export default async function handler(
       // Try creating with role field first (if column exists in DB)
       user = await prisma.user.create({
         data: {
-          email,
+          email: normalizedEmail,
+          username: normalizedUsername,
           password: hashedPassword,
           role: 'user', // Default role for new users
           profile: {
@@ -76,7 +94,8 @@ export default async function handler(
           await ensureUserRoleColumn(prisma);
           user = await prisma.user.create({
             data: {
-              email,
+              email: normalizedEmail,
+              username: normalizedUsername,
               password: hashedPassword,
               role: 'user',
               profile: {
@@ -103,7 +122,7 @@ export default async function handler(
 
     // Generate JWT token (include role in token)
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: userRole },
+      { userId: user.id, email: user.email, username: user.username, role: userRole },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -114,6 +133,7 @@ export default async function handler(
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
         role: userRole,
         profileId: user.profile?.id
       }

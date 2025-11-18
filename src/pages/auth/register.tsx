@@ -12,6 +12,7 @@ export default function Register() {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
+    username: '',
     password: '',
     confirmPassword: '',
     fullName: ''
@@ -33,6 +34,12 @@ export default function Register() {
       return;
     }
 
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(formData.username.trim())) {
+      setError(t('auth.errors.usernameInvalid'));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -41,6 +48,7 @@ export default function Register() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email,
+            username: formData.username,
           password: formData.password,
           fullName: formData.fullName
         })
@@ -116,6 +124,26 @@ export default function Register() {
                     className="input-field"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                  {t('auth.register.username')}
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="username"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="input-field"
+                    placeholder={t('auth.register.usernamePlaceholder')}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{t('auth.register.usernameHelp')}</p>
               </div>
 
               <div>

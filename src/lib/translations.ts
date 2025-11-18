@@ -136,6 +136,41 @@ export const translations: TranslationData = {
     'zh-CN': '邮箱地址',
     'zh-TW': '電子郵件地址',
   },
+  'auth.login.emailOption': {
+    en: 'Use email',
+    'zh-CN': '邮箱登录',
+    'zh-TW': '電子郵件登入',
+  },
+  'auth.login.emailPlaceholder': {
+    en: 'you@example.com',
+    'zh-CN': '请输入邮箱地址',
+    'zh-TW': '請輸入電子郵件地址',
+  },
+  'auth.login.usernameOption': {
+    en: 'Use username',
+    'zh-CN': '用户名登录',
+    'zh-TW': '使用者名稱登入',
+  },
+  'auth.login.username': {
+    en: 'Username',
+    'zh-CN': '用户名',
+    'zh-TW': '使用者名稱',
+  },
+  'auth.login.usernamePlaceholder': {
+    en: 'your_username',
+    'zh-CN': '请输入用户名',
+    'zh-TW': '請輸入使用者名稱',
+  },
+  'auth.login.chooseMethod': {
+    en: 'Login method',
+    'zh-CN': '登录方式',
+    'zh-TW': '登入方式',
+  },
+  'auth.login.identifierRequired': {
+    en: 'Please enter your email or username',
+    'zh-CN': '请输入邮箱或用户名',
+    'zh-TW': '請輸入電子郵件或使用者名稱',
+  },
   'auth.login.password': {
     en: 'Password',
     'zh-CN': '密码',
@@ -180,6 +215,21 @@ export const translations: TranslationData = {
     en: 'Full Name',
     'zh-CN': '姓名',
     'zh-TW': '姓名',
+  },
+  'auth.register.username': {
+    en: 'Username',
+    'zh-CN': '用户名',
+    'zh-TW': '使用者名稱',
+  },
+  'auth.register.usernamePlaceholder': {
+    en: '3-20 characters, letters/numbers/_',
+    'zh-CN': '3-20 个字符，仅限字母/数字/下划线',
+    'zh-TW': '3-20 個字元，僅限字母/數字/底線',
+  },
+  'auth.register.usernameHelp': {
+    en: 'Letters, numbers, and underscores only. Use for username login.',
+    'zh-CN': '仅支持字母、数字和下划线，可用于用户名登录。',
+    'zh-TW': '僅支援字母、數字與底線，可用於使用者名稱登入。',
   },
   'auth.register.email': {
     en: 'Email',
@@ -230,6 +280,11 @@ export const translations: TranslationData = {
     en: 'Login failed',
     'zh-CN': '登录失败',
     'zh-TW': '登入失敗',
+  },
+  'auth.errors.usernameInvalid': {
+    en: 'Username must be 3-20 letters, numbers, or underscores',
+    'zh-CN': '用户名需 3-20 位，仅可包含字母、数字或下划线',
+    'zh-TW': '使用者名稱需 3-20 位，僅可包含字母、數字或底線',
   },
   'auth.errors.registrationFailed': {
     en: 'Registration failed',

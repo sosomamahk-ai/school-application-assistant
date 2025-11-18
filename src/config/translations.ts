@@ -63,6 +63,13 @@ export interface Translations {
     login: {
       title: string;
       email: string;
+      emailOption: string;
+      emailPlaceholder: string;
+      usernameOption: string;
+      username: string;
+      usernamePlaceholder: string;
+      chooseMethod: string;
+      identifierRequired: string;
       password: string;
       button: string;
       signingIn: string;
@@ -74,6 +81,9 @@ export interface Translations {
     register: {
       title: string;
       name: string;
+      username: string;
+      usernamePlaceholder: string;
+      usernameHelp: string;
       email: string;
       password: string;
       confirmPassword: string;
@@ -88,6 +98,7 @@ export interface Translations {
       passwordTooShort: string;
       registrationFailed: string;
       loginFailed: string;
+      usernameInvalid: string;
     };
   };
   profile: {
@@ -348,6 +359,13 @@ export const translations: Record<Language, Translations> = {
       login: {
         title: 'Sign in to your account',
         email: 'Email address',
+        emailOption: 'Use email',
+        emailPlaceholder: 'you@example.com',
+        usernameOption: 'Use username',
+        username: 'Username',
+        usernamePlaceholder: 'your_username',
+        chooseMethod: 'Login method',
+        identifierRequired: 'Please enter your email or username',
         password: 'Password',
         button: 'Sign in',
         signingIn: 'Signing in...',
@@ -359,6 +377,9 @@ export const translations: Record<Language, Translations> = {
       register: {
         title: 'Create your account',
         name: 'Full Name',
+        username: 'Username',
+        usernamePlaceholder: '3-20 characters, letters/numbers/_',
+        usernameHelp: 'Only letters, numbers, and underscores. This will be used for username login.',
         email: 'Email address',
         password: 'Password',
         confirmPassword: 'Confirm Password',
@@ -373,6 +394,7 @@ export const translations: Record<Language, Translations> = {
         passwordTooShort: 'Password must be at least 6 characters',
         registrationFailed: 'Registration failed',
         loginFailed: 'Login failed',
+        usernameInvalid: 'Username must be 3-20 letters, numbers, or underscores',
       }
     },
     profile: {
@@ -631,6 +653,13 @@ export const translations: Record<Language, Translations> = {
       login: {
         title: '登录到您的账户',
         email: '邮箱地址',
+        emailOption: '邮箱登录',
+        emailPlaceholder: '请输入邮箱地址',
+        usernameOption: '用户名登录',
+        username: '用户名',
+        usernamePlaceholder: '请输入用户名',
+        chooseMethod: '登录方式',
+        identifierRequired: '请输入邮箱或用户名',
         password: '密码',
         button: '登录',
         signingIn: '登录中...',
@@ -642,6 +671,9 @@ export const translations: Record<Language, Translations> = {
       register: {
         title: '创建您的账户',
         name: '姓名',
+        username: '用户名',
+        usernamePlaceholder: '3-20 个字符，仅限字母/数字/下划线',
+        usernameHelp: '仅支持字母、数字和下划线。登录时可选择使用用户名。',
         email: '邮箱地址',
         password: '密码',
         confirmPassword: '确认密码',
@@ -656,6 +688,7 @@ export const translations: Record<Language, Translations> = {
         passwordTooShort: '密码至少需要6个字符',
         registrationFailed: '注册失败',
         loginFailed: '登录失败',
+        usernameInvalid: '用户名需 3-20 位，仅可包含字母、数字或下划线',
       }
     },
     profile: {
@@ -914,6 +947,13 @@ export const translations: Record<Language, Translations> = {
       login: {
         title: '登入您的帳戶',
         email: '電子郵件地址',
+        emailOption: '電子郵件登入',
+        emailPlaceholder: '請輸入電子郵件地址',
+        usernameOption: '使用者名稱登入',
+        username: '使用者名稱',
+        usernamePlaceholder: '請輸入使用者名稱',
+        chooseMethod: '登入方式',
+        identifierRequired: '請輸入電子郵件或使用者名稱',
         password: '密碼',
         button: '登入',
         signingIn: '登入中...',
@@ -925,6 +965,9 @@ export const translations: Record<Language, Translations> = {
       register: {
         title: '創建您的帳戶',
         name: '姓名',
+        username: '使用者名稱',
+        usernamePlaceholder: '3-20 個字元，僅限字母/數字/底線',
+        usernameHelp: '僅支援字母、數字與底線。登入時可選擇使用此使用者名稱。',
         email: '電子郵件地址',
         password: '密碼',
         confirmPassword: '確認密碼',
@@ -939,6 +982,7 @@ export const translations: Record<Language, Translations> = {
         passwordTooShort: '密碼至少需要6個字元',
         registrationFailed: '註冊失敗',
         loginFailed: '登入失敗',
+        usernameInvalid: '使用者名稱需 3-20 位，僅可包含字母、數字或底線',
       }
     },
     profile: {

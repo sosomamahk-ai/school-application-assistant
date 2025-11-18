@@ -12,8 +12,10 @@ export default function Login() {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
+    username: '',
     password: ''
   });
+  const [loginMethod, setLoginMethod] = useState<'email' | 'username'>('email');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -23,10 +25,23 @@ export default function Login() {
     setLoading(true);
 
     try {
+      const identifier = loginMethod === 'email'
+        ? formData.email.trim()
+        : formData.username.trim();
+
+      if (!identifier) {
+        setError(t('auth.login.identifierRequired'));
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          identifier,
+          password: formData.password
+        })
       });
 
       const data = await response.json();
@@ -85,20 +100,68 @@ export default function Login() {
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  {t('auth.login.email')}
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('auth.login.chooseMethod')}
+                </label>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setLoginMethod('email')}
+                    className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                      loginMethod === 'email'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-primary-300'
+                    }`}
+                  >
+                    {t('auth.login.emailOption')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMethod('username')}
+                    className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                      loginMethod === 'username'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-primary-300'
+                    }`}
+                  >
+                    {t('auth.login.usernameOption')}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="identifier"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  {loginMethod === 'email' ? t('auth.login.email') : t('auth.login.username')}
                 </label>
                 <div className="mt-1">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="input-field"
-                  />
+                  {loginMethod === 'email' ? (
+                    <input
+                      id="identifier"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required={loginMethod === 'email'}
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="input-field"
+                      placeholder={t('auth.login.emailPlaceholder')}
+                    />
+                  ) : (
+                    <input
+                      id="identifier"
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      required={loginMethod === 'username'}
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      className="input-field"
+                      placeholder={t('auth.login.usernamePlaceholder')}
+                    />
+                  )}
                 </div>
               </div>
 

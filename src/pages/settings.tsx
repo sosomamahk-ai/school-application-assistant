@@ -183,167 +183,173 @@ export default function Settings() {
         <title>{t('settings.title')} - {t('common.appName')}</title>
       </Head>
 
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">{t('settings.title')}</h1>
           <p className="text-gray-600 mt-2">{t('settings.subtitle')}</p>
         </div>
 
-        {/* 修改密码 */}
-        <div className="card mb-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Lock className="h-6 w-6 text-primary-600" />
-            <h2 className="text-xl font-semibold text-gray-900">{t('settings.changePassword')}</h2>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* 修改密码 */}
+          <div className="card h-full flex flex-col">
+            <div className="flex items-center space-x-2 mb-6">
+              <Lock className="h-6 w-6 text-primary-600" />
+              <h2 className="text-xl font-semibold text-gray-900">{t('settings.changePassword')}</h2>
+            </div>
+
+            {passwordSuccess && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-green-800">{t('settings.passwordChanged')}</span>
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <span className="text-red-800">{passwordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-4 flex-1 flex flex-col">
+              <div className="flex-1 space-y-4">
+                <div>
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('settings.currentPassword')}
+                  </label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="input-field"
+                    placeholder={t('settings.currentPasswordPlaceholder')}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('settings.newPassword')}
+                  </label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="input-field"
+                    placeholder={t('settings.newPasswordPlaceholder')}
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('settings.confirmNewPassword')}
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="input-field"
+                    placeholder={t('settings.confirmPasswordPlaceholder')}
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+              >
+                <Save className="h-5 w-5" />
+                <span>{loading ? t('common.saving') : t('settings.changePasswordButton')}</span>
+              </button>
+            </form>
           </div>
 
-          {passwordSuccess && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-green-800">{t('settings.passwordChanged')}</span>
-            </div>
-          )}
-
-          {passwordError && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <span className="text-red-800">{passwordError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <div>
-              <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('settings.currentPassword')}
-              </label>
-              <input
-                id="currentPassword"
-                type="password"
-                value={passwordForm.currentPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                className="input-field"
-                placeholder={t('settings.currentPasswordPlaceholder')}
-                required
-              />
+          {/* 修改邮箱 */}
+          <div className="card h-full flex flex-col">
+            <div className="flex items-center space-x-2 mb-6">
+              <Mail className="h-6 w-6 text-primary-600" />
+              <h2 className="text-xl font-semibold text-gray-900">{t('settings.changeEmail')}</h2>
             </div>
 
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('settings.newPassword')}
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                className="input-field"
-                placeholder={t('settings.newPasswordPlaceholder')}
-                required
-                minLength={6}
-              />
-            </div>
+            {emailSuccess && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-green-800">{t('settings.emailChanged')}</span>
+              </div>
+            )}
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('settings.confirmNewPassword')}
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                className="input-field"
-                placeholder={t('settings.confirmPasswordPlaceholder')}
-                required
-                minLength={6}
-              />
-            </div>
+            {emailError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <span className="text-red-800">{emailError}</span>
+              </div>
+            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="h-5 w-5" />
-              <span>{loading ? t('common.saving') : t('settings.changePasswordButton')}</span>
-            </button>
-          </form>
-        </div>
+            <form onSubmit={handleChangeEmail} className="space-y-4 flex-1 flex flex-col">
+              <div className="flex-1 space-y-4">
+                <div>
+                  <label htmlFor="currentEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('settings.currentEmail')}
+                  </label>
+                  <input
+                    id="currentEmail"
+                    type="email"
+                    value={currentUser?.email || ''}
+                    className="input-field bg-gray-50"
+                    disabled
+                  />
+                  <p className="text-sm text-gray-500 mt-1">{t('settings.currentEmailDescription')}</p>
+                </div>
 
-        {/* 修改邮箱 */}
-        <div className="card">
-          <div className="flex items-center space-x-2 mb-6">
-            <Mail className="h-6 w-6 text-primary-600" />
-            <h2 className="text-xl font-semibold text-gray-900">{t('settings.changeEmail')}</h2>
+                <div>
+                  <label htmlFor="newEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('settings.newEmail')}
+                  </label>
+                  <input
+                    id="newEmail"
+                    type="email"
+                    value={emailForm.newEmail}
+                    onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                    className="input-field"
+                    placeholder={t('settings.newEmailPlaceholder')}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="emailPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('settings.emailPassword')}
+                  </label>
+                  <input
+                    id="emailPassword"
+                    type="password"
+                    value={emailForm.currentPassword}
+                    onChange={(e) => setEmailForm({ ...emailForm, currentPassword: e.target.value })}
+                    className="input-field"
+                    placeholder={t('settings.emailPasswordPlaceholder')}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+              >
+                <Save className="h-5 w-5" />
+                <span>{loading ? t('common.saving') : t('settings.changeEmailButton')}</span>
+              </button>
+            </form>
           </div>
-
-          {emailSuccess && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="text-green-800">{t('settings.emailChanged')}</span>
-            </div>
-          )}
-
-          {emailError && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <span className="text-red-800">{emailError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleChangeEmail} className="space-y-4">
-            <div>
-              <label htmlFor="currentEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('settings.currentEmail')}
-              </label>
-              <input
-                id="currentEmail"
-                type="email"
-                value={currentUser?.email || ''}
-                className="input-field bg-gray-50"
-                disabled
-              />
-              <p className="text-sm text-gray-500 mt-1">{t('settings.currentEmailDescription')}</p>
-            </div>
-
-            <div>
-              <label htmlFor="newEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('settings.newEmail')}
-              </label>
-              <input
-                id="newEmail"
-                type="email"
-                value={emailForm.newEmail}
-                onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
-                className="input-field"
-                placeholder={t('settings.newEmailPlaceholder')}
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="emailPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                {t('settings.emailPassword')}
-              </label>
-              <input
-                id="emailPassword"
-                type="password"
-                value={emailForm.currentPassword}
-                onChange={(e) => setEmailForm({ ...emailForm, currentPassword: e.target.value })}
-                className="input-field"
-                placeholder={t('settings.emailPasswordPlaceholder')}
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="h-5 w-5" />
-              <span>{loading ? t('common.saving') : t('settings.changeEmailButton')}</span>
-            </button>
-          </form>
         </div>
       </div>
     </Layout>

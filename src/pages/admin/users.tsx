@@ -20,6 +20,7 @@ import { useTranslation } from '@/contexts/TranslationContext';
 interface AdminUser {
   id: string;
   email: string;
+  username?: string | null;
   role: 'admin' | 'user';
   createdAt: string;
   updatedAt: string;
@@ -349,7 +350,12 @@ export default function AdminUsersPage() {
                         {user.fullName || '—'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {user.email}
+                        <div className="flex flex-col">
+                          <span>{user.email}</span>
+                          {user.username && (
+                            <span className="text-xs text-gray-500">@{user.username}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span

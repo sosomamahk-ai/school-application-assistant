@@ -18,18 +18,51 @@ export default async function handler(
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    const { email, password } = req.body;
+    const identifierInput = typeof req.body.identifier === 'string'
+      ? req.body.identifier
+      : req.body.email;
+    const password: string | undefined = req.body.password;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    if (!identifierInput || !password) {
+      return res.status(400).json({ error: 'Identifier and password are required' });
+    }
+
+    const rawIdentifier = identifierInput.trim();
+    if (!rawIdentifier) {
+      return res.status(400).json({ error: 'Identifier is required' });
+    }
+
+    const identifier = rawIdentifier.toLowerCase();
+    const isEmail = rawIdentifier.includes('@');
+    const searchFilters: any[] = [];
+
+    if (isEmail) {
+      searchFilters.push({ email: identifier });
+      if (identifier !== rawIdentifier) {
+        searchFilters.push({ email: rawIdentifier });
+      }
+    } else {
+      const username = identifier.replace(/\s+/g, '');
+      searchFilters.push({ username });
+      if (username !== rawIdentifier) {
+        searchFilters.push({ username: rawIdentifier });
+      }
+      // Allow email fallback just in case users mistakenly enter email without @
+      searchFilters.push({ email: identifier });
+      if (identifier !== rawIdentifier) {
+        searchFilters.push({ email: rawIdentifier });
+      }
     }
 
     // Find user (role is required for RBAC)
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: searchFilters
+      },
       select: {
         id: true,
         email: true,
+        username: true,
         role: true,
         password: true,
         createdAt: true,
@@ -56,11 +89,14 @@ export default async function handler(
     const userRole = user.role || 'user';
 
     // Generate JWT token (include role in token)
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: userRole },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
+    const tokenPayload = {
+      userId: user.id,
+      email: user.email,
+      username: user.username,
+      role: userRole
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: '7d' });
 
     res.status(200).json({
       success: true,
@@ -68,6 +104,7 @@ export default async function handler(
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
         role: userRole,
         profileId: user.profile?.id
       }
