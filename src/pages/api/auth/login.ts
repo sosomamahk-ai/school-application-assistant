@@ -33,47 +33,22 @@ export default async function handler(
     }
 
     const identifier = rawIdentifier.toLowerCase();
-    const isEmail = rawIdentifier.includes('@');
-    const searchFilters: any[] = [];
 
-    if (isEmail) {
-      searchFilters.push({ email: identifier });
-      if (identifier !== rawIdentifier) {
-        searchFilters.push({ email: rawIdentifier });
-      }
-    } else {
-      const username = identifier.replace(/\s+/g, '');
-      searchFilters.push({ username });
-      if (username !== rawIdentifier) {
-        searchFilters.push({ username: rawIdentifier });
-      }
-      // Allow email fallback just in case users mistakenly enter email without @
-      searchFilters.push({ email: identifier });
-      if (identifier !== rawIdentifier) {
-        searchFilters.push({ email: rawIdentifier });
-      }
-    }
-
-    // Find user (role is required for RBAC)
     const user = await prisma.user.findFirst({
       where: {
-        OR: searchFilters
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        role: true,
-        password: true,
-        createdAt: true,
-        updatedAt: true,
-        profile: {
-          select: {
-            id: true
-          }
-        }
+        OR: [
+          { email: identifier },
+          { username: identifier }
+        ]
       }
-    }) as any;
+    });
+
+    const profile = user
+      ? await prisma.userProfile.findUnique({
+          where: { userId: user.id },
+          select: { id: true }
+        })
+      : null;
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -106,7 +81,7 @@ export default async function handler(
         email: user.email,
         username: user.username,
         role: userRole,
-        profileId: user.profile?.id
+        profileId: profile?.id
       }
     });
   } catch (error: any) {

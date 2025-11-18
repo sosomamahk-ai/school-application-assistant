@@ -19,23 +19,29 @@ export default async function handler(
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    const { email, password, fullName, username } = req.body;
+    const body = req.body ?? {};
+    const emailInput = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const passwordInput = typeof body.password === 'string' ? body.password : '';
+    const fullNameInput = typeof body.fullName === 'string' ? body.fullName : undefined;
+    const usernameInput = typeof body.username === 'string' ? body.username.trim().toLowerCase() : undefined;
 
-    if (!email || !password || !username) {
-      return res.status(400).json({ error: 'Email, username, and password are required' });
+    if (!emailInput || !passwordInput) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedUsername = username.trim().toLowerCase();
-
-    const usernameRegex = /^[a-z0-9_]{3,20}$/;
-    if (!usernameRegex.test(normalizedUsername)) {
-      return res.status(400).json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' });
+    if (usernameInput) {
+      const usernameRegex = /^[a-z0-9_]{3,20}$/;
+      if (!usernameRegex.test(usernameInput)) {
+        return res.status(400).json({ error: 'Username must be 3-20 characters (letters, numbers, underscore)' });
+      }
+      body.username = usernameInput;
+    } else {
+      body.username = undefined;
     }
 
     // Check if user already exists (don't select role if column doesn't exist)
     const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+      where: { email: emailInput },
       select: {
         id: true,
         email: true,
@@ -49,17 +55,19 @@ export default async function handler(
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    const existingUsername = await prisma.user.findUnique({
-      where: { username: normalizedUsername },
-      select: { id: true }
-    });
+    if (body.username) {
+      const existingUsername = await prisma.user.findUnique({
+        where: { username: body.username },
+        select: { id: true }
+      });
 
-    if (existingUsername) {
-      return res.status(400).json({ error: 'Username already taken' });
+      if (existingUsername) {
+        return res.status(400).json({ error: 'Username already taken' });
+      }
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(passwordInput, 10);
 
     // Create user and profile
     // Handle case where role column doesn't exist in database yet
@@ -70,13 +78,13 @@ export default async function handler(
       // Try creating with role field first (if column exists in DB)
       user = await prisma.user.create({
         data: {
-          email: normalizedEmail,
-          username: normalizedUsername,
+          email: emailInput,
+          username: body.username ?? null,
           password: hashedPassword,
           role: 'user', // Default role for new users
           profile: {
             create: {
-              fullName: fullName || null
+              fullName: fullNameInput || null
             }
           }
         },
@@ -94,13 +102,13 @@ export default async function handler(
           await ensureUserRoleColumn(prisma);
           user = await prisma.user.create({
             data: {
-              email: normalizedEmail,
-              username: normalizedUsername,
+              email: emailInput,
+              username: body.username ?? null,
               password: hashedPassword,
               role: 'user',
               profile: {
                 create: {
-                  fullName: fullName || null
+                  fullName: fullNameInput || null
                 }
               }
             },

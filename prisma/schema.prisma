@@ -11,93 +11,108 @@ datasource db {
 
 // User model for authentication
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String?  @unique
-  password  String
-  role      String   @default("user") // "user" or "admin"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  profile   UserProfile?
+  id            String         @id @default(cuid())
+  email         String         @unique
+  username      String?        @unique
+  password      String
+  role          String         @default("user") // "user" or "admin"
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  profile       UserProfile?
+  fieldMappings FieldMapping[]
 }
 
 // User profile with all application information
 model UserProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Basic Info
-  fullName     String?
-  phone        String?
-  birthday     DateTime?
-  nationality  String?
-  
+  fullName    String?
+  phone       String?
+  birthday    DateTime?
+  nationality String?
+
   // Structured data stored as JSON
-  educationData    Json?  // Array of education records
-  experiencesData  Json?  // Array of experience records
-  essaysData       Json?  // Object with various essay types
-  additionalData   Json?  // Any additional custom fields
-  
+  educationData   Json? // Array of education records
+  experiencesData Json? // Array of experience records
+  essaysData      Json? // Object with various essay types
+  additionalData  Json? // Any additional custom fields
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   applications Application[]
 }
 
 // School form template
 model SchoolFormTemplate {
-  id          String   @id @default(cuid())
-  schoolId    String   @unique
+  id          String  @id @default(cuid())
+  schoolId    String  @unique
   schoolName  String
   program     String
   description String?
-  category    String?  @default("国际学校") // 模板类别：国际学校、香港本地中学、香港本地小学、香港幼稚园、大学
-  
+  category    String? @default("国际学校") // 模板类别：国际学校、香港本地中学、香港本地小学、香港幼稚园、大学
+
   // Template fields stored as JSON for flexibility
-  fieldsData  Json     // Array of field definitions
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  fieldsData Json // Array of field definitions
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   applications Application[]
 }
 
 // Application submission
 model Application {
-  id          String   @id @default(cuid())
-  
-  profileId   String
-  profile     UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  templateId  String
-  template    SchoolFormTemplate @relation(fields: [templateId], references: [id])
-  
+  id String @id @default(cuid())
+
+  profileId String
+  profile   UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  templateId String
+  template   SchoolFormTemplate @relation(fields: [templateId], references: [id])
+
   // Application form data
-  formData    Json     // Filled form data
-  status      String   @default("draft") // draft, in_progress, submitted
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  formData Json // Filled form data
+  status   String @default("draft") // draft, in_progress, submitted
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   submittedAt DateTime?
-  
+
   @@index([profileId])
   @@index([templateId])
 }
 
 // AI Conversation history for guidance
 model AIConversation {
-  id          String   @id @default(cuid())
-  userId      String
+  id            String  @id @default(cuid())
+  userId        String
   applicationId String?
-  
-  messages    Json     // Array of conversation messages
-  context     Json?    // Additional context for AI
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+
+  messages Json // Array of conversation messages
+  context  Json? // Additional context for AI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
 }
 
+// ← 在 prisma/schema.prisma 文件中追加这个 model（保留原有模型）
+model FieldMapping {
+  id           String   @id @default(cuid())
+  userId       String
+  domain       String
+  selector     String
+  domId        String?
+  domName      String?
+  profileField String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, domain, selector])
+}

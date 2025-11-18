@@ -274,3 +274,8 @@ export default function Dashboard() {
   );
 }
 
+{process.env.NEXT_PUBLIC_AUTOFILL === "true" && (
+  <Link href="/autofill/mapping" className="underline text-blue-600">
+    Autofill Mapping (Beta)
+  </Link>
+)}

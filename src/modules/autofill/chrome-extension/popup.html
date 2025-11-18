@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>School Application Autofill</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <h1>📝 表单自动填充</h1>
+      <div class="status" id="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">就绪</span>
+      </div>
+    </header>
+
+    <!-- 登录状态 -->
+    <div class="section" id="authSection">
+      <div class="auth-status" id="authStatus">
+        <p>未登录</p>
+        <button id="loginBtn" class="btn btn-primary">登录</button>
+      </div>
+    </div>
+
+    <!-- 当前页面信息 -->
+    <div class="section" id="pageInfo">
+      <h3>当前页面</h3>
+      <p class="domain" id="currentDomain">-</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="section">
+      <div class="button-group">
+        <button id="scanBtn" class="btn btn-secondary">
+          🔍 扫描表单
+        </button>
+        <button id="fillBtn" class="btn btn-primary">
+          ✨ 自动填充
+        </button>
+      </div>
+    </div>
+
+    <!-- 字段列表 -->
+    <div class="section" id="fieldsSection" style="display: none;">
+      <h3>检测到的字段</h3>
+      <div class="fields-list" id="fieldsList">
+        <!-- 动态生成 -->
+      </div>
+    </div>
+
+    <!-- 映射规则 -->
+    <div class="section" id="mappingsSection" style="display: none;">
+      <h3>已保存的映射</h3>
+      <div class="mappings-list" id="mappingsList">
+        <!-- 动态生成 -->
+      </div>
+    </div>
+
+    <!-- 调试信息 -->
+    <div class="section" id="debugSection" style="display: none;">
+      <details>
+        <summary>调试信息</summary>
+        <pre id="debugInfo"></pre>
+      </details>
+    </div>
+
+    <!-- 设置 -->
+    <div class="section">
+      <button id="settingsBtn" class="btn btn-link">⚙️ 设置</button>
+      <button id="clearCacheBtn" class="btn btn-link">🗑️ 清除缓存</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

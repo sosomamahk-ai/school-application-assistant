@@ -1,0 +1,46 @@
+
+> school-application-assistant@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.33
+  - Local:        http://localhost:3001
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 2.1s
+ ✓ Compiled /api/autofill/save-mapping in 274ms (71 modules)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query INSERT INTO "public"."FieldMapping" ("userId","domain","selector","domId","domName","profileField","createdAt") VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT ("userId","domain","selector") DO UPDATE SET "profileField" = $8, "domId" = $9, "domName" = $10 WHERE (("public"."FieldMapping"."userId" = $11 AND "public"."FieldMapping"."domain" = $12 AND "public"."FieldMapping"."selector" = $13) AND 1=1) RETURNING "public"."FieldMapping"."id", "public"."FieldMapping"."userId", "public"."FieldMapping"."domain", "public"."FieldMapping"."selector", "public"."FieldMapping"."domId", "public"."FieldMapping"."domName", "public"."FieldMapping"."profileField", "public"."FieldMapping"."createdAt"
+prisma:query ROLLBACK
+prisma:error 
+Invalid `prisma.fieldMapping.upsert()` invocation:
+
+
+The table `public.FieldMapping` does not exist in the current database.
+saveMapping error: PrismaClientKnownRequestError: 
+Invalid `prisma.fieldMapping.upsert()` invocation:
+
+
+The table `public.FieldMapping` does not exist in the current database.
+    at $n.handleRequestError (C:\school-application-assistant\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\school-application-assistant\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\school-application-assistant\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\school-application-assistant\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async handler (webpack-internal:///(api)/./src/pages/api/autofill/save-mapping.ts:28:25)
+    at async K (C:\school-application-assistant\node_modules\next\dist\compiled\next-server\pages-api.runtime.dev.js:21:2871)
+    at async U.render (C:\school-application-assistant\node_modules\next\dist\compiled\next-server\pages-api.runtime.dev.js:21:3955)
+    at async DevServer.runApi (C:\school-application-assistant\node_modules\next\dist\server\next-server.js:603:9)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\school-application-assistant\node_modules\next\dist\server\next-server.js:269:37)
+    at async DevServer.handleRequestImpl (C:\school-application-assistant\node_modules\next\dist\server\base-server.js:818:17)
+    at async C:\school-application-assistant\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (C:\school-application-assistant\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (C:\school-application-assistant\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (C:\school-application-assistant\node_modules\next\dist\server\lib\router-server.js:179:21)
+    at async handleRequest (C:\school-application-assistant\node_modules\next\dist\server\lib\router-server.js:359:24) {
+  code: 'P2021',
+  clientVersion: '5.22.0',
+  meta: { modelName: 'FieldMapping', table: 'public.FieldMapping' }
+}
+ POST /api/autofill/save-mapping 500 in 2527ms
+[?25h
