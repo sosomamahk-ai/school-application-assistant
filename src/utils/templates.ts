@@ -76,16 +76,43 @@ export function deserializeSchoolName(value: unknown): string | LocalizedText {
   return '';
 }
 
-export function normalizeTemplateStructureInput(
-  fieldsData?: TemplateNode[] | TemplateNode | null
-): TemplateNode[] {
-  if (!fieldsData) {
+function parsePossibleJson(value: string): unknown {
+  const trimmed = value.trim();
+  if (!trimmed || (trimmed[0] !== '{' && trimmed[0] !== '[')) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
+function coerceTemplateNode(value: unknown): TemplateNode | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as TemplateNode;
+  }
+  return undefined;
+}
+
+export function normalizeTemplateStructureInput(fieldsData?: unknown): TemplateNode[] {
+  if (fieldsData === undefined || fieldsData === null) {
     return [];
   }
-  if (Array.isArray(fieldsData)) {
-    return fieldsData;
+
+  let normalizedInput: unknown = fieldsData;
+  if (typeof fieldsData === 'string') {
+    normalizedInput = parsePossibleJson(fieldsData) ?? fieldsData;
   }
-  return [fieldsData];
+
+  if (Array.isArray(normalizedInput)) {
+    return normalizedInput
+      .map((item) => coerceTemplateNode(item))
+      .filter((item): item is TemplateNode => Boolean(item));
+  }
+
+  const singleNode = coerceTemplateNode(normalizedInput);
+  return singleNode ? [singleNode] : [];
 }
 
 function cloneTemplateNode(
