@@ -1045,6 +1045,16 @@ export const translations: TranslationData = {
     'zh-CN': '删除失败',
     'zh-TW': '刪除失敗',
   },
+  'admin.templates.error.cannotDeleteMaster': {
+    en: 'Cannot delete master template. The master template is a system template and cannot be deleted. It contains all available fields and is essential for creating new school templates.',
+    'zh-CN': '无法删除主模板。主模板是系统模板，不能删除。它包含所有可用字段，是创建新学校模板所必需的。',
+    'zh-TW': '無法刪除主模板。主模板是系統範本，不能刪除。它包含所有可用欄位，是建立新學校範本所必需的。',
+  },
+  'admin.templates.action.deleteDisabledMaster': {
+    en: 'Cannot delete master template (system template)',
+    'zh-CN': '无法删除主模板（系统模板）',
+    'zh-TW': '無法刪除主模板（系統範本）',
+  },
   'admin.templates.import.title': {
     en: 'Import School Template',
     'zh-CN': '导入学校模板',

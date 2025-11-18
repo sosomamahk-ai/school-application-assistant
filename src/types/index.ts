@@ -1,5 +1,7 @@
 // Type definitions based on the Rule document
 
+import { LocalizedText } from '@/utils/i18n';
+
 export interface BasicInfo {
   fullName: string;
   email: string;
@@ -56,7 +58,7 @@ export interface FormField {
 
 export interface SchoolFormTemplateData {
   schoolId: string;
-  schoolName: string;
+  schoolName: string | LocalizedText;  // Supports both string (legacy) and LocalizedText (multi-language)
   program: string;
   description?: string;
   fields: FormField[];

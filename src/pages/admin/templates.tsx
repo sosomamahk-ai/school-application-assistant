@@ -9,6 +9,7 @@ import type { JWTPayload } from '@/utils/auth';
 import { getTokenFromCookieHeader } from '@/utils/token';
 import { useTranslation } from '@/contexts/TranslationContext';
 import type { TranslationData } from '@/lib/translations';
+import { isMasterTemplate } from '@/constants/templates';
 
 interface SchoolTemplate {
   id: string;
@@ -257,6 +258,13 @@ export default function TemplatesAdmin() {
   };
 
   const handleDelete = async (id: string) => {
+    // Check if this is the master template before attempting deletion
+    const template = templates.find(t => t.id === id);
+    if (template && isMasterTemplate(template.schoolId)) {
+      alert(t('admin.templates.error.cannotDeleteMaster'));
+      return;
+    }
+
     if (!confirm(t('admin.templates.confirmDelete'))) return;
 
     try {
@@ -273,7 +281,8 @@ export default function TemplatesAdmin() {
         fetchTemplates();
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        alert(t('admin.templates.error.delete') + ': ' + (errorData.error || 'Failed to delete template'));
+        const errorMessage = errorData.message || errorData.error || 'Failed to delete template';
+        alert(t('admin.templates.error.delete') + ': ' + errorMessage);
       }
     } catch (error) {
       console.error('Error deleting template:', error);
@@ -838,8 +847,17 @@ function TemplateCard({
           </button>
           <button
             onClick={() => onDelete(template.id)}
-            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title={t('admin.templates.action.delete')}
+            disabled={isMasterTemplate(template.schoolId)}
+            className={`p-2 rounded-lg transition-colors ${
+              isMasterTemplate(template.schoolId)
+                ? 'text-gray-300 cursor-not-allowed'
+                : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+            }`}
+            title={
+              isMasterTemplate(template.schoolId)
+                ? t('admin.templates.action.deleteDisabledMaster')
+                : t('admin.templates.action.delete')
+            }
           >
             <Trash2 className="h-5 w-5" />
           </button>

@@ -6,12 +6,14 @@ import AIGuidancePanel from '@/components/AIGuidancePanel';
 import FormFieldInput from '@/components/FormFieldInput';
 import { FormField, ApplicationFormData } from '@/types';
 import { ChevronLeft, ChevronRight, Save, Send, Loader2, Download, FileText, Code } from 'lucide-react';
+import { useTranslation } from '@/contexts/TranslationContext';
+import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 
 interface ApplicationData {
   id: string;
   template: {
     id: string;
-    schoolName: string;
+    schoolName: string | LocalizedText;
     program: string;
     description?: string;
     fields: FormField[];
@@ -23,6 +25,7 @@ interface ApplicationData {
 export default function ApplicationForm() {
   const router = useRouter();
   const { applicationId } = router.query;
+  const { language } = useTranslation();
   
   const [application, setApplication] = useState<ApplicationData | null>(null);
   const [formData, setFormData] = useState<ApplicationFormData>({});
@@ -150,7 +153,10 @@ export default function ApplicationForm() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `application-${application?.template.schoolName}-${format}.${format === 'json' ? 'json' : format === 'html' ? 'html' : 'txt'}`;
+        const schoolName = application?.template.schoolName 
+          ? getLocalizedSchoolName(application.template.schoolName, language) 
+          : 'application';
+        a.download = `application-${schoolName}-${format}.${format === 'json' ? 'json' : format === 'html' ? 'html' : 'txt'}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -216,7 +222,7 @@ export default function ApplicationForm() {
   return (
     <>
       <Head>
-        <title>{application.template.schoolName} Application - School Application Assistant</title>
+        <title>{getLocalizedSchoolName(application.template.schoolName, language)} Application - School Application Assistant</title>
       </Head>
 
       <Layout>
@@ -226,7 +232,7 @@ export default function ApplicationForm() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {application.template.schoolName}
+                  {getLocalizedSchoolName(application.template.schoolName, language)}
                 </h1>
                 <p className="text-gray-600">{application.template.program}</p>
               </div>

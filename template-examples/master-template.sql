@@ -23,7 +23,7 @@ INSERT INTO "SchoolFormTemplate" (
 ) VALUES (
   gen_random_uuid()::text,
   'template-master-all-fields',
-  '[主模板] 完整字段库',
+  '{"en": "[Master Template] Complete Field Library", "zh-CN": "[主模板] 完整字段库", "zh-TW": "[主模板] 完整字段庫"}'::jsonb,
   '包含所有个人资料字段的主模板',
   '此模板包含系统中所有可用的个人资料字段，可以在此基础上删减字段来创建具体学校的申请表',
   '国际学校',

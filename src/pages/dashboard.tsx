@@ -5,10 +5,11 @@ import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { Plus, FileText, Clock, CheckCircle, Trash2, Settings } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
+import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 
 interface Application {
   id: string;
-  schoolName: string;
+  schoolName: string | LocalizedText;
   program: string;
   status: string;
   createdAt: string;
@@ -18,14 +19,14 @@ interface Application {
 
 interface Template {
   id: string;
-  schoolName: string;
+  schoolName: string | LocalizedText;
   program: string;
   description?: string;
 }
 
 export default function Dashboard() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [applications, setApplications] = useState<Application[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,7 +211,7 @@ export default function Dashboard() {
                   </div>
                   
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {app.schoolName}
+                    {getLocalizedSchoolName(app.schoolName, language)}
                   </h3>
                   <p className="text-gray-600 mb-4">{app.program}</p>
                   
@@ -249,7 +250,7 @@ export default function Dashboard() {
                     }}
                   >
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {template.schoolName}
+                      {getLocalizedSchoolName(template.schoolName, language)}
                     </h3>
                     <p className="text-gray-600">{template.program}</p>
                     {template.description && (

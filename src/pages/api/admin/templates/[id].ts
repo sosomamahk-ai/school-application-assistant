@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
+import { isMasterTemplate } from '@/constants/templates';
 
 export default async function handler(
   req: NextApiRequest,
@@ -26,6 +27,14 @@ export default async function handler(
 
     if (!template) {
       return res.status(404).json({ error: 'Template not found' });
+    }
+
+    // Prevent deletion of master template
+    if (isMasterTemplate(template.schoolId)) {
+      return res.status(403).json({ 
+        error: 'Cannot delete master template',
+        message: 'The master template is a system template and cannot be deleted. It contains all available fields and is essential for creating new school templates.'
+      });
     }
 
     // Delete all applications that use this template first
