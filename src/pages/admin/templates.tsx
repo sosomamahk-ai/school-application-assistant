@@ -109,17 +109,110 @@ export default function TemplatesAdmin() {
     }
   };
 
+  // Parse "中文（English）" format and split into Chinese and English
+  const parseBracketFormat = (text: string): { chinese: string; english: string } => {
+    // Match pattern: 中文（English）or 中文(English)
+    const match = text.match(/^(.+?)[（(](.+?)[）)]$/);
+    if (match) {
+      return {
+        chinese: match[1].trim(),
+        english: match[2].trim(),
+      };
+    }
+    return { chinese: '', english: text };
+  };
+
+  // Simplified to traditional Chinese conversion map (common characters)
+  const simplifiedToTraditional: Record<string, string> = {
+    // Common characters
+    '学': '學', '校': '校', '名': '名', '称': '稱', '称': '稱',
+    '简': '簡', '体': '體', '中': '中', '文': '文',
+    '传': '傳', '统': '統', '翻': '翻', '译': '譯',
+    '管': '管', '理': '理', '模': '模', '板': '板',
+    '字': '字', '段': '段', '标': '標', '签': '籤',
+    '保': '保', '存': '存', '取': '取', '消': '消',
+    '编': '編', '辑': '輯', '删': '刪', '除': '除',
+    '添': '添', '加': '加', '新': '新', '创': '創',
+    '建': '建', '查': '查', '看': '看', '预': '預',
+    '览': '覽', '导': '導', '出': '出', '入': '入',
+    '设': '設', '置': '置', '选': '選', '择': '擇',
+    '输': '輸', '入': '入', '输': '輸', '出': '出',
+    '确': '確', '认': '認', '取': '取', '消': '消',
+    '编': '編', '辑': '輯', '删': '刪', '除': '除',
+    '详': '詳', '细': '細', '信': '信', '息': '息',
+    '类': '類', '型': '型', '必': '必', '填': '填',
+    '可': '可', '选': '選', '帮': '幫', '助': '助',
+    '文': '文', '本': '本', '提': '提', '示': '示',
+    '占': '佔', '位': '位', '符': '符', '号': '號',
+    '最': '最', '大': '大', '长': '長', '度': '度',
+    '最': '最', '小': '小', '长': '長', '度': '度',
+    '默': '默', '认': '認', '值': '值', '规': '規',
+    '则': '則', '自': '自', '动': '動', '填': '填',
+    '充': '充', '映': '映', '射': '射', '到': '到',
+    '用': '用', '户': '戶', '字': '字', '段': '段',
+    '路': '路', '径': '徑', '基': '基', '本': '本',
+    '教': '教', '育': '育', '经': '經', '历': '歷',
+    '工': '工', '作': '作', '经': '經', '验': '驗',
+    '论': '論', '文': '文', '附': '附', '加': '加',
+    '数': '數', '据': '據', '选': '選', '项': '項',
+    '日': '日', '期': '期', '时': '時', '间': '間',
+    '电': '電', '话': '話', '邮': '郵', '箱': '箱',
+    '地': '地', '址': '址', '国': '國', '籍': '籍',
+    '生': '生', '日': '日', '性': '性', '别': '別',
+  };
+
+  // Convert simplified Chinese to traditional (simple version)
+  const convertToTraditional = (simplified: string): string => {
+    // For now, return simplified as-is with a note that user should manually edit
+    // In production, you might want to use a proper conversion library
+    return simplified.split('').map(char => simplifiedToTraditional[char] || char).join('');
+  };
+
   const handleTranslationChange = (
     key: string,
     language: 'en' | 'zh-CN' | 'zh-TW',
-    value: string
+    value: string,
+    originalLabel?: string
   ) => {
     setTranslationsData((prev) => {
+      const existing = prev[key];
+      let newEn = existing?.en || originalLabel || '';
+      let newZhCN = existing?.['zh-CN'] || '';
+      let newZhTW = existing?.['zh-TW'] || '';
+
+      // If updating English column and it contains bracket format, parse it
+      if (language === 'en' && value) {
+        const parsed = parseBracketFormat(value);
+        if (parsed.chinese && parsed.english) {
+          // Auto-fill Chinese and English
+          newZhCN = parsed.chinese;
+          newEn = parsed.english;
+          // Auto-convert to traditional (simple conversion)
+          newZhTW = convertToTraditional(parsed.chinese);
+        } else {
+          newEn = value;
+        }
+      } else {
+        // Update the specific language
+        if (language === 'en') {
+          newEn = value;
+        } else if (language === 'zh-CN') {
+          newZhCN = value;
+          // Auto-update traditional if simplified is updated and traditional is empty
+          if (value && !newZhTW) {
+            newZhTW = convertToTraditional(value);
+          }
+        } else if (language === 'zh-TW') {
+          newZhTW = value;
+        }
+      }
+      
       const updated = {
         ...prev,
         [key]: {
-          ...(prev[key] || { en: '', 'zh-CN': '', 'zh-TW': '' }),
-          [language]: value,
+          en: newEn,
+          'zh-CN': newZhCN,
+          'zh-TW': newZhTW,
         },
       };
       return updated;
@@ -494,12 +587,16 @@ export default function TemplatesAdmin() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {getAllTemplateFieldLabels(templates).map(({ labelKey, originalLabel }) => {
-                  const translation = translationsData[labelKey] || {
+                  // Get existing translation or initialize with originalLabel as default for en
+                  const existingTranslation = translationsData[labelKey];
+                  const translation = existingTranslation || {
                     en: originalLabel || '',
                     'zh-CN': '',
                     'zh-TW': '',
                   };
-                  const isEmpty = !translation.en && !translation['zh-CN'] && !translation['zh-TW'];
+                  // If translation exists but en is empty, use originalLabel as fallback
+                  const displayEn = translation.en || originalLabel || '';
+                  const isEmpty = !displayEn && !translation['zh-CN'] && !translation['zh-TW'];
                   
                   return (
                     <tr key={labelKey} className={`hover:bg-gray-50 ${isEmpty ? 'bg-yellow-50' : ''}`}>
@@ -510,7 +607,7 @@ export default function TemplatesAdmin() {
                         <input
                           type="text"
                           value={translation['zh-CN'] || ''}
-                          onChange={(e) => handleTranslationChange(labelKey, 'zh-CN', e.target.value)}
+                          onChange={(e) => handleTranslationChange(labelKey, 'zh-CN', e.target.value, originalLabel)}
                           placeholder="简体中文翻译"
                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
                             isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
@@ -521,7 +618,7 @@ export default function TemplatesAdmin() {
                         <input
                           type="text"
                           value={translation['zh-TW'] || ''}
-                          onChange={(e) => handleTranslationChange(labelKey, 'zh-TW', e.target.value)}
+                          onChange={(e) => handleTranslationChange(labelKey, 'zh-TW', e.target.value, originalLabel)}
                           placeholder="繁體中文翻譯"
                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
                             isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
@@ -531,13 +628,16 @@ export default function TemplatesAdmin() {
                       <td className="px-6 py-4">
                         <input
                           type="text"
-                          value={translation.en || ''}
-                          onChange={(e) => handleTranslationChange(labelKey, 'en', e.target.value)}
-                          placeholder="English translation"
+                          value={displayEn}
+                          onChange={(e) => handleTranslationChange(labelKey, 'en', e.target.value, originalLabel)}
+                          placeholder="English translation or 中文（English）"
                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
                             isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
                           }`}
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          支持格式：中文（English）将自动分离
+                        </p>
                       </td>
                     </tr>
                   );
