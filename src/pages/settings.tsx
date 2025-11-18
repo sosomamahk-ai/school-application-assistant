@@ -42,12 +42,12 @@ export default function Settings() {
       try {
         const user = JSON.parse(userStr);
         setCurrentUser(user);
-        setEmailForm({ ...emailForm, newEmail: user.email || '' });
+        setEmailForm(prev => ({ ...prev, newEmail: user.email || '' }));
       } catch (e) {
         console.error('Error parsing user data:', e);
       }
     }
-  }, []);
+  }, [router]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
