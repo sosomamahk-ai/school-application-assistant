@@ -2,17 +2,25 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { Save, Plus, Trash2 } from 'lucide-react';
-import { Education, Experience, FormField } from '@/types';
+import { Save } from 'lucide-react';
+import { FormField } from '@/types';
 import { useTranslation } from '@/contexts/TranslationContext';
 import FormFieldInput from '@/components/FormFieldInput';
+
+interface TemplateSection {
+  id: string;
+  label: string;
+  type: string;
+  fields: FormField[];
+}
 
 export default function Profile() {
   const router = useRouter();
   const { t } = useTranslation();
   const [profile, setProfile] = useState<any>(null);
-  const [templateFields, setTemplateFields] = useState<FormField[]>([]);
+  const [sections, setSections] = useState<TemplateSection[]>([]);
   const [fieldValues, setFieldValues] = useState<{ [key: string]: any }>({});
+  const [activeTab, setActiveTab] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -28,12 +36,26 @@ export default function Profile() {
 
   const fetchMainTemplate = async () => {
     try {
-      // Fetch the main template (template-master-all-fields)
       const response = await fetch('/api/templates?schoolId=template-master-all-fields');
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.template && Array.isArray(data.template.fields)) {
-          setTemplateFields(data.template.fields);
+          // Parse sections from fieldsData
+          const parsedSections: TemplateSection[] = data.template.fields
+            .filter((item: any) => item.type === 'section' && Array.isArray(item.fields))
+            .map((item: any) => ({
+              id: item.id,
+              label: item.label,
+              type: item.type,
+              fields: item.fields || []
+            }));
+          
+          setSections(parsedSections);
+          
+          // Set first tab as active
+          if (parsedSections.length > 0 && !activeTab) {
+            setActiveTab(parsedSections[0].id);
+          }
         }
       } else {
         // Fallback: try to find any template starting with "template-"
@@ -45,7 +67,20 @@ export default function Profile() {
               t.schoolId && t.schoolId.startsWith('template-')
             );
             if (mainTemplate && Array.isArray(mainTemplate.fields)) {
-              setTemplateFields(mainTemplate.fields);
+              const parsedSections: TemplateSection[] = mainTemplate.fields
+                .filter((item: any) => item.type === 'section' && Array.isArray(item.fields))
+                .map((item: any) => ({
+                  id: item.id,
+                  label: item.label,
+                  type: item.type,
+                  fields: item.fields || []
+                }));
+              
+              setSections(parsedSections);
+              
+              if (parsedSections.length > 0 && !activeTab) {
+                setActiveTab(parsedSections[0].id);
+              }
             }
           }
         }
@@ -91,28 +126,30 @@ export default function Profile() {
     }
   };
 
-  // Initialize field values when template fields are loaded
+  // Initialize field values when sections are loaded
   useEffect(() => {
-    if (templateFields.length > 0 && profile) {
+    if (sections.length > 0 && profile) {
       setFieldValues(prevValues => {
         const values = { ...prevValues };
         let updated = false;
         
         // Initialize any missing field values from profile
-        templateFields.forEach(field => {
-          if (values[field.id] === undefined) {
-            // Try to get value from profile additional data
-            if (profile.additional && profile.additional[field.id] !== undefined) {
-              values[field.id] = profile.additional[field.id];
-              updated = true;
+        sections.forEach(section => {
+          section.fields.forEach(field => {
+            if (values[field.id] === undefined) {
+              // Try to get value from profile additional data
+              if (profile.additional && profile.additional[field.id] !== undefined) {
+                values[field.id] = profile.additional[field.id];
+                updated = true;
+              }
             }
-          }
+          });
         });
         
         return updated ? values : prevValues;
       });
     }
-  }, [templateFields, profile]);
+  }, [sections, profile]);
 
   const saveProfile = async () => {
     setSaving(true);
@@ -132,10 +169,12 @@ export default function Profile() {
       };
       
       // Store all template field values in additionalData
-      templateFields.forEach(field => {
-        if (fieldValues[field.id] !== undefined) {
-          profileData.additional[field.id] = fieldValues[field.id];
-        }
+      sections.forEach(section => {
+        section.fields.forEach(field => {
+          if (fieldValues[field.id] !== undefined) {
+            profileData.additional[field.id] = fieldValues[field.id];
+          }
+        });
       });
       
       const response = await fetch('/api/profile', {
@@ -167,59 +206,6 @@ export default function Profile() {
     }));
   };
 
-  const addEducation = () => {
-    const newEducation: Education = {
-      schoolName: '',
-      degree: '',
-      major: '',
-      startDate: '',
-      endDate: '',
-      GPA: ''
-    };
-    setProfile({
-      ...profile,
-      education: [...(profile.education || []), newEducation]
-    });
-  };
-
-  const removeEducation = (index: number) => {
-    const updated = [...profile.education];
-    updated.splice(index, 1);
-    setProfile({ ...profile, education: updated });
-  };
-
-  const updateEducation = (index: number, field: string, value: string) => {
-    const updated = [...profile.education];
-    updated[index] = { ...updated[index], [field]: value };
-    setProfile({ ...profile, education: updated });
-  };
-
-  const addExperience = () => {
-    const newExperience: Experience = {
-      title: '',
-      organization: '',
-      description: '',
-      startDate: '',
-      endDate: ''
-    };
-    setProfile({
-      ...profile,
-      experiences: [...(profile.experiences || []), newExperience]
-    });
-  };
-
-  const removeExperience = (index: number) => {
-    const updated = [...profile.experiences];
-    updated.splice(index, 1);
-    setProfile({ ...profile, experiences: updated });
-  };
-
-  const updateExperience = (index: number, field: string, value: string) => {
-    const updated = [...profile.experiences];
-    updated[index] = { ...updated[index], [field]: value };
-    setProfile({ ...profile, experiences: updated });
-  };
-
   if (loading) {
     return (
       <Layout>
@@ -229,6 +215,8 @@ export default function Profile() {
       </Layout>
     );
   }
+
+  const activeSection = sections.find(s => s.id === activeTab);
 
   return (
     <>
@@ -254,224 +242,64 @@ export default function Profile() {
             </button>
           </div>
 
-          {/* Dynamic Template Fields */}
-          {templateFields.length > 0 ? (
+          {/* Tabs and Content */}
+          {sections.length > 0 ? (
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('profile.basicInfo')}</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                {templateFields.map((field) => (
-                  <div key={field.id} className={field.type === 'textarea' || field.type === 'essay' ? 'md:col-span-2' : ''}>
-                    <FormFieldInput
-                      field={field}
-                      value={fieldValues[field.id] || ''}
-                      onChange={(value) => updateFieldValue(field.id, value)}
-                    />
-                  </div>
-                ))}
+              {/* Tab Navigation */}
+              <div className="border-b border-gray-200 mb-6">
+                <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
+                  {sections.map((section) => (
+                    <button
+                      key={section.id}
+                      onClick={() => setActiveTab(section.id)}
+                      className={`
+                        whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                        ${
+                          activeTab === section.id
+                            ? 'border-primary-500 text-primary-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      {section.label}
+                    </button>
+                  ))}
+                </nav>
               </div>
+
+              {/* Tab Content */}
+              {activeSection && (
+                <div className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {activeSection.fields.map((field) => (
+                      <div
+                        key={field.id}
+                        className={
+                          field.type === 'textarea' || field.type === 'essay'
+                            ? 'md:col-span-2'
+                            : ''
+                        }
+                      >
+                        <FormFieldInput
+                          field={field}
+                          value={fieldValues[field.id] || ''}
+                          onChange={(value) => updateFieldValue(field.id, value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            !loading && (
-              <div className="card">
-                <p className="text-gray-600">
-                  {t('profile.noTemplateFields') || 'Template fields are being loaded. Please refresh the page if this message persists.'}
-                </p>
-              </div>
-            )
+            <div className="card">
+              <p className="text-gray-600">
+                {t('profile.noTemplateFields') || 'Template fields are being loaded. Please refresh the page if this message persists.'}
+              </p>
+            </div>
           )}
-
-          {/* Education */}
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">{t('profile.education')}</h2>
-              <button onClick={addEducation} className="btn-secondary flex items-center space-x-2">
-                <Plus className="h-5 w-5" />
-                <span>{t('profile.addEducation')}</span>
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {profile?.education?.map((edu: Education, index: number) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-medium text-gray-900">{t('profile.educationItem')} {index + 1}</h3>
-                    <button
-                      onClick={() => removeEducation(index)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.schoolName')}
-                      </label>
-                      <input
-                        type="text"
-                        value={edu.schoolName}
-                        onChange={(e) => updateEducation(index, 'schoolName', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.degree')}
-                      </label>
-                      <input
-                        type="text"
-                        value={edu.degree}
-                        onChange={(e) => updateEducation(index, 'degree', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.major')}
-                      </label>
-                      <input
-                        type="text"
-                        value={edu.major}
-                        onChange={(e) => updateEducation(index, 'major', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.gpa')}
-                      </label>
-                      <input
-                        type="text"
-                        value={edu.GPA}
-                        onChange={(e) => updateEducation(index, 'GPA', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.startDate')}
-                      </label>
-                      <input
-                        type="date"
-                        value={edu.startDate}
-                        onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.endDate')}
-                      </label>
-                      <input
-                        type="date"
-                        value={edu.endDate}
-                        onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Experiences */}
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">{t('profile.experiences')}</h2>
-              <button onClick={addExperience} className="btn-secondary flex items-center space-x-2">
-                <Plus className="h-5 w-5" />
-                <span>{t('profile.addExperience')}</span>
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {profile?.experiences?.map((exp: Experience, index: number) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-medium text-gray-900">{t('profile.experienceItem')} {index + 1}</h3>
-                    <button
-                      onClick={() => removeExperience(index)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.jobTitle')}
-                      </label>
-                      <input
-                        type="text"
-                        value={exp.title}
-                        onChange={(e) => updateExperience(index, 'title', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.organization')}
-                      </label>
-                      <input
-                        type="text"
-                        value={exp.organization}
-                        onChange={(e) => updateExperience(index, 'organization', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.jobDescription')}
-                      </label>
-                      <textarea
-                        value={exp.description}
-                        onChange={(e) => updateExperience(index, 'description', e.target.value)}
-                        rows={3}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.startDate')}
-                      </label>
-                      <input
-                        type="date"
-                        value={exp.startDate}
-                        onChange={(e) => updateExperience(index, 'startDate', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('profile.endDate')}
-                      </label>
-                      <input
-                        type="date"
-                        value={exp.endDate}
-                        onChange={(e) => updateExperience(index, 'endDate', e.target.value)}
-                        className="input-field"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </Layout>
     </>
   );
 }
-
