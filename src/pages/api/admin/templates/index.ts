@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { Prisma } from '@prisma/client';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 import { deserializeSchoolName } from '@/utils/templates';
@@ -18,8 +19,22 @@ export default async function handler(
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
+    const search = Array.isArray(req.query.search) ? req.query.search[0] : req.query.search;
+    const where: Prisma.SchoolFormTemplateWhereInput = {};
+
+    if (search && search.trim().length > 0) {
+      const term = search.trim();
+      where.OR = [
+        { schoolId: { contains: term, mode: 'insensitive' } },
+        { program: { contains: term, mode: 'insensitive' } },
+        { description: { contains: term, mode: 'insensitive' } },
+        { schoolName: { contains: term, mode: 'insensitive' } }
+      ];
+    }
+
     // 获取所有模板（包括禁用的）- 管理员专用
     const templates = await prisma.schoolFormTemplate.findMany({
+      where,
       orderBy: {
         updatedAt: 'desc'
       }

@@ -995,6 +995,36 @@ export const translations: TranslationData = {
     'zh-CN': '加载中...',
     'zh-TW': '載入中...',
   },
+  'admin.templates.searchLabel': {
+    en: 'Search templates',
+    'zh-CN': '搜索模板',
+    'zh-TW': '搜尋範本',
+  },
+  'admin.templates.searchPlaceholder': {
+    en: 'Search by name, template ID, description...',
+    'zh-CN': '按名称、ID、描述搜索...',
+    'zh-TW': '依名稱、ID、描述搜尋...',
+  },
+  'admin.templates.clearSearch': {
+    en: 'Clear search',
+    'zh-CN': '清除搜索',
+    'zh-TW': '清除搜尋',
+  },
+  'admin.templates.searchHint': {
+    en: 'Enter keywords to filter templates instantly.',
+    'zh-CN': '输入关键字可即时筛选模板。',
+    'zh-TW': '輸入關鍵字即可即時篩選範本。',
+  },
+  'admin.templates.searchResults': {
+    en: 'Showing results for "{keyword}"',
+    'zh-CN': '显示与“{keyword}”相关的结果',
+    'zh-TW': '顯示與「{keyword}」相關的結果',
+  },
+  'admin.templates.searching': {
+    en: 'Searching templates...',
+    'zh-CN': '正在搜索模板...',
+    'zh-TW': '正在搜尋範本...',
+  },
   'admin.templates.noTemplates': {
     en: 'No school templates yet',
     'zh-CN': '还没有任何学校模板',
@@ -1009,6 +1039,11 @@ export const translations: TranslationData = {
     en: 'Create First Template',
     'zh-CN': '创建第一个模板',
     'zh-TW': '創建第一個範本',
+  },
+  'admin.templates.noTemplatesSearch': {
+    en: 'No templates match "{keyword}".',
+    'zh-CN': '没有找到与“{keyword}”匹配的模板。',
+    'zh-TW': '沒有找到與「{keyword}」相符的範本。',
   },
   'admin.templates.systemTemplates': {
     en: 'System Preset Templates',
@@ -1029,6 +1064,11 @@ export const translations: TranslationData = {
     en: 'Inactive',
     'zh-CN': '已禁用',
     'zh-TW': '已禁用',
+  },
+  'admin.templates.tag.system': {
+    en: 'System template',
+    'zh-CN': '系统模板',
+    'zh-TW': '系統範本',
   },
   'admin.templates.label.templateId': {
     en: 'Template ID:',
@@ -1064,6 +1104,11 @@ export const translations: TranslationData = {
     en: 'Export as JSON',
     'zh-CN': '导出为JSON',
     'zh-TW': '匯出為JSON',
+  },
+  'admin.templates.noDescription': {
+    en: 'No description provided yet.',
+    'zh-CN': '暂无模板介绍。',
+    'zh-TW': '暫無範本介紹。',
   },
   'admin.templates.action.delete': {
     en: 'Delete',

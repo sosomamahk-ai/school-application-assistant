@@ -3,7 +3,7 @@ import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
-import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter, Save } from 'lucide-react';
+import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter, Save, Search, Loader2, X } from 'lucide-react';
 import jwt from 'jsonwebtoken';
 import type { JWTPayload } from '@/utils/auth';
 import { getTokenFromCookieHeader } from '@/utils/token';
@@ -60,18 +60,40 @@ export default function TemplatesAdmin() {
   const { t, language } = useTranslation();
   const [templates, setTemplates] = useState<SchoolTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showCreateMasterModal, setShowCreateMasterModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [translationsData, setTranslationsData] = useState<TranslationData>({});
   const [savingTranslations, setSavingTranslations] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 350);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const fetchTemplates = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       // 使用管理员专用API，获取所有模板（包括禁用的）
-      const response = await fetch('/api/admin/templates', {
+      const params = new URLSearchParams();
+      if (debouncedSearchTerm) {
+        params.set('search', debouncedSearchTerm);
+      }
+      const endpoint = params.toString()
+        ? `/api/admin/templates?${params.toString()}`
+        : '/api/admin/templates';
+
+      setLoading(true);
+      setIsSearching(Boolean(debouncedSearchTerm));
+
+      const response = await fetch(endpoint, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -96,14 +118,17 @@ export default function TemplatesAdmin() {
       alert(t('admin.templates.error.loadFailedNetwork'));
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
-  }, [router, t]);
+  }, [debouncedSearchTerm, router, t]);
 
   useEffect(() => {
     fetchTemplates();
-    fetchTranslations();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchTemplates]);
+
+  useEffect(() => {
+    fetchTranslations();
+  }, []);
 
   const fetchTranslations = async () => {
     try {
@@ -348,6 +373,8 @@ export default function TemplatesAdmin() {
   
   // 获取用户创建的模板
   const userTemplates = filteredTemplates.filter(template => !template.schoolId || !template.schoolId.startsWith('template-'));
+  const noFilteredTemplates = filteredTemplates.length === 0;
+  const noResultsDueToSearch = noFilteredTemplates && Boolean(debouncedSearchTerm);
 
   return (
     <Layout>
@@ -451,6 +478,49 @@ export default function TemplatesAdmin() {
           </div>
         </div>
 
+        {/* Template Search */}
+        <div className="mb-6">
+          <label className="text-sm font-medium text-gray-700">
+            {t('admin.templates.searchLabel')}
+          </label>
+          <div className="mt-2 relative">
+            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t('admin.templates.searchPlaceholder')}
+              className="input-field pl-10 pr-10"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                aria-label={t('admin.templates.clearSearch')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="mt-2 min-h-[1.5rem] text-sm text-gray-500 flex items-center space-x-2">
+            {isSearching && (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-primary-600" />
+                <span>{t('admin.templates.searching')}</span>
+              </>
+            )}
+            {!isSearching && debouncedSearchTerm && (
+              <span>
+                {t('admin.templates.searchResults').replace('{keyword}', debouncedSearchTerm)}
+              </span>
+            )}
+            {!debouncedSearchTerm && !isSearching && (
+              <span>{t('admin.templates.searchHint')}</span>
+            )}
+          </div>
+        </div>
+
         {/* 类别筛选按钮 */}
         <div className="mb-6 flex items-center space-x-2 overflow-x-auto pb-2">
           <Filter className="h-5 w-5 text-gray-400 flex-shrink-0" />
@@ -493,21 +563,25 @@ export default function TemplatesAdmin() {
         </div>
 
         {/* Templates List */}
-        {loading ? (
+        {loading && templates.length === 0 ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">{t('admin.templates.loading')}</p>
           </div>
-        ) : filteredTemplates.length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-gray-600 mb-4">
-              {selectedCategory === 'all'
-                ? t('admin.templates.noTemplates')
-                : t('admin.templates.noTemplatesCategory').replace('{category}', getCategoryTranslation(selectedCategory))}
+        ) : noFilteredTemplates ? (
+          <div className="card text-center py-12 space-y-4">
+            <p className="text-gray-600">
+              {noResultsDueToSearch
+                ? t('admin.templates.noTemplatesSearch').replace('{keyword}', debouncedSearchTerm)
+                : selectedCategory === 'all'
+                  ? t('admin.templates.noTemplates')
+                  : t('admin.templates.noTemplatesCategory').replace('{category}', getCategoryTranslation(selectedCategory))}
             </p>
-            <button onClick={handleCreateNew} className="btn-primary">
-              {t('admin.templates.createFirst')}
-            </button>
+            {!noResultsDueToSearch && (
+              <button onClick={handleCreateNew} className="btn-primary">
+                {t('admin.templates.createFirst')}
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -819,85 +893,110 @@ function TemplateCard({
     return CATEGORY_COLORS[categoryKey] || 'bg-gray-100 text-gray-800';
   };
 
+  const templateName = getLocalizedSchoolName(template.schoolName as any, language);
+  const fieldCount = Array.isArray(template.fieldsData) ? template.fieldsData.length : 0;
+  const description = template.description || t('admin.templates.noDescription');
+
   return (
-    <div className="card flex flex-col h-full hover:shadow-lg transition-shadow">
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <h3 className="text-xl font-semibold text-gray-900">
-              {getLocalizedSchoolName(template.schoolName as any, language)}
-            </h3>
-            {template.category && (
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(template.category)}`}>
-                {template.category}
-              </span>
-            )}
-            <span className={`px-3 py-1 rounded-full text-sm ${
-              template.isActive 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-gray-100 text-gray-800'
-            }`}>
-              {template.isActive ? t('admin.templates.status.active') : t('admin.templates.status.inactive')}
-            </span>
-          </div>
-          <p className="text-gray-600 mb-2">{template.program}</p>
-          <p className="text-sm text-gray-500 mb-3">{template.description}</p>
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
-            <span>{t('admin.templates.label.templateId')} {template.schoolId}</span>
-            <span>•</span>
-            <span>{t('admin.templates.label.fieldCount')} {Array.isArray(template.fieldsData) ? template.fieldsData.length : 0}</span>
-            <span>•</span>
-            <span>{t('admin.templates.label.updatedAt')} {new Date(template.updatedAt).toLocaleDateString()}</span>
-          </div>
-        </div>
-        <div className="flex space-x-2">
-          {isSystem && (
-            <button
-              onClick={() => onCreateFrom(template.id)}
-              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title={t('admin.templates.action.createFrom')}
-            >
-              <Copy className="h-5 w-5" />
-            </button>
-          )}
+    <div className="card flex flex-col h-full space-y-4">
+      {/* Line 1: Title */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-900">{templateName}</h3>
+        <p className="text-sm text-gray-500 mt-1">{template.program}</p>
+      </div>
+
+      {/* Line 2: Tags */}
+      <div className="flex flex-wrap gap-2">
+        {template.category && (
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${getCategoryColor(template.category)}`}>
+            {template.category}
+          </span>
+        )}
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${
+            template.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+          }`}
+        >
+          {template.isActive ? t('admin.templates.status.active') : t('admin.templates.status.inactive')}
+        </span>
+        <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-gray-100 text-gray-700">
+          {t('admin.templates.label.fieldCount')} {fieldCount}
+        </span>
+        {isSystem && (
+          <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-blue-50 text-blue-700">
+            {t('admin.templates.tag.system')}
+          </span>
+        )}
+      </div>
+
+      {/* Line 3: Actions */}
+      <div className="flex flex-wrap gap-2">
+        {isSystem && (
           <button
-            onClick={() => router.push(`/admin/templates/preview/${template.id}`)}
-            className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-            title={t('admin.templates.action.preview')}
+            onClick={() => onCreateFrom(template.id)}
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-blue-100 text-blue-700 bg-blue-50 hover:bg-blue-100 text-sm font-medium transition-colors"
+            title={t('admin.templates.action.createFrom')}
           >
-            <Eye className="h-5 w-5" />
+            <Copy className="h-4 w-4 mr-2" />
+            {t('admin.templates.action.createFrom')}
           </button>
-          <button
-            onClick={() => onEdit(template.id)}
-            className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-            title={t('admin.templates.action.edit')}
-          >
-            <Edit className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => onExport(template)}
-            className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-            title={t('admin.templates.action.export')}
-          >
-            <Download className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => onDelete(template.id)}
-            disabled={isMasterTemplate(template.schoolId)}
-            className={`p-2 rounded-lg transition-colors ${
-              isMasterTemplate(template.schoolId)
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
-            }`}
-            title={
-              isMasterTemplate(template.schoolId)
-                ? t('admin.templates.action.deleteDisabledMaster')
-                : t('admin.templates.action.delete')
-            }
-          >
-            <Trash2 className="h-5 w-5" />
-          </button>
-        </div>
+        )}
+        <button
+          onClick={() => router.push(`/admin/templates/preview/${template.id}`)}
+          className="inline-flex items-center px-3 py-2 rounded-lg border border-primary-100 text-primary-700 bg-primary-50 hover:bg-primary-100 text-sm font-medium transition-colors"
+          title={t('admin.templates.action.preview')}
+        >
+          <Eye className="h-4 w-4 mr-2" />
+          {t('admin.templates.action.preview')}
+        </button>
+        <button
+          onClick={() => onEdit(template.id)}
+          className="inline-flex items-center px-3 py-2 rounded-lg border border-primary-100 text-primary-700 bg-primary-50 hover:bg-primary-100 text-sm font-medium transition-colors"
+          title={t('admin.templates.action.edit')}
+        >
+          <Edit className="h-4 w-4 mr-2" />
+          {t('admin.templates.action.edit')}
+        </button>
+        <button
+          onClick={() => onExport(template)}
+          className="inline-flex items-center px-3 py-2 rounded-lg border border-green-100 text-green-700 bg-green-50 hover:bg-green-100 text-sm font-medium transition-colors"
+          title={t('admin.templates.action.export')}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          {t('admin.templates.action.export')}
+        </button>
+        <button
+          onClick={() => onDelete(template.id)}
+          disabled={isMasterTemplate(template.schoolId)}
+          className={`inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+            isMasterTemplate(template.schoolId)
+              ? 'border-gray-100 text-gray-300 cursor-not-allowed'
+              : 'border-red-100 text-red-700 bg-red-50 hover:bg-red-100'
+          }`}
+          title={
+            isMasterTemplate(template.schoolId)
+              ? t('admin.templates.action.deleteDisabledMaster')
+              : t('admin.templates.action.delete')
+          }
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          {t('admin.templates.action.delete')}
+        </button>
+      </div>
+
+      {/* Line 4: Description */}
+      <div className="text-sm text-gray-600 flex-1">
+        {description}
+      </div>
+
+      {/* Line 5: Template ID */}
+      <div className="text-xs text-gray-500">
+        <span className="font-semibold">{t('admin.templates.label.templateId')}</span> {template.schoolId}
+      </div>
+
+      {/* Line 6: Updated time */}
+      <div className="text-xs text-gray-500">
+        <span className="font-semibold">{t('admin.templates.label.updatedAt')}</span> {new Date(template.updatedAt).toLocaleString()}
       </div>
     </div>
   );
