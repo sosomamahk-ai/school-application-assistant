@@ -252,10 +252,27 @@ export default function Profile() {
                     // Get label in current language
                     let displayLabel = section.label;
                     
-                    // Try to get translation if translation key exists
-                    const possibleKey = `profile.section.${section.id}`;
-                    if (translations[possibleKey]) {
-                      displayLabel = translations[possibleKey][language] || translations[possibleKey].en || section.label;
+                    // Check if label contains slash separator (e.g., "基本信息/basic information")
+                    if (section.label.includes('/')) {
+                      const parts = section.label.split('/').map(s => s.trim());
+                      if (parts.length >= 2) {
+                        // First part is usually Chinese, second part is English
+                        const chinesePart = parts[0];
+                        const englishPart = parts[1];
+                        
+                        // Determine which part to show based on current language
+                        if (language === 'zh-CN' || language === 'zh-TW') {
+                          displayLabel = chinesePart;
+                        } else {
+                          displayLabel = englishPart;
+                        }
+                      }
+                    } else {
+                      // Try to get translation if translation key exists
+                      const possibleKey = `profile.section.${section.id}`;
+                      if (translations[possibleKey]) {
+                        displayLabel = translations[possibleKey][language] || translations[possibleKey].en || section.label;
+                      }
                     }
                     
                     return (
