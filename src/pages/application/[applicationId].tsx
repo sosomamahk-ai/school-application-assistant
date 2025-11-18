@@ -98,6 +98,7 @@ export default function ApplicationForm() {
       fetchApplication();
       checkAutoFill();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applicationId, fetchApplication, checkAutoFill]);
 
   const saveApplication = async (updateStatus?: string) => {

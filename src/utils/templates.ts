@@ -42,7 +42,7 @@ export function deserializeSchoolName(value: unknown): string | LocalizedText {
   return '';
 }
 
-function cloneTemplateNode(node: any, valueMap: Record<string, any>) {
+function cloneTemplateNode(node: any, valueMap: Record<string, any>): any {
   if (Array.isArray(node)) {
     return node.map((child) => cloneTemplateNode(child, valueMap));
   }
