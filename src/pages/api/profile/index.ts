@@ -25,6 +25,7 @@ export default async function handler(
       res.status(200).json({
         success: true,
         profile: {
+          userId: userId,
           id: profile.id,
           fullName: profile.fullName,
           phone: profile.phone,
@@ -66,6 +67,7 @@ export default async function handler(
       res.status(200).json({
         success: true,
         profile: {
+          userId: userId,
           id: profile.id,
           fullName: profile.fullName,
           phone: profile.phone,

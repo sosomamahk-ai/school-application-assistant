@@ -11,7 +11,11 @@ const elements = {
   loginBtn: document.getElementById('loginBtn'),
   pageInfo: document.getElementById('pageInfo'),
   currentDomain: document.getElementById('currentDomain'),
+  schoolSection: document.getElementById('schoolSection'),
+  currentSchoolId: document.getElementById('currentSchoolId'),
+  schoolSelect: document.getElementById('schoolSelect'),
   scanBtn: document.getElementById('scanBtn'),
+  pushFieldsBtn: document.getElementById('pushFieldsBtn'),
   fillBtn: document.getElementById('fillBtn'),
   fieldsSection: document.getElementById('fieldsSection'),
   fieldsList: document.getElementById('fieldsList'),
@@ -26,6 +30,7 @@ const elements = {
 // 状态
 let currentTab = null;
 let currentDomain = null;
+let currentSchoolId = null;
 let currentFields = [];
 let currentMappings = [];
 let userProfile = null;
@@ -49,6 +54,9 @@ async function init() {
 
     // 检查登录状态
     await checkAuthStatus();
+
+    // 检测学校 ID
+    await detectSchool();
 
     // 加载字段和映射
     await loadFields();
@@ -93,10 +101,22 @@ async function loadFields() {
   try {
     if (!currentTab) return;
 
-    const response = await chrome.tabs.sendMessage(currentTab.id, { action: 'getFields' });
-    if (response && response.fields) {
-      currentFields = response.fields;
-      renderFields();
+    // 检查当前标签页是否支持 content script
+    const url = currentTab.url || '';
+    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('edge://')) {
+      // 扩展页面或 Chrome 内部页面不支持 content script
+      return;
+    }
+
+    try {
+      const response = await chrome.tabs.sendMessage(currentTab.id, { action: 'getFields' });
+      if (response && response.fields) {
+        currentFields = response.fields;
+        renderFields();
+      }
+    } catch (error) {
+      // Content script 可能还没有注入，这是正常的，不显示错误
+      // 静默处理连接错误
     }
   } catch (error) {
     console.error('Load fields error:', error);
@@ -192,13 +212,48 @@ function renderMappings() {
 }
 
 /**
+ * 检测学校 ID
+ */
+async function detectSchool() {
+  try {
+    if (!currentTab) return;
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'detectSchoolId',
+      tabId: currentTab.id,
+    });
+
+    if (response && response.success && response.schoolId) {
+      currentSchoolId = response.schoolId;
+      elements.schoolSection.style.display = 'block';
+      elements.currentSchoolId.textContent = currentSchoolId;
+      elements.pushFieldsBtn.style.display = 'inline-block';
+    } else {
+      // 显示学校选择器（可以手动选择）
+      elements.schoolSection.style.display = 'block';
+      elements.currentSchoolId.textContent = '未识别';
+      elements.schoolSelect.style.display = 'block';
+      // 可以在这里加载学校列表
+    }
+  } catch (error) {
+    console.error('Detect school error:', error);
+  }
+}
+
+/**
  * 设置事件监听
  */
 function setupEventListeners() {
   elements.scanBtn.addEventListener('click', handleScan);
+  elements.pushFieldsBtn.addEventListener('click', handlePushFields);
   elements.fillBtn.addEventListener('click', handleFill);
   elements.clearCacheBtn.addEventListener('click', handleClearCache);
   elements.settingsBtn.addEventListener('click', handleSettings);
+  elements.schoolSelect.addEventListener('change', (e) => {
+    currentSchoolId = e.target.value;
+    elements.currentSchoolId.textContent = currentSchoolId || '未识别';
+    elements.pushFieldsBtn.style.display = currentSchoolId ? 'inline-block' : 'none';
+  });
 }
 
 /**
@@ -213,7 +268,35 @@ async function handleScan() {
       throw new Error('无法获取当前标签页');
     }
 
-    const response = await chrome.tabs.sendMessage(currentTab.id, { action: 'scan' });
+    // 检查当前标签页是否支持 content script
+    const url = currentTab.url || '';
+    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('edge://')) {
+      throw new Error('当前页面不支持表单扫描（Chrome 内部页面）');
+    }
+
+    let response;
+    try {
+      response = await chrome.tabs.sendMessage(currentTab.id, { action: 'scan' });
+    } catch (error) {
+      if (error.message.includes('Could not establish connection') || 
+          error.message.includes('Receiving end does not exist')) {
+        // Content script 未注入，尝试先注入
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: currentTab.id },
+            files: ['content.js']
+          });
+          // 等待一下让脚本加载
+          await new Promise(resolve => setTimeout(resolve, 500));
+          response = await chrome.tabs.sendMessage(currentTab.id, { action: 'scan' });
+        } catch (injectError) {
+          throw new Error('无法注入内容脚本，请刷新页面后重试');
+        }
+      } else {
+        throw error;
+      }
+    }
+    
     if (response && response.fields) {
       currentFields = response.fields;
 
@@ -250,9 +333,45 @@ async function handleScan() {
     }
   } catch (error) {
     console.error('Scan error:', error);
-    updateStatus('error', '扫描失败');
+    const errorMsg = error.message || '扫描失败';
+    updateStatus('error', errorMsg.length > 30 ? '扫描失败' : errorMsg);
   } finally {
     elements.scanBtn.disabled = false;
+  }
+}
+
+/**
+ * 处理上传模板
+ */
+async function handlePushFields() {
+  try {
+    if (!currentSchoolId) {
+      throw new Error('请先选择或识别学校');
+    }
+
+    if (currentFields.length === 0) {
+      throw new Error('请先扫描表单字段');
+    }
+
+    updateStatus('loading', '上传模板中...');
+    elements.pushFieldsBtn.disabled = true;
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'pushFields',
+      schoolId: currentSchoolId,
+      fields: currentFields,
+    });
+
+    if (response && response.success) {
+      updateStatus('ready', '模板上传成功');
+    } else {
+      throw new Error(response?.error || '上传失败');
+    }
+  } catch (error) {
+    console.error('Push fields error:', error);
+    updateStatus('error', error.message || '上传失败');
+  } finally {
+    elements.pushFieldsBtn.disabled = false;
   }
 }
 
@@ -268,16 +387,36 @@ async function handleFill() {
       throw new Error('无法获取当前标签页');
     }
 
-    // 触发后台脚本的自动填充
-    chrome.runtime.sendMessage({
-      action: 'triggerFill',
-      tabId: currentTab.id,
-    });
+    // 检查当前标签页是否支持 content script
+    const url = currentTab.url || '';
+    if (url.startsWith('chrome://') || url.startsWith('chrome-extension://') || url.startsWith('edge://')) {
+      throw new Error('当前页面不支持自动填充（Chrome 内部页面）');
+    }
 
-    updateStatus('ready', '填充完成');
+    // 如果有学校 ID，使用新的模板填充方式
+    if (currentSchoolId) {
+      // 触发后台脚本的自动填充（使用模板）
+      const response = await chrome.runtime.sendMessage({
+        action: 'triggerFill',
+        tabId: currentTab.id,
+      });
+
+      if (response && response.success) {
+        updateStatus('ready', '填充完成');
+      } else {
+        throw new Error(response?.error || '填充失败');
+      }
+    } else {
+      // 使用旧的填充方式
+      chrome.runtime.sendMessage({
+        action: 'triggerFill',
+        tabId: currentTab.id,
+      });
+      updateStatus('ready', '填充完成');
+    }
   } catch (error) {
     console.error('Fill error:', error);
-    updateStatus('error', '填充失败');
+    updateStatus('error', error.message || '填充失败');
   } finally {
     elements.fillBtn.disabled = false;
   }
@@ -302,8 +441,8 @@ async function handleClearCache() {
  * 处理设置
  */
 function handleSettings() {
-  // 打开设置页面
-  chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+  // 打开字段管理页面
+  chrome.tabs.create({ url: chrome.runtime.getURL('fields-manager.html') });
 }
 
 /**

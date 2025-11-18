@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>字段管理 - School Application Autofill</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body {
+      width: 600px;
+      min-height: 500px;
+      padding: 20px;
+    }
+    .field-editor {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .field-editor h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      color: #1f2937;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .fields-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .field-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .field-item-info {
+      flex: 1;
+    }
+    .field-item-key {
+      font-weight: 600;
+      color: #1f2937;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+    }
+    .field-item-label {
+      color: #6b7280;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .field-item-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .category-header {
+      font-weight: 600;
+      color: #667eea;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #667eea;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>📝 字段管理</h1>
+    </header>
+
+    <!-- 添加新字段 -->
+    <div class="field-editor">
+      <h3>添加新字段</h3>
+      <div class="form-group">
+        <label>字段键 (Key) *</label>
+        <input type="text" id="fieldKey" placeholder="例如: custom_field_name" />
+        <small style="color: #6b7280; font-size: 11px;">用于代码中引用，使用小写字母和下划线</small>
+      </div>
+      <div class="form-group">
+        <label>显示标签 (Label) *</label>
+        <input type="text" id="fieldLabel" placeholder="例如: 自定义字段 (Custom Field)" />
+        <small style="color: #6b7280; font-size: 11px;">在右键菜单中显示的文本</small>
+      </div>
+      <div class="form-group">
+        <label>分类 (Category)</label>
+        <input type="text" id="fieldCategory" placeholder="例如: 自定义" />
+        <small style="color: #6b7280; font-size: 11px;">可选，用于分组显示</small>
+      </div>
+      <div class="btn-group">
+        <button id="addFieldBtn" class="btn btn-primary">添加字段</button>
+        <button id="resetBtn" class="btn btn-secondary">重置为默认</button>
+      </div>
+    </div>
+
+    <!-- 字段列表 -->
+    <div class="section">
+      <h3>已配置的字段</h3>
+      <div class="fields-list" id="fieldsList">
+        <!-- 动态生成 -->
+      </div>
+    </div>
+
+    <div class="section">
+      <button id="saveBtn" class="btn btn-primary" style="width: 100%;">保存更改</button>
+      <button id="backBtn" class="btn btn-link" style="width: 100%; margin-top: 8px;">返回 Popup</button>
+    </div>
+  </div>
+
+  <script src="fields-manager.js"></script>
+</body>
+</html>
+

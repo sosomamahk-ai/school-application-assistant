@@ -5,8 +5,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")  // 用于迁移的直接连接（Supabase 需要）
 }
 
 // User model for authentication
@@ -115,4 +116,19 @@ model FieldMapping {
   user         User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, domain, selector])
+}
+
+// Application data for school-specific applications
+// This stores the actual form data filled by users for each school
+model ApplicationData {
+  id        String   @id @default(cuid())
+  schoolId  String
+  userId    String
+  data      Json     // The actual form data (key-value pairs)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schoolId, userId])
+  @@index([schoolId])
+  @@index([userId])
 }

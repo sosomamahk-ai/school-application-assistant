@@ -1,6 +1,8 @@
 /**
  * 增强的表单字段扫描器
  * 支持多种识别方式：id, name, placeholder, label, aria-label, 上下文分析
+ * 
+ * 返回格式符合模板字段要求：{ key, label, type, ... }
  */
 function scanInputs() {
   const elements = [...document.querySelectorAll("input, textarea, select")];
@@ -19,11 +21,15 @@ function scanInputs() {
                      el.getAttribute('aria-required') === 'true' ||
                      (el.closest('.required, [class*="required"]') !== null);
     
+    // 生成 key（优先使用 name，然后是 id，最后是自动生成）
+    const key = el.name || el.id || `field_${idx + 1}`;
+    
     return {
+      key: key,
       id: el.id || null,
       name: el.name || null,
       placeholder: el.placeholder || null,
-      label: label,
+      label: label || el.placeholder || el.name || key,
       ariaLabel: el.getAttribute('aria-label') || null,
       tag: el.tagName.toLowerCase(),
       type: el.type || el.tagName.toLowerCase(),
@@ -31,6 +37,7 @@ function scanInputs() {
       required: required,
       context: context,
       value: el.value || null,
+      description: el.getAttribute('title') || el.getAttribute('data-description') || null,
     };
   });
 }
@@ -239,6 +246,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // 批量填充
     const results = fillFields(msg.mappings);
     sendResponse({ results });
+  } else if (msg.action === "fillWithData") {
+    // 使用数据对象和模板填充表单
+    // msg.data: 申请数据对象
+    // msg.templateFields: 可选的模板字段数组
+    if (typeof window.fillForm !== 'undefined' && window.fillForm.fillFormWithData) {
+      const result = window.fillForm.fillFormWithData(msg.data, msg.templateFields);
+      sendResponse(result);
+    } else {
+      // 回退到基本填充逻辑
+      const results = [];
+      Object.keys(msg.data).forEach(key => {
+        const value = msg.data[key];
+        const selectors = [
+          `[name="${key}"]`,
+          `#${key}`,
+          `[id="${key}"]`,
+        ];
+        for (const selector of selectors) {
+          const result = fillField(selector, value);
+          if (result.success) {
+            results.push({ key, selector, ...result });
+            break;
+          }
+        }
+      });
+      sendResponse({ success: true, results });
+    }
   } else if (msg.action === "getFields") {
     // 获取当前字段
     sendResponse({ fields: currentFields, domain: currentDomain });

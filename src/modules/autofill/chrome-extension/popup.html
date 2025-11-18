@@ -31,11 +31,23 @@
       <p class="domain" id="currentDomain">-</p>
     </div>
 
+    <!-- 学校识别 -->
+    <div class="section" id="schoolSection" style="display: none;">
+      <h3>识别的学校</h3>
+      <p class="school-id" id="currentSchoolId">-</p>
+      <select id="schoolSelect" class="school-select" style="display: none;">
+        <option value="">请选择学校...</option>
+      </select>
+    </div>
+
     <!-- 操作按钮 -->
     <div class="section">
       <div class="button-group">
         <button id="scanBtn" class="btn btn-secondary">
           🔍 扫描表单
+        </button>
+        <button id="pushFieldsBtn" class="btn btn-secondary" style="display: none;">
+          📤 上传模板
         </button>
         <button id="fillBtn" class="btn btn-primary">
           ✨ 自动填充
@@ -69,7 +81,7 @@
 
     <!-- 设置 -->
     <div class="section">
-      <button id="settingsBtn" class="btn btn-link">⚙️ 设置</button>
+      <button id="settingsBtn" class="btn btn-link">⚙️ 管理字段</button>
       <button id="clearCacheBtn" class="btn btn-link">🗑️ 清除缓存</button>
     </div>
   </div>
