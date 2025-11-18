@@ -308,7 +308,7 @@ export default function TemplatesAdmin() {
             <p className="text-gray-600 mb-4">
               {selectedCategory === 'all'
                 ? t('admin.templates.noTemplates')
-                : t('admin.templates.noTemplatesCategory', { category: getCategoryTranslation(selectedCategory) }).replace('{category}', getCategoryTranslation(selectedCategory))}
+                : t('admin.templates.noTemplatesCategory').replace('{category}', getCategoryTranslation(selectedCategory))}
             </p>
             <button onClick={handleCreateNew} className="btn-primary">
               {t('admin.templates.createFirst')}
