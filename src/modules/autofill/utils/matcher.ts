@@ -180,12 +180,12 @@ function analyzeContext(field: any): { field: string | null; confidence: number 
   const nearbyFields = (context.nearbyFields || []).map((f: string) => f.toLowerCase());
 
   // 如果附近有 email 字段，当前字段可能是名字
-  if (nearbyFields.some(f => f.includes('email'))) {
+  if (nearbyFields.some((f: string) => f.includes('email'))) {
     if (field.type === 'text' && !field.mappedField) {
-      if (nearbyFields.some(f => f.includes('last') || f.includes('family'))) {
+      if (nearbyFields.some((f: string) => f.includes('last') || f.includes('family'))) {
         return { field: 'given_name', confidence: 0.6 };
       }
-      if (nearbyFields.some(f => f.includes('first') || f.includes('given'))) {
+      if (nearbyFields.some((f: string) => f.includes('first') || f.includes('given'))) {
         return { field: 'family_name', confidence: 0.6 };
       }
     }
