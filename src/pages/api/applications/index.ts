@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
-import { deserializeSchoolName } from '@/utils/templates';
+import { buildInitialApplicationFormData, deserializeSchoolName, ensureFormDataStructure } from '@/utils/templates';
 
 export default async function handler(
   req: NextApiRequest,
@@ -30,7 +30,8 @@ export default async function handler(
           template: {
             select: {
               schoolName: true,
-              program: true
+              program: true,
+              fieldsData: true
             }
           }
         },
@@ -44,7 +45,7 @@ export default async function handler(
           schoolName: deserializeSchoolName(app.template.schoolName),
           program: app.template.program,
           status: app.status,
-          formData: app.formData,
+          formData: ensureFormDataStructure(app.formData, app.template.fieldsData),
           createdAt: app.createdAt,
           updatedAt: app.updatedAt,
           submittedAt: app.submittedAt
@@ -67,11 +68,13 @@ export default async function handler(
         return res.status(404).json({ error: 'Template not found' });
       }
 
+      const { formData: initialFormData } = buildInitialApplicationFormData(template.fieldsData || []);
+
       const application = await prisma.application.create({
         data: {
           profileId: profile.id,
           templateId,
-          formData: {},
+          formData: initialFormData,
           status: 'draft'
         },
         include: {

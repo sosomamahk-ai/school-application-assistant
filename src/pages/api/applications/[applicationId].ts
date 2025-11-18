@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
-import { deserializeSchoolName } from '@/utils/templates';
+import { deserializeSchoolName, ensureFormDataStructure } from '@/utils/templates';
 
 export default async function handler(
   req: NextApiRequest,
@@ -44,6 +44,19 @@ export default async function handler(
         return res.status(404).json({ error: 'Application not found' });
       }
 
+      let formData = ensureFormDataStructure(application.formData, application.template.fieldsData);
+
+      if (!application.formData?.__structure && formData !== application.formData) {
+        try {
+          await prisma.application.update({
+            where: { id: application.id },
+            data: { formData }
+          });
+        } catch (err) {
+          console.warn('Failed to persist form structure for application', application.id, err);
+        }
+      }
+
       res.status(200).json({
         success: true,
         application: {
@@ -55,7 +68,7 @@ export default async function handler(
             description: application.template.description,
             fields: application.template.fieldsData
           },
-          formData: application.formData,
+          formData,
           status: application.status,
           createdAt: application.createdAt,
           updatedAt: application.updatedAt,
@@ -70,6 +83,13 @@ export default async function handler(
         where: {
           id: applicationId,
           profileId: profile.id
+        },
+        include: {
+          template: {
+            select: {
+              fieldsData: true
+            }
+          }
         }
       });
 
@@ -77,10 +97,14 @@ export default async function handler(
         return res.status(404).json({ error: 'Application not found' });
       }
 
+      const nextFormData = formData !== undefined
+        ? ensureFormDataStructure(formData, application.template?.fieldsData)
+        : undefined;
+
       const updated = await prisma.application.update({
         where: { id: applicationId },
         data: {
-          formData: formData !== undefined ? formData : undefined,
+          formData: nextFormData,
           status: status || undefined,
           submittedAt: status === 'submitted' ? new Date() : undefined
         }
