@@ -9,15 +9,16 @@ import type { JWTPayload } from '@/utils/auth';
 import { getTokenFromCookieHeader } from '@/utils/token';
 import { useTranslation } from '@/contexts/TranslationContext';
 import type { TranslationData } from '@/lib/translations';
-import { isMasterTemplate } from '@/constants/templates';
+import { isMasterTemplate, MASTER_TEMPLATE_PREFIX } from '@/constants/templates';
+import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 
 interface SchoolTemplate {
   id: string;
   schoolId: string;
-  schoolName: string;
+  schoolName: string | LocalizedText;
   program: string;
-  description: string;
-  category?: string;
+  description: string | null;
+  category?: string | null;
   fieldsData: any;
   isActive: boolean;
   createdAt: string;
@@ -43,12 +44,24 @@ const CATEGORY_COLORS: Record<string, string> = {
   'university': 'bg-purple-100 text-purple-800'
 };
 
+const MASTER_TEMPLATE_UI_DEFAULTS = {
+  schoolName: {
+    en: '[Master Template] Complete Field Library',
+    'zh-CN': '[主模板] 完整字段库',
+    'zh-TW': '[主模板] 完整字段庫'
+  },
+  program: '包含所有个人资料字段的主模板',
+  description: '此模板包含系统中所有可用的个人资料字段，可以在此基础上删减字段来创建具体学校的申请表',
+  category: '国际学校'
+};
+
 export default function TemplatesAdmin() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [templates, setTemplates] = useState<SchoolTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showCreateMasterModal, setShowCreateMasterModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [translationsData, setTranslationsData] = useState<TranslationData>({});
@@ -304,34 +317,6 @@ export default function TemplatesAdmin() {
     setShowImportModal(true);
   };
 
-  const handleCreateMaster = async () => {
-    if (!confirm(t('admin.templates.confirmCreateMaster'))) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/templates/create-master', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        alert(t('admin.templates.success.createMaster'));
-        fetchTemplates(); // Refresh templates list to show the newly created master template
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMessage = errorData.message || errorData.error || 'Failed to create master template';
-        alert(t('admin.templates.error.createMaster') + ': ' + errorMessage);
-      }
-    } catch (error) {
-      console.error('Error creating master template:', error);
-      alert(t('admin.templates.error.createMaster'));
-    }
-  };
-
   // Helper function to get category translation
   const getCategoryTranslation = (categoryKey: string) => {
     return t(`admin.templates.category.${categoryKey}` as any);
@@ -416,7 +401,7 @@ export default function TemplatesAdmin() {
                     {/* Create Master Template Option */}
                     <button
                       onClick={() => {
-                        handleCreateMaster();
+                        setShowCreateMasterModal(true);
                         setShowCreateMenu(false);
                       }}
                       className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors border border-dashed border-gray-300 mb-2"
@@ -434,6 +419,7 @@ export default function TemplatesAdmin() {
                         const categoryKey = Object.entries(CATEGORY_COLORS).find(([_, color]) => 
                           template.category && CATEGORY_COLORS[template.category as keyof typeof CATEGORY_COLORS]
                         )?.[0] || template.category || '';
+                        const localizedName = getLocalizedSchoolName(template.schoolName as any, language);
                         return (
                           <button
                             key={template.id}
@@ -445,7 +431,7 @@ export default function TemplatesAdmin() {
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
-                                <div className="font-medium text-gray-900">{template.schoolName}</div>
+                                <div className="font-medium text-gray-900">{localizedName}</div>
                                 <div className="text-sm text-gray-500">{template.description}</div>
                               </div>
                               {template.category && (
@@ -703,6 +689,16 @@ export default function TemplatesAdmin() {
             }}
           />
         )}
+
+        {showCreateMasterModal && (
+          <CreateMasterModal
+            onClose={() => setShowCreateMasterModal(false)}
+            onSuccess={() => {
+              setShowCreateMasterModal(false);
+              fetchTemplates();
+            }}
+          />
+        )}
       </div>
     </Layout>
   );
@@ -800,7 +796,7 @@ function TemplateCard({
   isSystem: boolean;
 }) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const CATEGORY_COLORS: Record<string, string> = {
     'international': 'bg-blue-100 text-blue-800',
@@ -829,7 +825,7 @@ function TemplateCard({
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
             <h3 className="text-xl font-semibold text-gray-900">
-              {template.schoolName}
+              {getLocalizedSchoolName(template.schoolName as any, language)}
             </h3>
             {template.category && (
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(template.category)}`}>
@@ -1021,6 +1017,213 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               {importing ? t('admin.templates.import.importing') : t('admin.templates.import.import')}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Create Master Template Modal
+function CreateMasterModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const { t } = useTranslation();
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    schoolId: `${MASTER_TEMPLATE_PREFIX}${Date.now()}`,
+    schoolNameEn: MASTER_TEMPLATE_UI_DEFAULTS.schoolName.en,
+    schoolNameZhCN: MASTER_TEMPLATE_UI_DEFAULTS.schoolName['zh-CN'],
+    schoolNameZhTW: MASTER_TEMPLATE_UI_DEFAULTS.schoolName['zh-TW'],
+    program: MASTER_TEMPLATE_UI_DEFAULTS.program,
+    description: MASTER_TEMPLATE_UI_DEFAULTS.description,
+    category: MASTER_TEMPLATE_UI_DEFAULTS.category,
+    isActive: false
+  });
+
+  const handleChange = (field: keyof typeof formData, value: string | boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = async () => {
+    const trimmed = formData.schoolId.trim();
+    if (!trimmed) {
+      alert(t('admin.templates.createMasterModal.schoolIdRequired'));
+      return;
+    }
+
+    const schoolIdValue = trimmed.startsWith(MASTER_TEMPLATE_PREFIX)
+      ? trimmed
+      : `${MASTER_TEMPLATE_PREFIX}${trimmed}`;
+
+    setSubmitting(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/templates/create-master', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          schoolId: schoolIdValue,
+          schoolName: {
+            en: formData.schoolNameEn,
+            'zh-CN': formData.schoolNameZhCN,
+            'zh-TW': formData.schoolNameZhTW
+          },
+          program: formData.program,
+          description: formData.description,
+          category: formData.category,
+          isActive: formData.isActive
+        })
+      });
+
+      if (response.ok) {
+        alert(t('admin.templates.success.createMaster'));
+        onSuccess();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorMessage = errorData.message || errorData.error || 'Failed to create master template';
+        alert(t('admin.templates.error.createMaster') + ': ' + errorMessage);
+      }
+    } catch (error) {
+      console.error('Error creating master template:', error);
+      alert(t('admin.templates.error.createMaster'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {t('admin.templates.createMasterModal.title')}
+        </h2>
+        <p className="text-gray-600 mb-6">
+          {t('admin.templates.createMasterModal.description')}
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('admin.templates.createMasterModal.field.schoolId')}
+            </label>
+            <input
+              type="text"
+              value={formData.schoolId}
+              onChange={(e) => handleChange('schoolId', e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 border-gray-300"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {t('admin.templates.createMasterModal.field.schoolIdHelp').replace('{prefix}', MASTER_TEMPLATE_PREFIX)}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('admin.templates.createMasterModal.field.schoolNameZhCN')}
+              </label>
+              <input
+                type="text"
+                value={formData.schoolNameZhCN}
+                onChange={(e) => handleChange('schoolNameZhCN', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 border-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('admin.templates.createMasterModal.field.schoolNameZhTW')}
+              </label>
+              <input
+                type="text"
+                value={formData.schoolNameZhTW}
+                onChange={(e) => handleChange('schoolNameZhTW', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 border-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('admin.templates.createMasterModal.field.schoolNameEn')}
+              </label>
+              <input
+                type="text"
+                value={formData.schoolNameEn}
+                onChange={(e) => handleChange('schoolNameEn', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 border-gray-300"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('admin.templates.createMasterModal.field.program')}
+            </label>
+            <input
+              type="text"
+              value={formData.program}
+              onChange={(e) => handleChange('program', e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 border-gray-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('admin.templates.createMasterModal.field.description')}
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 border-gray-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('admin.templates.createMasterModal.field.category')}
+            </label>
+            <input
+              type="text"
+              value={formData.category}
+              onChange={(e) => handleChange('category', e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 border-gray-300"
+              placeholder={MASTER_TEMPLATE_UI_DEFAULTS.category}
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              id="master-template-active"
+              type="checkbox"
+              checked={formData.isActive}
+              onChange={(e) => handleChange('isActive', e.target.checked)}
+              className="h-4 w-4 text-primary-600 border-gray-300 rounded"
+            />
+            <label htmlFor="master-template-active" className="text-sm text-gray-700">
+              {t('admin.templates.createMasterModal.field.isActive')}
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="btn-secondary"
+            disabled={submitting}
+          >
+            {t('admin.templates.createMasterModal.cancel')}
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="btn-primary"
+            disabled={submitting}
+          >
+            {submitting ? t('admin.templates.createMasterModal.submitting') : t('admin.templates.createMasterModal.submit')}
+          </button>
         </div>
       </div>
     </div>

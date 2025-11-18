@@ -1065,6 +1065,81 @@ export const translations: TranslationData = {
     'zh-CN': '创建包含所有可用字段的主模板',
     'zh-TW': '創建包含所有可用欄位的主範本',
   },
+  'admin.templates.createMasterModal.title': {
+    en: 'Create a New Master Template',
+    'zh-CN': '创建新的主模板',
+    'zh-TW': '創建新的主範本',
+  },
+  'admin.templates.createMasterModal.description': {
+    en: 'Use the master field library to generate a system template. You can customize the school ID, display name, category, and status.',
+    'zh-CN': '使用主字段库生成系统模板。可以自定义学校 ID、显示名称、分类和状态。',
+    'zh-TW': '使用主欄位庫建立系統範本。可以自訂學校 ID、顯示名稱、分類與狀態。',
+  },
+  'admin.templates.createMasterModal.field.schoolId': {
+    en: 'School ID',
+    'zh-CN': '学校 ID',
+    'zh-TW': '學校 ID',
+  },
+  'admin.templates.createMasterModal.field.schoolIdHelp': {
+    en: 'Must start with {prefix}. Only letters, numbers, and hyphens are recommended.',
+    'zh-CN': '必须以 {prefix} 开头，建议只使用字母、数字和连字符。',
+    'zh-TW': '必須以 {prefix} 開頭，建議只使用字母、數字與連字號。',
+  },
+  'admin.templates.createMasterModal.field.schoolNameZhCN': {
+    en: 'School Name (Simplified Chinese)',
+    'zh-CN': '学校名称（简体中文）',
+    'zh-TW': '學校名稱（簡體中文）',
+  },
+  'admin.templates.createMasterModal.field.schoolNameZhTW': {
+    en: 'School Name (Traditional Chinese)',
+    'zh-CN': '学校名称（繁体中文）',
+    'zh-TW': '學校名稱（繁體中文）',
+  },
+  'admin.templates.createMasterModal.field.schoolNameEn': {
+    en: 'School Name (English)',
+    'zh-CN': '学校名称（英文）',
+    'zh-TW': '學校名稱（英文）',
+  },
+  'admin.templates.createMasterModal.field.program': {
+    en: 'Program',
+    'zh-CN': '项目',
+    'zh-TW': '項目',
+  },
+  'admin.templates.createMasterModal.field.description': {
+    en: 'Description',
+    'zh-CN': '描述',
+    'zh-TW': '描述',
+  },
+  'admin.templates.createMasterModal.field.category': {
+    en: 'Category',
+    'zh-CN': '分类',
+    'zh-TW': '分類',
+  },
+  'admin.templates.createMasterModal.field.isActive': {
+    en: 'Mark as active (students can see this template)',
+    'zh-CN': '标记为启用（学生可见）',
+    'zh-TW': '標記為啟用（學生可見）',
+  },
+  'admin.templates.createMasterModal.cancel': {
+    en: 'Cancel',
+    'zh-CN': '取消',
+    'zh-TW': '取消',
+  },
+  'admin.templates.createMasterModal.submit': {
+    en: 'Create Template',
+    'zh-CN': '创建模板',
+    'zh-TW': '建立範本',
+  },
+  'admin.templates.createMasterModal.submitting': {
+    en: 'Creating...',
+    'zh-CN': '创建中...',
+    'zh-TW': '建立中...',
+  },
+  'admin.templates.createMasterModal.schoolIdRequired': {
+    en: 'Please enter a school ID.',
+    'zh-CN': '请输入学校 ID。',
+    'zh-TW': '請輸入學校 ID。',
+  },
   'admin.templates.confirmCreateMaster': {
     en: 'Are you sure you want to create the master template? This will create a template with all available fields that can be used as a base for creating school-specific templates.',
     'zh-CN': '确定要创建主模板吗？这将创建包含所有可用字段的模板，可以作为创建具体学校模板的基础。',

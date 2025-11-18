@@ -7,7 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 import { MASTER_TEMPLATE_DATA } from '@/data/master-template';
-import { MASTER_TEMPLATE_SCHOOL_ID } from '@/constants/templates';
+import { MASTER_TEMPLATE_PREFIX } from '@/constants/templates';
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,20 +24,50 @@ export default async function handler(
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
-    // 准备模板数据
+    const {
+      schoolId,
+      schoolName,
+      program,
+      description,
+      category,
+      isActive,
+      fieldsData
+    } = req.body || {};
+
+    const trimmedSchoolId = typeof schoolId === 'string' ? schoolId.trim() : '';
+    if (!trimmedSchoolId) {
+      return res.status(400).json({ error: 'Missing required field: schoolId' });
+    }
+
+    if (!trimmedSchoolId.startsWith(MASTER_TEMPLATE_PREFIX)) {
+      return res.status(400).json({
+        error: `Master template schoolId must start with "${MASTER_TEMPLATE_PREFIX}".`
+      });
+    }
+
+    // 准备模板数据，允许覆盖部分字段
     const templateData = {
-      schoolId: MASTER_TEMPLATE_DATA.schoolId,
-      schoolName: MASTER_TEMPLATE_DATA.schoolName,
-      program: MASTER_TEMPLATE_DATA.program,
-      description: MASTER_TEMPLATE_DATA.description,
-      category: MASTER_TEMPLATE_DATA.category,
-      fieldsData: MASTER_TEMPLATE_DATA.fieldsData,
-      isActive: MASTER_TEMPLATE_DATA.isActive
+      schoolId: trimmedSchoolId,
+      schoolName: schoolName && typeof schoolName === 'object'
+        ? schoolName
+        : MASTER_TEMPLATE_DATA.schoolName,
+      program: program || MASTER_TEMPLATE_DATA.program,
+      description:
+        typeof description === 'string' ? description : MASTER_TEMPLATE_DATA.description,
+      category: category || MASTER_TEMPLATE_DATA.category,
+      fieldsData:
+        Array.isArray(fieldsData) && fieldsData.length > 0
+          ? fieldsData
+          : MASTER_TEMPLATE_DATA.fieldsData,
+      isActive:
+        typeof isActive === 'boolean'
+          ? isActive
+          : (MASTER_TEMPLATE_DATA.isActive !== undefined ? MASTER_TEMPLATE_DATA.isActive : false)
     };
 
     // 使用 upsert 来创建或更新主模板
     const template = await prisma.schoolFormTemplate.upsert({
-      where: { schoolId: MASTER_TEMPLATE_SCHOOL_ID },
+      where: { schoolId: templateData.schoolId },
       update: {
         schoolName: templateData.schoolName as any,
         program: templateData.program,
