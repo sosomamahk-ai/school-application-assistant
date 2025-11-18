@@ -247,28 +247,15 @@ export default function Profile() {
             <div className="card">
               {/* Tab Navigation */}
               <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex flex-wrap gap-x-4 gap-y-2" aria-label="Tabs">
+                <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
                   {sections.map((section) => {
-                    // Try to get both language versions if translation key exists
-                    const possibleKey = `profile.section.${section.id}`;
-                    const hasTranslation = translations[possibleKey];
-                    
+                    // Get label in current language
                     let displayLabel = section.label;
-                    let displayLabelEn = '';
                     
-                    if (hasTranslation) {
-                      // If translation exists, get both versions
-                      if (language === 'zh-CN' || language === 'zh-TW') {
-                        displayLabel = translations[possibleKey][language] || section.label;
-                        displayLabelEn = translations[possibleKey].en || section.label;
-                      } else {
-                        displayLabelEn = translations[possibleKey].en || section.label;
-                        displayLabel = translations[possibleKey]['zh-CN'] || translations[possibleKey]['zh-TW'] || section.label;
-                      }
-                    } else {
-                      // No translation available, use current label for both
-                      displayLabel = section.label;
-                      displayLabelEn = section.label;
+                    // Try to get translation if translation key exists
+                    const possibleKey = `profile.section.${section.id}`;
+                    if (translations[possibleKey]) {
+                      displayLabel = translations[possibleKey][language] || translations[possibleKey].en || section.label;
                     }
                     
                     return (
@@ -276,7 +263,7 @@ export default function Profile() {
                         key={section.id}
                         onClick={() => setActiveTab(section.id)}
                         className={`
-                          py-3 px-3 border-b-2 font-medium text-sm text-center min-w-[80px]
+                          whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
                           ${
                             activeTab === section.id
                               ? 'border-primary-500 text-primary-600'
@@ -284,23 +271,7 @@ export default function Profile() {
                           }
                         `}
                       >
-                        <div className="flex flex-col items-center">
-                          {(language === 'zh-CN' || language === 'zh-TW') ? (
-                            <>
-                              <span className="leading-tight">{displayLabel}</span>
-                              {hasTranslation && displayLabelEn !== displayLabel && (
-                                <span className="text-xs text-gray-400 mt-0.5 leading-tight">{displayLabelEn}</span>
-                              )}
-                            </>
-                          ) : (
-                            <>
-                              {hasTranslation && displayLabel !== displayLabelEn && (
-                                <span className="text-xs text-gray-400 mb-0.5 leading-tight">{displayLabel}</span>
-                              )}
-                              <span className="leading-tight">{displayLabelEn}</span>
-                            </>
-                          )}
-                        </div>
+                        {displayLabel}
                       </button>
                     );
                   })}
