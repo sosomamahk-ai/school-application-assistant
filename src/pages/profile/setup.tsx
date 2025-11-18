@@ -92,7 +92,7 @@ export default function ProfileSetup() {
       return;
     }
     fetchProfile();
-  }, []);
+  }, [router]);
 
   const fetchProfile = async () => {
     try {

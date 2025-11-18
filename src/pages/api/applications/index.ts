@@ -5,7 +5,8 @@ import {
   buildInitialApplicationFormData,
   deserializeSchoolName,
   ensureFormDataStructure,
-  StructuredFormData
+  StructuredFormData,
+  normalizeTemplateStructureInput
 } from '@/utils/templates';
 
 function normalizeStructuredFormData(value: unknown): StructuredFormData | undefined {
@@ -59,7 +60,7 @@ export default async function handler(
           status: app.status,
           formData: ensureFormDataStructure(
             normalizeStructuredFormData(app.formData),
-            app.template.fieldsData
+            normalizeTemplateStructureInput(app.template.fieldsData)
           ),
           createdAt: app.createdAt,
           updatedAt: app.updatedAt,
@@ -83,7 +84,8 @@ export default async function handler(
         return res.status(404).json({ error: 'Template not found' });
       }
 
-      const { formData: initialFormData } = buildInitialApplicationFormData(template.fieldsData || []);
+      const templateStructure = normalizeTemplateStructureInput(template.fieldsData);
+      const { formData: initialFormData } = buildInitialApplicationFormData(templateStructure);
 
       const application = await prisma.application.create({
         data: {

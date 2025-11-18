@@ -1,7 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
-import { deserializeSchoolName, ensureFormDataStructure, StructuredFormData } from '@/utils/templates';
+import {
+  deserializeSchoolName,
+  ensureFormDataStructure,
+  StructuredFormData,
+  normalizeTemplateStructureInput
+} from '@/utils/templates';
 
 function normalizeStructuredFormData(value: unknown): StructuredFormData | undefined {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -52,7 +57,8 @@ export default async function handler(
       }
 
       const existingFormData = normalizeStructuredFormData(application.formData);
-      const formData = ensureFormDataStructure(existingFormData, application.template.fieldsData);
+      const templateStructure = normalizeTemplateStructureInput(application.template.fieldsData);
+      const formData = ensureFormDataStructure(existingFormData, templateStructure);
       const hasStructure = Boolean(existingFormData?.__structure);
 
       if (!hasStructure && formData !== application.formData) {
@@ -107,9 +113,11 @@ export default async function handler(
       }
 
       const payloadFormData = normalizeStructuredFormData(formData);
-      const nextFormData = formData !== undefined
-        ? ensureFormDataStructure(payloadFormData, application.template?.fieldsData)
-        : undefined;
+      const templateStructure = normalizeTemplateStructureInput(application.template?.fieldsData);
+      const nextFormData =
+        formData !== undefined
+          ? ensureFormDataStructure(payloadFormData, templateStructure)
+          : undefined;
 
       const updated = await prisma.application.update({
         where: { id: applicationId },

@@ -76,7 +76,7 @@ export function deserializeSchoolName(value: unknown): string | LocalizedText {
   return '';
 }
 
-function normalizeStructureInput(
+export function normalizeTemplateStructureInput(
   fieldsData?: TemplateNode[] | TemplateNode | null
 ): TemplateNode[] {
   if (!fieldsData) {
@@ -121,7 +121,7 @@ export function buildInitialApplicationFormData(
   formData: StructuredFormData;
 } {
   const values: Record<string, string | number | boolean | null> = {};
-  const normalizedInput = normalizeStructureInput(fieldsData);
+  const normalizedInput = normalizeTemplateStructureInput(fieldsData);
   const structure = normalizedInput.map((node) => cloneTemplateNode(node, values));
 
   const formData: StructuredFormData = {
@@ -138,11 +138,12 @@ export function ensureFormDataStructure(
 ): StructuredFormData {
   const safeFormData: StructuredFormData =
     formData && typeof formData === 'object' ? formData : {};
-  if (safeFormData.__structure || !fieldsData) {
+  const normalizedStructure = normalizeTemplateStructureInput(fieldsData);
+  if (safeFormData.__structure || normalizedStructure.length === 0) {
     return safeFormData;
   }
 
-  const { structure, values } = buildInitialApplicationFormData(fieldsData);
+  const { structure, values } = buildInitialApplicationFormData(normalizedStructure);
 
   return {
     ...values,
