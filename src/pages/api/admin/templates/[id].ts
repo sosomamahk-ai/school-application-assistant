@@ -28,15 +28,33 @@ export default async function handler(
       return res.status(404).json({ error: 'Template not found' });
     }
 
+    // Delete all applications that use this template first
+    // This is necessary because the foreign key constraint doesn't have onDelete: Cascade
+    await prisma.application.deleteMany({
+      where: { templateId: id as string }
+    });
+
     // Delete the template - all templates can be deleted, including system-generated ones
     await prisma.schoolFormTemplate.delete({
       where: { id: id as string }
     });
 
     res.status(200).json({ success: true, message: 'Template deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Template delete error:', error);
-    res.status(500).json({ error: 'Failed to delete template' });
+    
+    // Provide more specific error messages
+    if (error?.code === 'P2003') {
+      // Foreign key constraint error
+      return res.status(400).json({ 
+        error: 'Cannot delete template: There are applications using this template. Please delete them first or contact support.' 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to delete template',
+      message: error?.message || 'Unknown error occurred'
+    });
   }
 }
 
