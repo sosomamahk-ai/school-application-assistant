@@ -76,17 +76,7 @@ export default function Profile() {
     }
   }, []);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/auth/login');
-      return;
-    }
-    fetchMainTemplate();
-    fetchProfile();
-  }, [router, fetchMainTemplate]);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/profile', {
@@ -120,7 +110,17 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+    fetchMainTemplate();
+    fetchProfile();
+  }, [router, fetchMainTemplate, fetchProfile]);
 
   // Initialize field values when sections are loaded
   useEffect(() => {

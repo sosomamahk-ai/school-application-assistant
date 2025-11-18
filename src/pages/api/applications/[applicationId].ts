@@ -44,9 +44,14 @@ export default async function handler(
         return res.status(404).json({ error: 'Application not found' });
       }
 
-      let formData = ensureFormDataStructure(application.formData, application.template.fieldsData);
+      const formData = ensureFormDataStructure(application.formData, application.template.fieldsData);
+      const hasStructure =
+        application.formData &&
+        typeof application.formData === 'object' &&
+        !Array.isArray(application.formData) &&
+        '__structure' in (application.formData as Record<string, unknown>);
 
-      if (!application.formData?.__structure && formData !== application.formData) {
+      if (!hasStructure && formData !== application.formData) {
         try {
           await prisma.application.update({
             where: { id: application.id },
