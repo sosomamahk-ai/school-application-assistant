@@ -71,7 +71,7 @@ const normalizeField = (field: RawTemplateField): FormField => ({
   options: normalizeOptions(field.options)
 });
 
-const MASTER_PROFILE_SECTIONS: TemplateSection[] = (MASTER_TEMPLATE_DATA.fieldsData as RawTemplateSection[])
+const MASTER_PROFILE_SECTIONS: TemplateSection[] = (MASTER_TEMPLATE_DATA.fieldsData as ReadonlyArray<RawTemplateSection>)
   .filter((section) => section.type === 'section' && Array.isArray(section.fields))
   .map((section) => ({
     id: section.id,
