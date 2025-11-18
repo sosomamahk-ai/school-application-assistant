@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -24,17 +24,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/auth/login');
-      return;
-    }
-    fetchMainTemplate();
-    fetchProfile();
-  }, []);
-
-  const fetchMainTemplate = async () => {
+  const fetchMainTemplate = useCallback(async () => {
     try {
       const response = await fetch('/api/templates?schoolId=template-master-all-fields');
       if (response.ok) {
@@ -53,9 +43,7 @@ export default function Profile() {
           setSections(parsedSections);
           
           // Set first tab as active
-          if (parsedSections.length > 0 && !activeTab) {
-            setActiveTab(parsedSections[0].id);
-          }
+          setActiveTab(prev => prev || (parsedSections.length > 0 ? parsedSections[0].id : ''));
         }
       } else {
         // Fallback: try to find any template starting with "template-"
@@ -78,9 +66,7 @@ export default function Profile() {
               
               setSections(parsedSections);
               
-              if (parsedSections.length > 0 && !activeTab) {
-                setActiveTab(parsedSections[0].id);
-              }
+              setActiveTab(prev => prev || (parsedSections.length > 0 ? parsedSections[0].id : ''));
             }
           }
         }
@@ -88,7 +74,17 @@ export default function Profile() {
     } catch (error) {
       console.error('Error fetching main template:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+    fetchMainTemplate();
+    fetchProfile();
+  }, [router, fetchMainTemplate]);
 
   const fetchProfile = async () => {
     try {

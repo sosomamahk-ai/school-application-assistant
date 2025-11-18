@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -31,18 +31,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showNewAppModal, setShowNewAppModal] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchApplications();
-    fetchTemplates();
-  }, []);
-
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/applications', {
@@ -60,9 +49,9 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       const response = await fetch('/api/templates');
       if (response.ok) {
@@ -72,7 +61,18 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error fetching templates:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchApplications();
+    fetchTemplates();
+  }, [router, fetchApplications, fetchTemplates]);
 
   const createApplication = async (templateId: string) => {
     try {

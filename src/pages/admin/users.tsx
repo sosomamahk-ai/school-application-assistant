@@ -84,7 +84,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, roleFilter, router]);
+  }, [query, roleFilter, router, t]);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');

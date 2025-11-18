@@ -99,7 +99,13 @@ export default function NewTemplate() {
           isActive: true
         });
         
-        setFields(baseData.fieldsData || []);
+        // Deep clone fieldsData to ensure all nested structures (sections, fields, sub-items) are fully copied
+        // This ensures that when creating a new template from the main template, all internal structure is preserved
+        const clonedFieldsData = baseData.fieldsData 
+          ? JSON.parse(JSON.stringify(baseData.fieldsData))
+          : [];
+        
+        setFields(clonedFieldsData);
       }
     } catch (error) {
       console.error('Error loading base template:', error);

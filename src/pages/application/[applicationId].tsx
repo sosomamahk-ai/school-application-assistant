@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -32,14 +32,9 @@ export default function ApplicationForm() {
   const [showAllFields, setShowAllFields] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  useEffect(() => {
-    if (applicationId) {
-      fetchApplication();
-      checkAutoFill();
-    }
-  }, [applicationId]);
-
-  const fetchApplication = async () => {
+  const fetchApplication = useCallback(async () => {
+    if (!applicationId || typeof applicationId !== 'string') return;
+    
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/applications/${applicationId}`, {
@@ -58,9 +53,11 @@ export default function ApplicationForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [applicationId]);
 
-  const checkAutoFill = async () => {
+  const checkAutoFill = useCallback(async () => {
+    if (!applicationId || typeof applicationId !== 'string') return;
+    
     try {
       const token = localStorage.getItem('token');
       
@@ -91,7 +88,14 @@ export default function ApplicationForm() {
     } catch (error) {
       console.error('Error auto-filling:', error);
     }
-  };
+  }, [applicationId]);
+
+  useEffect(() => {
+    if (applicationId) {
+      fetchApplication();
+      checkAutoFill();
+    }
+  }, [applicationId, fetchApplication, checkAutoFill]);
 
   const saveApplication = async (updateStatus?: string) => {
     setSaving(true);
