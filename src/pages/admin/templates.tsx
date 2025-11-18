@@ -114,6 +114,9 @@ export default function TemplatesAdmin() {
       if (response.ok) {
         alert(t('admin.templates.success.delete'));
         fetchTemplates();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(t('admin.templates.error.delete') + ': ' + (errorData.error || 'Failed to delete template'));
       }
     } catch (error) {
       console.error('Error deleting template:', error);

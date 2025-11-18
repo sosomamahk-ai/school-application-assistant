@@ -28,7 +28,7 @@ export default async function handler(
       return res.status(404).json({ error: 'Template not found' });
     }
 
-    // Delete the template
+    // Delete the template - all templates can be deleted, including system-generated ones
     await prisma.schoolFormTemplate.delete({
       where: { id: id as string }
     });
