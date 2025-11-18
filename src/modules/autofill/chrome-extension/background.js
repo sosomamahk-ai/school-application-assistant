@@ -8,7 +8,8 @@
 // 可以通过 Popup 设置界面配置 API 地址
 async function getApiBaseUrl() {
   const result = await chrome.storage.local.get('autofill_api_url');
-  return result.autofill_api_url || 'http://localhost:3000';
+  // 优先使用用户配置的 URL，否则使用生产环境 URL
+  return result.autofill_api_url || 'https://school-application-assistant.vercel.app';
 }
 const STORAGE_KEYS = {
   USER_TOKEN: 'autofill_user_token',
@@ -197,7 +198,7 @@ async function handleFieldBinding(tabId, profileField) {
     // 显示通知
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: '字段绑定成功',
       message: `已将字段 "${field.label || field.placeholder || field.name}" 绑定到 ${profileField}`,
     });
@@ -205,7 +206,7 @@ async function handleFieldBinding(tabId, profileField) {
     console.error('Field binding error:', error);
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: '绑定失败',
       message: String(error),
     });
@@ -259,7 +260,7 @@ async function handleAutoFill(tabId) {
     const successCount = fillResponse.results.filter(r => r.success).length;
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: '填充完成',
       message: `成功填充 ${successCount}/${fillMappings.length} 个字段`,
     });
@@ -267,7 +268,7 @@ async function handleAutoFill(tabId) {
     console.error('Auto fill error:', error);
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: '填充失败',
       message: String(error),
     });
@@ -905,7 +906,7 @@ async function handleAutoFillWithTemplate(tabId) {
     // 6. 显示通知
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: '自动填充完成',
       message: `已为 ${schoolId} 填充 ${Object.keys(applicationData).length} 个字段`,
     });
@@ -913,7 +914,7 @@ async function handleAutoFillWithTemplate(tabId) {
     console.error('handleAutoFillWithTemplate error:', error);
     chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'icons/icon48.png',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: '自动填充失败',
       message: String(error),
     });

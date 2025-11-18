@@ -275,8 +275,20 @@ export default function NewTemplate() {
             <ArrowLeft className="h-5 w-5 mr-2" />
             返回模板列表
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">创建新学校模板</h1>
-          <p className="text-gray-600 mt-2">填写学校信息并配置申请表单字段</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">创建新学校模板</h1>
+              <p className="text-gray-600 mt-2">填写学校信息并配置申请表单字段</p>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <Save className="h-5 w-5" />
+              <span>{saving ? '保存中...' : '保存模板'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Basic Info */}
@@ -508,18 +520,10 @@ export default function NewTemplate() {
         )}
 
         {/* Actions */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-end items-center">
           <Link href="/admin/templates" className="btn-secondary">
             取消
           </Link>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <Save className="h-5 w-5" />
-            <span>{saving ? '保存中...' : '保存模板'}</span>
-          </button>
         </div>
       </div>
     </Layout>

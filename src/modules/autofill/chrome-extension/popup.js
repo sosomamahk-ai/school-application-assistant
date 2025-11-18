@@ -448,9 +448,11 @@ function handleSettings() {
 /**
  * 处理登录
  */
-function handleLogin() {
-  // 打开登录页面
-  chrome.tabs.create({ url: 'http://localhost:3000/auth/login' });
+async function handleLogin() {
+  // 获取 API 基础 URL（优先使用配置的，否则使用生产环境）
+  const apiUrl = await getApiBaseUrl();
+  const loginUrl = `${apiUrl}/auth/login`;
+  chrome.tabs.create({ url: loginUrl });
 }
 
 /**
@@ -508,6 +510,7 @@ async function getStoredToken() {
  */
 async function getApiBaseUrl() {
   const result = await chrome.storage.local.get('autofill_api_url');
-  return result.autofill_api_url || 'http://localhost:3000';
+  // 优先使用用户配置的 URL，否则使用生产环境 URL
+  return result.autofill_api_url || 'https://school-application-assistant.vercel.app';
 }
 
