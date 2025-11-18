@@ -3,13 +3,16 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { Save, Plus, Trash2 } from 'lucide-react';
-import { Education, Experience } from '@/types';
+import { Education, Experience, FormField } from '@/types';
 import { useTranslation } from '@/contexts/TranslationContext';
+import FormFieldInput from '@/components/FormFieldInput';
 
 export default function Profile() {
   const router = useRouter();
   const { t } = useTranslation();
   const [profile, setProfile] = useState<any>(null);
+  const [templateFields, setTemplateFields] = useState<FormField[]>([]);
+  const [fieldValues, setFieldValues] = useState<{ [key: string]: any }>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -19,8 +22,38 @@ export default function Profile() {
       router.push('/auth/login');
       return;
     }
+    fetchMainTemplate();
     fetchProfile();
   }, []);
+
+  const fetchMainTemplate = async () => {
+    try {
+      // Fetch the main template (template-master-all-fields)
+      const response = await fetch('/api/templates?schoolId=template-master-all-fields');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.template && Array.isArray(data.template.fields)) {
+          setTemplateFields(data.template.fields);
+        }
+      } else {
+        // Fallback: try to find any template starting with "template-"
+        const allTemplatesResponse = await fetch('/api/templates');
+        if (allTemplatesResponse.ok) {
+          const allData = await allTemplatesResponse.json();
+          if (allData.success && Array.isArray(allData.templates)) {
+            const mainTemplate = allData.templates.find((t: any) => 
+              t.schoolId && t.schoolId.startsWith('template-')
+            );
+            if (mainTemplate && Array.isArray(mainTemplate.fields)) {
+              setTemplateFields(mainTemplate.fields);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching main template:', error);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -32,6 +65,24 @@ export default function Profile() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data.profile);
+        
+        // Initialize field values from profile data
+        const values: { [key: string]: any } = {};
+        
+        // Map existing profile fields to field values
+        if (data.profile.fullName) values.fullName = data.profile.fullName;
+        if (data.profile.phone) values.phone = data.profile.phone;
+        if (data.profile.birthday) {
+          values.birthday = new Date(data.profile.birthday).toISOString().split('T')[0];
+        }
+        if (data.profile.nationality) values.nationality = data.profile.nationality;
+        
+        // Map additional data if it exists
+        if (data.profile.additional && typeof data.profile.additional === 'object') {
+          Object.assign(values, data.profile.additional);
+        }
+        
+        setFieldValues(values);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -40,21 +91,66 @@ export default function Profile() {
     }
   };
 
+  // Initialize field values when template fields are loaded
+  useEffect(() => {
+    if (templateFields.length > 0 && profile) {
+      setFieldValues(prevValues => {
+        const values = { ...prevValues };
+        let updated = false;
+        
+        // Initialize any missing field values from profile
+        templateFields.forEach(field => {
+          if (values[field.id] === undefined) {
+            // Try to get value from profile additional data
+            if (profile.additional && profile.additional[field.id] !== undefined) {
+              values[field.id] = profile.additional[field.id];
+              updated = true;
+            }
+          }
+        });
+        
+        return updated ? values : prevValues;
+      });
+    }
+  }, [templateFields, profile]);
+
   const saveProfile = async () => {
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
+      
+      // Prepare profile data with template field values
+      const profileData: any = {
+        fullName: fieldValues.fullName || profile?.fullName,
+        phone: fieldValues.phone || profile?.phone,
+        birthday: fieldValues.birthday || profile?.birthday,
+        nationality: fieldValues.nationality || profile?.nationality,
+        education: profile?.education,
+        experiences: profile?.experiences,
+        essays: profile?.essays,
+        additional: {}
+      };
+      
+      // Store all template field values in additionalData
+      templateFields.forEach(field => {
+        if (fieldValues[field.id] !== undefined) {
+          profileData.additional[field.id] = fieldValues[field.id];
+        }
+      });
+      
       const response = await fetch('/api/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(profile)
+        body: JSON.stringify(profileData)
       });
 
       if (response.ok) {
         alert(t('profile.saveSuccess'));
+        // Update local profile state
+        setProfile(profileData);
       }
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -62,6 +158,13 @@ export default function Profile() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateFieldValue = (fieldId: string, value: any) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
   };
 
   const addEducation = () => {
@@ -151,59 +254,31 @@ export default function Profile() {
             </button>
           </div>
 
-          {/* Basic Information */}
-          <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('profile.basicInfo')}</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('profile.fullName')}
-                </label>
-                <input
-                  type="text"
-                  value={profile?.fullName || ''}
-                  onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('profile.phone')}
-                </label>
-                <input
-                  type="tel"
-                  value={profile?.phone || ''}
-                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('profile.birthday')}
-                </label>
-                <input
-                  type="date"
-                  value={profile?.birthday ? new Date(profile.birthday).toISOString().split('T')[0] : ''}
-                  onChange={(e) => setProfile({ ...profile, birthday: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('profile.nationality')}
-                </label>
-                <input
-                  type="text"
-                  value={profile?.nationality || ''}
-                  onChange={(e) => setProfile({ ...profile, nationality: e.target.value })}
-                  className="input-field"
-                />
+          {/* Dynamic Template Fields */}
+          {templateFields.length > 0 ? (
+            <div className="card">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('profile.basicInfo')}</h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {templateFields.map((field) => (
+                  <div key={field.id} className={field.type === 'textarea' || field.type === 'essay' ? 'md:col-span-2' : ''}>
+                    <FormFieldInput
+                      field={field}
+                      value={fieldValues[field.id] || ''}
+                      onChange={(value) => updateFieldValue(field.id, value)}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          ) : (
+            !loading && (
+              <div className="card">
+                <p className="text-gray-600">
+                  {t('profile.noTemplateFields') || 'Template fields are being loaded. Please refresh the page if this message persists.'}
+                </p>
+              </div>
+            )
+          )}
 
           {/* Education */}
           <div className="card">

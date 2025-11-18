@@ -7,6 +7,39 @@ export default async function handler(
 ) {
   if (req.method === 'GET') {
     try {
+      const { schoolId } = req.query;
+
+      // If schoolId is provided, get specific template (including inactive ones for main template)
+      if (schoolId && typeof schoolId === 'string') {
+        const template = await prisma.schoolFormTemplate.findUnique({
+          where: { schoolId },
+          select: {
+            id: true,
+            schoolId: true,
+            schoolName: true,
+            program: true,
+            description: true,
+            fieldsData: true
+          }
+        });
+
+        if (!template) {
+          return res.status(404).json({ error: 'Template not found' });
+        }
+
+        return res.status(200).json({
+          success: true,
+          template: {
+            id: template.id,
+            schoolId: template.schoolId,
+            schoolName: template.schoolName,
+            program: template.program,
+            description: template.description,
+            fields: template.fieldsData
+          }
+        });
+      }
+
       // Get all active templates
       const templates = await prisma.schoolFormTemplate.findMany({
         where: { isActive: true },
