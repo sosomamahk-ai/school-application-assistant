@@ -33,6 +33,7 @@ export default function NewTemplate() {
   const { baseTemplate } = router.query;
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingTranslations, setSavingTranslations] = useState(false);
   const [translationsData, setTranslationsData] = useState<TranslationData>({});
   const [template, setTemplate] = useState({
     schoolId: '',
@@ -210,6 +211,51 @@ export default function NewTemplate() {
     }
   };
 
+  const handleTranslationChange = (
+    key: string,
+    language: 'en' | 'zh-CN' | 'zh-TW',
+    value: string
+  ) => {
+    setTranslationsData((prev) => {
+      const updated = {
+        ...prev,
+        [key]: {
+          ...(prev[key] || { en: '', 'zh-CN': '', 'zh-TW': '' }),
+          [language]: value,
+        },
+      };
+      return updated;
+    });
+  };
+
+  const handleSaveTranslations = async () => {
+    setSavingTranslations(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/translations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ translations: translationsData }),
+      });
+
+      if (response.ok) {
+        alert('翻译保存成功！');
+        await fetchTranslations();
+      } else {
+        const error = await response.json();
+        alert(`保存失败: ${error.error || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('Error saving translations:', error);
+      alert('保存失败，请重试');
+    } finally {
+      setSavingTranslations(false);
+    }
+  };
+
   return (
     <Layout>
       <Head>
@@ -317,68 +363,6 @@ export default function NewTemplate() {
           </div>
         </div>
 
-        {/* Translation Keys Management */}
-        {fields.length > 0 && (
-          <div className="card mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">字段标签翻译管理</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              管理模板字段标签的多语言翻译。Key 列显示翻译键字符串。
-            </p>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                      Key
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                      Simplified Chinese
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                      Traditional Chinese
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                      English
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {getAllFieldLabels(fields).map((labelKey) => {
-                    const translation = translationsData[labelKey] || {
-                      en: '',
-                      'zh-CN': '',
-                      'zh-TW': '',
-                    };
-                    
-                    return (
-                      <tr key={labelKey} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <code className="text-sm font-mono text-gray-900">{labelKey}</code>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-700">
-                            {translation['zh-CN'] || <span className="text-gray-400">-</span>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-700">
-                            {translation['zh-TW'] || <span className="text-gray-400">-</span>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-700">
-                            {translation.en || <span className="text-gray-400">-</span>}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
         {/* Fields Configuration */}
         <div className="card mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -423,6 +407,99 @@ export default function NewTemplate() {
             </div>
           )}
         </div>
+
+        {/* Translation Keys Management */}
+        {fields.length > 0 && (
+          <div className="card mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">字段标签翻译管理</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  管理模板字段标签的多语言翻译。可以直接编辑并保存翻译。
+                </p>
+              </div>
+              <button
+                onClick={handleSaveTranslations}
+                disabled={savingTranslations}
+                className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+              >
+                <Save className="h-5 w-5" />
+                <span>{savingTranslations ? '保存中...' : '保存翻译'}</span>
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      Key
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      Simplified Chinese
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      Traditional Chinese
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                      English
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {getAllFieldLabelsWithOriginal(fields).map(({ labelKey, originalLabel }) => {
+                    const translation = translationsData[labelKey] || {
+                      en: originalLabel || '',
+                      'zh-CN': '',
+                      'zh-TW': '',
+                    };
+                    const isEmpty = !translation.en && !translation['zh-CN'] && !translation['zh-TW'];
+                    
+                    return (
+                      <tr key={labelKey} className={`hover:bg-gray-50 ${isEmpty ? 'bg-yellow-50' : ''}`}>
+                        <td className="px-6 py-4">
+                          <code className="text-sm font-mono text-gray-900">{labelKey}</code>
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="text"
+                            value={translation['zh-CN'] || ''}
+                            onChange={(e) => handleTranslationChange(labelKey, 'zh-CN', e.target.value)}
+                            placeholder="简体中文翻译"
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                              isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
+                            }`}
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="text"
+                            value={translation['zh-TW'] || ''}
+                            onChange={(e) => handleTranslationChange(labelKey, 'zh-TW', e.target.value)}
+                            placeholder="繁體中文翻譯"
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                              isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
+                            }`}
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <input
+                            type="text"
+                            value={translation.en || ''}
+                            onChange={(e) => handleTranslationChange(labelKey, 'en', e.target.value)}
+                            placeholder="English translation"
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                              isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
+                            }`}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-between items-center">
@@ -632,16 +709,19 @@ function FieldEditor({
   );
 }
 
-// Helper function to extract all field label keys from fields
-function getAllFieldLabels(fields: Field[]): string[] {
-  const keys = new Set<string>();
+// Helper function to extract all field label keys from fields with original labels
+function getAllFieldLabelsWithOriginal(fields: Field[]): Array<{ labelKey: string; originalLabel: string }> {
+  const keysMap = new Map<string, string>();
   
   const processField = (field: Field) => {
-    if (field.label) {
-      // Generate translation key from field label
+    if (field.id && field.label) {
+      // Generate translation key from field ID
       // Format: template.field.{fieldId}
       const key = `template.field.${field.id}`;
-      keys.add(key);
+      // Store the original label if not already stored
+      if (!keysMap.has(key)) {
+        keysMap.set(key, field.label);
+      }
     }
     
     // Process nested fields in sections
@@ -652,6 +732,8 @@ function getAllFieldLabels(fields: Field[]): string[] {
   
   fields.forEach(processField);
   
-  return Array.from(keys).sort();
+  return Array.from(keysMap.entries())
+    .map(([labelKey, originalLabel]) => ({ labelKey, originalLabel }))
+    .sort((a, b) => a.labelKey.localeCompare(b.labelKey));
 }
 
