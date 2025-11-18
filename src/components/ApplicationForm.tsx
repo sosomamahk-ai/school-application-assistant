@@ -8,6 +8,10 @@ export interface ApplicationField {
   type: FieldKind;
   value: string | number | boolean | null;
   options?: Array<{ label: string; value: string }>;
+  required?: boolean;
+  helpText?: string;
+  placeholder?: string;
+  aiFillRule?: string;
 }
 
 export interface ApplicationTab {
@@ -25,9 +29,10 @@ export interface ApplicationFormState {
 interface ApplicationFormProps {
   application: ApplicationFormState;
   onApplicationChange?: (nextApplication: ApplicationFormState) => void;
+  onFieldFocus?: (field: ApplicationField) => void;
 }
 
-export default function ApplicationForm({ application, onApplicationChange }: ApplicationFormProps) {
+export default function ApplicationForm({ application, onApplicationChange, onFieldFocus }: ApplicationFormProps) {
   const [currentApp, setCurrentApp] = useState<ApplicationFormState>(application);
   const [activeTabId, setActiveTabId] = useState<string>(() => application.tabs[0]?.id ?? '');
 
@@ -64,6 +69,9 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
   };
 
   const renderFieldInput = (tabId: string, field: ApplicationField) => {
+    const notifyFocus = () => {
+      onFieldFocus?.(field);
+    };
     const baseClass =
       'w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500';
 
@@ -77,6 +85,8 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
             rows={4}
             onChange={(event) => handleFieldChange(tabId, field.id, event.currentTarget.value)}
             className={baseClass}
+            placeholder={field.placeholder}
+            onFocus={notifyFocus}
           />
         );
       case 'select':
@@ -86,6 +96,7 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
             name={field.id}
             value={typeof field.value === 'string' ? field.value : ''}
             onChange={(event) => handleFieldChange(tabId, field.id, event.currentTarget.value)}
+            onFocus={notifyFocus}
             className={baseClass}
           >
             <option value="">请选择</option>
@@ -105,6 +116,7 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
             checked={Boolean(field.value)}
             onChange={(event) => handleFieldChange(tabId, field.id, event.currentTarget.checked)}
             className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            onFocus={notifyFocus}
           />
         );
       case 'date':
@@ -115,6 +127,7 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
             type="date"
             value={typeof field.value === 'string' ? field.value : ''}
             onChange={(event) => handleFieldChange(tabId, field.id, event.currentTarget.value)}
+            onFocus={notifyFocus}
             className={baseClass}
           />
         );
@@ -126,6 +139,7 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
             type="number"
             value={typeof field.value === 'number' ? field.value : ''}
             onChange={(event) => handleFieldChange(tabId, field.id, Number(event.currentTarget.value))}
+            onFocus={notifyFocus}
             className={baseClass}
           />
         );
@@ -138,6 +152,8 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
             type="text"
             value={typeof field.value === 'string' ? field.value : ''}
             onChange={(event) => handleFieldChange(tabId, field.id, event.currentTarget.value)}
+            placeholder={field.placeholder}
+            onFocus={notifyFocus}
             className={baseClass}
           />
         );
@@ -175,7 +191,9 @@ export default function ApplicationForm({ application, onApplicationChange }: Ap
             <div key={field.id} className="space-y-2">
               <label htmlFor={field.id} className="block text-sm font-medium text-gray-700">
                 {field.label}
+                {field.required && <span className="ml-1 text-red-500">*</span>}
               </label>
+              {field.helpText && <p className="text-sm text-gray-500">{field.helpText}</p>}
               {renderFieldInput(activeTab.id, field)}
             </div>
           ))}

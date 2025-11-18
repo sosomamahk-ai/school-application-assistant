@@ -21,6 +21,11 @@ export interface TemplateNode {
   label?: string;
   type?: string;
   value?: string | number | boolean | null;
+  required?: boolean;
+  helpText?: string;
+  placeholder?: string;
+  aiFillRule?: string;
+  options?: Array<string | { label?: string; value?: string }>;
   fields?: TemplateNode[];
   items?: TemplateNode[];
   sections?: TemplateNode[];

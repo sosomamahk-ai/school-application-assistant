@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
@@ -10,6 +10,7 @@ import ApplicationForm, {
   ApplicationField,
   ApplicationTab
 } from '@/components/ApplicationForm';
+import AIGuidancePanel from '@/components/AIGuidancePanel';
 import type { FormField } from '@/types';
 import type { StructuredFormData, TemplateNode } from '@/utils/templates';
 import { TEMPLATE_CHILD_COLLECTION_KEYS } from '@/utils/templates';
@@ -29,6 +30,39 @@ interface ApiApplication {
 
 type StructuredFormDataState = StructuredFormData | Record<string, any>;
 const FALLBACK_TAB_TITLE = '申请内容';
+type TemplateFieldOption = { label?: unknown; value?: unknown } | string;
+
+function normalizeFieldOptions(options?: unknown): ApplicationField['options'] {
+  if (!Array.isArray(options)) {
+    return undefined;
+  }
+
+  return options
+    .map((entry) => {
+      if (typeof entry === 'string') {
+        const trimmed = entry.trim();
+        return trimmed ? { label: trimmed, value: trimmed } : null;
+      }
+
+      if (entry && typeof entry === 'object') {
+        const option = entry as Exclude<TemplateFieldOption, string>;
+        const rawLabel = typeof option.label === 'string' ? option.label.trim() : '';
+        const rawValue = typeof option.value === 'string' ? option.value.trim() : '';
+        const label = rawLabel || rawValue;
+        const value = rawValue || rawLabel;
+        if (!label && !value) {
+          return null;
+        }
+        return {
+          label: label || value,
+          value: value || label
+        };
+      }
+
+      return null;
+    })
+    .filter((item): item is { label: string; value: string } => Boolean(item));
+}
 
 function getChildNodes(node?: TemplateNode): TemplateNode[] {
   if (!node) {
@@ -70,11 +104,24 @@ function collectLeafFields(
 ): void {
   const children = getChildNodes(node);
   if (children.length === 0 && node.id) {
+    const { required, helpText, placeholder, aiFillRule, options } = node as TemplateNode & {
+      required?: boolean;
+      helpText?: unknown;
+      placeholder?: unknown;
+      aiFillRule?: unknown;
+      options?: unknown;
+    };
+
     accumulator.push({
       id: node.id,
       label: node.label || node.id,
       type: mapFieldType(node.type),
-      value: values[node.id] ?? ''
+      value: values[node.id] ?? '',
+      required: Boolean(required),
+      helpText: typeof helpText === 'string' ? helpText : undefined,
+      placeholder: typeof placeholder === 'string' ? placeholder : undefined,
+      aiFillRule: typeof aiFillRule === 'string' ? aiFillRule : undefined,
+      options: normalizeFieldOptions(options)
     });
     return;
   }
@@ -124,7 +171,12 @@ function buildTabsFromStructure(
           id: field.id,
           label: field.label,
           type: mapFieldType(field.type),
-          value: values[field.id] ?? ''
+          value: values[field.id] ?? '',
+          required: field.required,
+          helpText: field.helpText,
+          placeholder: field.placeholder,
+          options: field.options?.map((option) => ({ label: option, value: option })),
+          aiFillRule: field.aiFillRule
         }))
       }
     ];
@@ -142,6 +194,7 @@ export default function ApplicationPage() {
   const [formData, setFormData] = useState<StructuredFormDataState>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!applicationId || typeof applicationId !== 'string') {
@@ -212,6 +265,88 @@ export default function ApplicationPage() {
     const structure = formData.__structure as TemplateNode[] | TemplateNode | undefined;
     return buildTabsFromStructure(structure, formData, application.template.fields);
   }, [application, formData]);
+
+  useEffect(() => {
+    if (formTabs.length === 0) {
+      setActiveFieldId(null);
+      return;
+    }
+
+    if (activeFieldId) {
+      const exists = formTabs.some((tab) => tab.fields.some((field) => field.id === activeFieldId));
+      if (exists) {
+        return;
+      }
+    }
+
+    const firstField = formTabs[0]?.fields[0];
+    setActiveFieldId(firstField ? firstField.id : null);
+  }, [formTabs, activeFieldId]);
+
+  const activeField = useMemo<ApplicationField | null>(() => {
+    if (!activeFieldId) {
+      return null;
+    }
+    for (const tab of formTabs) {
+      const found = tab.fields.find((field) => field.id === activeFieldId);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }, [formTabs, activeFieldId]);
+
+  const templateFieldMap = useMemo(() => {
+    const map = new Map<string, FormField>();
+    application?.template.fields.forEach((field) => {
+      map.set(field.id, field);
+    });
+    return map;
+  }, [application]);
+
+  const activeGuidanceField = useMemo<FormField | null>(() => {
+    if (!activeField) {
+      return null;
+    }
+    if (templateFieldMap.has(activeField.id)) {
+      return templateFieldMap.get(activeField.id)!;
+    }
+
+    const normalizedType: FormField['type'] =
+      activeField.type === 'textarea'
+        ? 'textarea'
+        : activeField.type === 'select'
+          ? 'select'
+          : activeField.type === 'date'
+            ? 'date'
+            : 'text';
+
+    return {
+      id: activeField.id,
+      label: activeField.label,
+      type: normalizedType,
+      required: Boolean(activeField.required),
+      placeholder: activeField.placeholder,
+      helpText: activeField.helpText,
+      aiFillRule: activeField.aiFillRule,
+      options: activeField.options?.map((option) => option.label)
+    };
+  }, [activeField, templateFieldMap]);
+
+  const handleGuidanceSuggestion = useCallback(
+    (value: string) => {
+      if (!activeField) {
+        return;
+      }
+      setFormData((previous) => {
+        const next: StructuredFormDataState =
+          previous && typeof previous === 'object' ? { ...previous } : {};
+        next[activeField.id] = value;
+        return next;
+      });
+    },
+    [activeField]
+  );
 
   const formState = useMemo<ApplicationFormState | null>(() => {
     if (!application) {
@@ -343,11 +478,31 @@ export default function ApplicationPage() {
 
           {formTabs.length > 0 ? (
             <div className="rounded-2xl bg-white p-6 shadow-sm">
-              <ApplicationForm
-                application={formState}
-                onApplicationChange={handleApplicationChange}
-                />
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+                <div className="min-w-0">
+                  <ApplicationForm
+                    application={formState}
+                    onApplicationChange={handleApplicationChange}
+                    onFieldFocus={(field) => setActiveFieldId(field.id)}
+                  />
+                </div>
+                <div className="min-w-0 lg:sticky lg:top-6">
+                  {activeGuidanceField ? (
+                    <AIGuidancePanel
+                      field={activeGuidanceField}
+                      currentValue={
+                        activeField && typeof activeField.value === 'string' ? activeField.value : undefined
+                      }
+                      onSuggestionAccept={handleGuidanceSuggestion}
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-gray-500">
+                      选择任意字段以查看 AI 填写指导。
+                    </div>
+                  )}
+                </div>
               </div>
+            </div>
           ) : (
             <div className="rounded-2xl bg-white p-6 text-center text-gray-600 shadow-sm">
               当前申请没有可填写的字段。
