@@ -7,6 +7,7 @@ import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter } from 'lucide-
 import jwt from 'jsonwebtoken';
 import type { JWTPayload } from '@/utils/auth';
 import { getTokenFromCookieHeader } from '@/utils/token';
+import { useTranslation } from '@/contexts/TranslationContext';
 
 interface SchoolTemplate {
   id: string;
@@ -21,31 +22,32 @@ interface SchoolTemplate {
   updatedAt: string;
 }
 
-// 5个类别
-const CATEGORIES = [
-  '全部',
-  '国际学校',
-  '香港本地中学',
-  '香港本地小学',
-  '香港幼稚园',
-  '大学'
-];
+// Category keys for translation
+const CATEGORY_KEYS = [
+  'all',
+  'international',
+  'hkSecondary',
+  'hkPrimary',
+  'hkKindergarten',
+  'university'
+] as const;
 
-// 类别颜色
+// Category color mapping
 const CATEGORY_COLORS: Record<string, string> = {
-  '国际学校': 'bg-blue-100 text-blue-800',
-  '香港本地中学': 'bg-green-100 text-green-800',
-  '香港本地小学': 'bg-yellow-100 text-yellow-800',
-  '香港幼稚园': 'bg-pink-100 text-pink-800',
-  '大学': 'bg-purple-100 text-purple-800'
+  'international': 'bg-blue-100 text-blue-800',
+  'hkSecondary': 'bg-green-100 text-green-800',
+  'hkPrimary': 'bg-yellow-100 text-yellow-800',
+  'hkKindergarten': 'bg-pink-100 text-pink-800',
+  'university': 'bg-purple-100 text-purple-800'
 };
 
 export default function TemplatesAdmin() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState<SchoolTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('全部');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
@@ -69,15 +71,16 @@ export default function TemplatesAdmin() {
         // 处理其他错误
         const errorData = await response.json().catch(() => ({}));
         console.error('Failed to fetch templates:', response.status, errorData);
-        alert(`加载模板失败: ${errorData.error || '未知错误'}`);
+        const errorMsg = errorData.error || t('admin.templates.error.unknown');
+        alert(t('admin.templates.error.loadFailed').replace('{error}', errorMsg));
       }
     } catch (error) {
       console.error('Error fetching templates:', error);
-      alert('加载模板时发生错误，请检查网络连接');
+      alert(t('admin.templates.error.loadFailedNetwork'));
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     fetchTemplates();
@@ -97,7 +100,7 @@ export default function TemplatesAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除此模板吗？')) return;
+    if (!confirm(t('admin.templates.confirmDelete'))) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -109,12 +112,12 @@ export default function TemplatesAdmin() {
       });
 
       if (response.ok) {
-        alert('删除成功');
+        alert(t('admin.templates.success.delete'));
         fetchTemplates();
       }
     } catch (error) {
       console.error('Error deleting template:', error);
-      alert('删除失败');
+      alert(t('admin.templates.error.delete'));
     }
   };
 
@@ -132,35 +135,50 @@ export default function TemplatesAdmin() {
     setShowImportModal(true);
   };
 
+  // Helper function to get category translation
+  const getCategoryTranslation = (categoryKey: string) => {
+    return t(`admin.templates.category.${categoryKey}` as any);
+  };
+
   // 筛选模板
-  const filteredTemplates = selectedCategory === '全部' 
-    ? templates 
-    : templates.filter(t => t.category === selectedCategory);
+  const filteredTemplates = selectedCategory === 'all'
+    ? templates
+    : templates.filter(template => {
+        // Map category keys to actual category values
+        const categoryMap: Record<string, string> = {
+          'international': '国际学校',
+          'hkSecondary': '香港本地中学',
+          'hkPrimary': '香港本地小学',
+          'hkKindergarten': '香港幼稚园',
+          'university': '大学'
+        };
+        return template.category === categoryMap[selectedCategory] || template.category === selectedCategory;
+      });
 
   // 获取系统预设模板（用于"基于模板创建"）- 包括所有以 template- 开头的模板
-  const systemTemplates = templates.filter(t => {
-    const isSystem = t.schoolId && t.schoolId.startsWith('template-');
+  const systemTemplates = templates.filter(template => {
+    const isSystem = template.schoolId && template.schoolId.startsWith('template-');
     if (isSystem) {
-      console.log('Found system template:', t.schoolId, t.schoolName);
+      console.log('Found system template:', template.schoolId, template.schoolName);
     }
     return isSystem;
   });
   
   // 获取用户创建的模板
-  const userTemplates = filteredTemplates.filter(t => !t.schoolId || !t.schoolId.startsWith('template-'));
+  const userTemplates = filteredTemplates.filter(template => !template.schoolId || !template.schoolId.startsWith('template-'));
 
   return (
     <Layout>
       <Head>
-        <title>学校模板管理 - 管理后台</title>
+        <title>{t('admin.templates.pageTitle')}</title>
       </Head>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">学校申请模板管理</h1>
-            <p className="text-gray-600 mt-2">创建、编辑和管理学校申请表单模板</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('admin.templates.mainTitle')}</h1>
+            <p className="text-gray-600 mt-2">{t('admin.templates.description')}</p>
           </div>
           <div className="flex space-x-3">
             <button
@@ -168,7 +186,7 @@ export default function TemplatesAdmin() {
               className="btn-secondary flex items-center space-x-2"
             >
               <Upload className="h-5 w-5" />
-              <span>导入模板</span>
+              <span>{t('admin.templates.import')}</span>
             </button>
             
             {/* 创建菜单（支持基于模板创建） */}
@@ -178,7 +196,7 @@ export default function TemplatesAdmin() {
                 className="btn-primary flex items-center space-x-2"
               >
                 <Plus className="h-5 w-5" />
-                <span>创建新模板</span>
+                <span>{t('admin.templates.createNew')}</span>
               </button>
               
               {showCreateMenu && (
@@ -191,40 +209,45 @@ export default function TemplatesAdmin() {
                       }}
                       className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
                     >
-                      <div className="font-medium text-gray-900">从空白创建</div>
-                      <div className="text-sm text-gray-500">创建一个全新的模板</div>
+                      <div className="font-medium text-gray-900">{t('admin.templates.createFromBlank')}</div>
+                      <div className="text-sm text-gray-500">{t('admin.templates.createFromBlankDesc')}</div>
                     </button>
                     
                     <div className="border-t border-gray-100 my-2"></div>
-                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">基于类别模板创建</div>
+                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">{t('admin.templates.createFromTemplate')}</div>
                     
                     {systemTemplates.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-gray-500">
-                        暂无系统模板，请先在数据库中导入主模板
+                        {t('admin.templates.noSystemTemplates')}
                       </div>
                     ) : (
-                      systemTemplates.map((template) => (
-                        <button
-                          key={template.id}
-                          onClick={() => {
-                            handleCreateFromTemplate(template.id);
-                            setShowCreateMenu(false);
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900">{template.schoolName}</div>
-                              <div className="text-sm text-gray-500">{template.description}</div>
+                      systemTemplates.map((template) => {
+                        const categoryKey = Object.entries(CATEGORY_COLORS).find(([_, color]) => 
+                          template.category && CATEGORY_COLORS[template.category as keyof typeof CATEGORY_COLORS]
+                        )?.[0] || template.category || '';
+                        return (
+                          <button
+                            key={template.id}
+                            onClick={() => {
+                              handleCreateFromTemplate(template.id);
+                              setShowCreateMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{template.schoolName}</div>
+                                <div className="text-sm text-gray-500">{template.description}</div>
+                              </div>
+                              {template.category && (
+                                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${CATEGORY_COLORS[categoryKey] || 'bg-gray-100 text-gray-800'}`}>
+                                  {template.category}
+                                </span>
+                              )}
                             </div>
-                            {template.category && (
-                              <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${CATEGORY_COLORS[template.category]}`}>
-                                {template.category}
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      ))
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -236,57 +259,93 @@ export default function TemplatesAdmin() {
         {/* 类别筛选按钮 */}
         <div className="mb-6 flex items-center space-x-2 overflow-x-auto pb-2">
           <Filter className="h-5 w-5 text-gray-400 flex-shrink-0" />
-          {CATEGORIES.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`
-                px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
-                ${selectedCategory === category
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }
-              `}
-            >
-              {category}
-              {category !== '全部' && (
-                <span className="ml-2 text-xs opacity-75">
-                  ({templates.filter(t => t.category === category).length})
-                </span>
-              )}
-            </button>
-          ))}
+          {CATEGORY_KEYS.map((categoryKey) => {
+            const categoryTranslation = getCategoryTranslation(categoryKey);
+            const categoryCount = categoryKey === 'all' 
+              ? templates.length 
+              : templates.filter(template => {
+                  const categoryMap: Record<string, string> = {
+                    'international': '国际学校',
+                    'hkSecondary': '香港本地中学',
+                    'hkPrimary': '香港本地小学',
+                    'hkKindergarten': '香港幼稚园',
+                    'university': '大学'
+                  };
+                  return template.category === categoryMap[categoryKey] || template.category === categoryKey;
+                }).length;
+            
+            return (
+              <button
+                key={categoryKey}
+                onClick={() => setSelectedCategory(categoryKey)}
+                className={`
+                  px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors
+                  ${selectedCategory === categoryKey
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }
+                `}
+              >
+                {categoryTranslation}
+                {categoryKey !== 'all' && (
+                  <span className="ml-2 text-xs opacity-75">
+                    ({categoryCount})
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Templates List */}
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">加载中...</p>
+            <p className="mt-4 text-gray-600">{t('admin.templates.loading')}</p>
           </div>
         ) : filteredTemplates.length === 0 ? (
           <div className="card text-center py-12">
             <p className="text-gray-600 mb-4">
-              {selectedCategory === '全部' 
-                ? '还没有任何学校模板' 
-                : `还没有"${selectedCategory}"类别的模板`}
+              {selectedCategory === 'all'
+                ? t('admin.templates.noTemplates')
+                : t('admin.templates.noTemplatesCategory', { category: getCategoryTranslation(selectedCategory) }).replace('{category}', getCategoryTranslation(selectedCategory))}
             </p>
             <button onClick={handleCreateNew} className="btn-primary">
-              创建第一个模板
+              {t('admin.templates.createFirst')}
             </button>
           </div>
         ) : (
           <>
             {/* 系统预设模板 */}
-            {systemTemplates.filter(t => selectedCategory === '全部' || t.category === selectedCategory).length > 0 && (
+            {systemTemplates.filter(template => {
+              if (selectedCategory === 'all') return true;
+              const categoryMap: Record<string, string> = {
+                'international': '国际学校',
+                'hkSecondary': '香港本地中学',
+                'hkPrimary': '香港本地小学',
+                'hkKindergarten': '香港幼稚园',
+                'university': '大学'
+              };
+              return template.category === categoryMap[selectedCategory] || template.category === selectedCategory;
+            }).length > 0 && (
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="inline-block w-1 h-6 bg-blue-600 mr-3 rounded"></span>
-                  系统预设模板
+                  {t('admin.templates.systemTemplates')}
                 </h2>
                 <div className="grid gap-4">
                   {systemTemplates
-                    .filter(t => selectedCategory === '全部' || t.category === selectedCategory)
+                    .filter(template => {
+                      if (selectedCategory === 'all') return true;
+                      const categoryMap: Record<string, string> = {
+                        'international': '国际学校',
+                        'hkSecondary': '香港本地中学',
+                        'hkPrimary': '香港本地小学',
+                        'hkKindergarten': '香港幼稚园',
+                        'university': '大学'
+                      };
+                      return template.category === categoryMap[selectedCategory] || template.category === selectedCategory;
+                    })
                     .map((template) => (
                       <TemplateCard 
                         key={template.id}
@@ -307,7 +366,7 @@ export default function TemplatesAdmin() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                   <span className="inline-block w-1 h-6 bg-green-600 mr-3 rounded"></span>
-                  我的模板
+                  {t('admin.templates.myTemplates')}
                 </h2>
                 <div className="grid gap-4">
                   {userTemplates.map((template) => (
@@ -388,18 +447,32 @@ function TemplateCard({
   template: SchoolTemplate; 
   onEdit: (id: string) => void; 
   onDelete: (id: string) => void; 
-  onExport: (template: SchoolTemplate) => void;
+  onExport: (template: SchoolTemplate) => void; 
   onCreateFrom: (id: string) => void;
   isSystem: boolean;
 }) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const CATEGORY_COLORS: Record<string, string> = {
-    '国际学校': 'bg-blue-100 text-blue-800',
-    '香港本地中学': 'bg-green-100 text-green-800',
-    '香港本地小学': 'bg-yellow-100 text-yellow-800',
-    '香港幼稚园': 'bg-pink-100 text-pink-800',
-    '大学': 'bg-purple-100 text-purple-800'
+    'international': 'bg-blue-100 text-blue-800',
+    'hkSecondary': 'bg-green-100 text-green-800',
+    'hkPrimary': 'bg-yellow-100 text-yellow-800',
+    'hkKindergarten': 'bg-pink-100 text-pink-800',
+    'university': 'bg-purple-100 text-purple-800'
+  };
+
+  const getCategoryColor = (category?: string) => {
+    if (!category) return 'bg-gray-100 text-gray-800';
+    const categoryMap: Record<string, string> = {
+      '国际学校': 'international',
+      '香港本地中学': 'hkSecondary',
+      '香港本地小学': 'hkPrimary',
+      '香港幼稚园': 'hkKindergarten',
+      '大学': 'university'
+    };
+    const categoryKey = categoryMap[category] || category;
+    return CATEGORY_COLORS[categoryKey] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -411,7 +484,7 @@ function TemplateCard({
               {template.schoolName}
             </h3>
             {template.category && (
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${CATEGORY_COLORS[template.category]}`}>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(template.category)}`}>
                 {template.category}
               </span>
             )}
@@ -420,17 +493,17 @@ function TemplateCard({
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-gray-100 text-gray-800'
             }`}>
-              {template.isActive ? '已启用' : '已禁用'}
+              {template.isActive ? t('admin.templates.status.active') : t('admin.templates.status.inactive')}
             </span>
           </div>
           <p className="text-gray-600 mb-2">{template.program}</p>
           <p className="text-sm text-gray-500 mb-3">{template.description}</p>
           <div className="flex items-center space-x-4 text-sm text-gray-500">
-            <span>模板ID: {template.schoolId}</span>
+            <span>{t('admin.templates.label.templateId')} {template.schoolId}</span>
             <span>•</span>
-            <span>字段数: {Array.isArray(template.fieldsData) ? template.fieldsData.length : 0}</span>
+            <span>{t('admin.templates.label.fieldCount')} {Array.isArray(template.fieldsData) ? template.fieldsData.length : 0}</span>
             <span>•</span>
-            <span>更新于: {new Date(template.updatedAt).toLocaleDateString('zh-CN')}</span>
+            <span>{t('admin.templates.label.updatedAt')} {new Date(template.updatedAt).toLocaleDateString()}</span>
           </div>
         </div>
         <div className="flex space-x-2">
@@ -438,7 +511,7 @@ function TemplateCard({
             <button
               onClick={() => onCreateFrom(template.id)}
               className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              title="基于此模板创建"
+              title={t('admin.templates.action.createFrom')}
             >
               <Copy className="h-5 w-5" />
             </button>
@@ -446,28 +519,28 @@ function TemplateCard({
           <button
             onClick={() => router.push(`/admin/templates/preview/${template.id}`)}
             className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-            title="预览"
+            title={t('admin.templates.action.preview')}
           >
             <Eye className="h-5 w-5" />
           </button>
           <button
             onClick={() => onEdit(template.id)}
             className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-            title="编辑"
+            title={t('admin.templates.action.edit')}
           >
             <Edit className="h-5 w-5" />
           </button>
           <button
             onClick={() => onExport(template)}
             className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-            title="导出为JSON"
+            title={t('admin.templates.action.export')}
           >
             <Download className="h-5 w-5" />
           </button>
           <button
             onClick={() => onDelete(template.id)}
             className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="删除"
+            title={t('admin.templates.action.delete')}
           >
             <Trash2 className="h-5 w-5" />
           </button>
@@ -479,6 +552,7 @@ function TemplateCard({
 
 // Import Modal Component
 function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [jsonText, setJsonText] = useState('');
@@ -491,7 +565,7 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
   const handleImport = async () => {
     if (!file && !jsonText) {
-      alert('请选择文件或输入 JSON');
+      alert(t('admin.templates.import.errorNoInput'));
       return;
     }
 
@@ -518,15 +592,16 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
       });
 
       if (response.ok) {
-        alert('导入成功！');
+        alert(t('admin.templates.import.success'));
         onSuccess();
       } else {
         const error = await response.json();
-        alert(`导入失败: ${error.error || '未知错误'}`);
+        const errorMsg = error.error || t('admin.templates.error.unknown');
+        alert(t('admin.templates.import.error').replace('{error}', errorMsg));
       }
     } catch (error) {
       console.error('Import error:', error);
-      alert('导入失败：JSON 格式错误');
+      alert(t('admin.templates.import.errorFormat'));
     } finally {
       setImporting(false);
     }
@@ -535,13 +610,13 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">导入学校模板</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('admin.templates.import.title')}</h2>
         
         <div className="space-y-4">
           {/* File Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              上传 JSON 文件
+              {t('admin.templates.import.uploadFile')}
             </label>
             <input
               type="file"
@@ -554,14 +629,14 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
           {/* Or Divider */}
           <div className="flex items-center">
             <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-4 text-gray-500 text-sm">或者</span>
+            <span className="px-4 text-gray-500 text-sm">{t('admin.templates.import.or')}</span>
             <div className="flex-1 border-t border-gray-300"></div>
           </div>
 
           {/* JSON Text Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              粘贴 JSON 内容
+              {t('admin.templates.import.pasteJson')}
             </label>
             <textarea
               value={jsonText}
@@ -579,14 +654,14 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               className="btn-secondary"
               disabled={importing}
             >
-              取消
+              {t('admin.templates.import.cancel')}
             </button>
             <button
               onClick={handleImport}
               className="btn-primary"
               disabled={importing}
             >
-              {importing ? '导入中...' : '导入'}
+              {importing ? t('admin.templates.import.importing') : t('admin.templates.import.import')}
             </button>
           </div>
         </div>

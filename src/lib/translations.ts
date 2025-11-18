@@ -860,6 +860,21 @@ export const translations: TranslationData = {
     'zh-CN': '模板管理',
     'zh-TW': '範本管理',
   },
+  'admin.templates.pageTitle': {
+    en: 'School Template Management - Admin Panel',
+    'zh-CN': '学校模板管理 - 管理后台',
+    'zh-TW': '學校範本管理 - 管理後台',
+  },
+  'admin.templates.mainTitle': {
+    en: 'School Application Template Management',
+    'zh-CN': '学校申请模板管理',
+    'zh-TW': '學校申請範本管理',
+  },
+  'admin.templates.description': {
+    en: 'Create, edit and manage school application form templates',
+    'zh-CN': '创建、编辑和管理学校申请表单模板',
+    'zh-TW': '創建、編輯和管理學校申請表單範本',
+  },
   'admin.templates.createNew': {
     en: 'Create New Template',
     'zh-CN': '创建新模板',
@@ -869,6 +884,221 @@ export const translations: TranslationData = {
     en: 'Import Template',
     'zh-CN': '导入模板',
     'zh-TW': '匯入範本',
+  },
+  'admin.templates.createFromBlank': {
+    en: 'Create from Blank',
+    'zh-CN': '从空白创建',
+    'zh-TW': '從空白創建',
+  },
+  'admin.templates.createFromBlankDesc': {
+    en: 'Create a brand new template',
+    'zh-CN': '创建一个全新的模板',
+    'zh-TW': '創建一個全新的範本',
+  },
+  'admin.templates.createFromTemplate': {
+    en: 'Create from Category Template',
+    'zh-CN': '基于类别模板创建',
+    'zh-TW': '基於類別範本創建',
+  },
+  'admin.templates.noSystemTemplates': {
+    en: 'No system templates available, please import master templates to database first',
+    'zh-CN': '暂无系统模板，请先在数据库中导入主模板',
+    'zh-TW': '暫無系統範本，請先在資料庫中匯入主範本',
+  },
+  'admin.templates.category.all': {
+    en: 'All',
+    'zh-CN': '全部',
+    'zh-TW': '全部',
+  },
+  'admin.templates.category.international': {
+    en: 'International School',
+    'zh-CN': '国际学校',
+    'zh-TW': '國際學校',
+  },
+  'admin.templates.category.hkSecondary': {
+    en: 'Hong Kong Secondary School',
+    'zh-CN': '香港本地中学',
+    'zh-TW': '香港本地中學',
+  },
+  'admin.templates.category.hkPrimary': {
+    en: 'Hong Kong Primary School',
+    'zh-CN': '香港本地小学',
+    'zh-TW': '香港本地小學',
+  },
+  'admin.templates.category.hkKindergarten': {
+    en: 'Hong Kong Kindergarten',
+    'zh-CN': '香港幼稚园',
+    'zh-TW': '香港幼稚園',
+  },
+  'admin.templates.category.university': {
+    en: 'University',
+    'zh-CN': '大学',
+    'zh-TW': '大學',
+  },
+  'admin.templates.loading': {
+    en: 'Loading...',
+    'zh-CN': '加载中...',
+    'zh-TW': '載入中...',
+  },
+  'admin.templates.noTemplates': {
+    en: 'No school templates yet',
+    'zh-CN': '还没有任何学校模板',
+    'zh-TW': '還沒有任何學校範本',
+  },
+  'admin.templates.noTemplatesCategory': {
+    en: 'No templates in "{category}" category',
+    'zh-CN': '还没有"{category}"类别的模板',
+    'zh-TW': '還沒有"{category}"類別的範本',
+  },
+  'admin.templates.createFirst': {
+    en: 'Create First Template',
+    'zh-CN': '创建第一个模板',
+    'zh-TW': '創建第一個範本',
+  },
+  'admin.templates.systemTemplates': {
+    en: 'System Preset Templates',
+    'zh-CN': '系统预设模板',
+    'zh-TW': '系統預設範本',
+  },
+  'admin.templates.myTemplates': {
+    en: 'My Templates',
+    'zh-CN': '我的模板',
+    'zh-TW': '我的範本',
+  },
+  'admin.templates.status.active': {
+    en: 'Active',
+    'zh-CN': '已启用',
+    'zh-TW': '已啟用',
+  },
+  'admin.templates.status.inactive': {
+    en: 'Inactive',
+    'zh-CN': '已禁用',
+    'zh-TW': '已禁用',
+  },
+  'admin.templates.label.templateId': {
+    en: 'Template ID:',
+    'zh-CN': '模板ID:',
+    'zh-TW': '範本ID:',
+  },
+  'admin.templates.label.fieldCount': {
+    en: 'Fields:',
+    'zh-CN': '字段数:',
+    'zh-TW': '欄位數:',
+  },
+  'admin.templates.label.updatedAt': {
+    en: 'Updated:',
+    'zh-CN': '更新于:',
+    'zh-TW': '更新於:',
+  },
+  'admin.templates.action.createFrom': {
+    en: 'Create from this template',
+    'zh-CN': '基于此模板创建',
+    'zh-TW': '基於此範本創建',
+  },
+  'admin.templates.action.preview': {
+    en: 'Preview',
+    'zh-CN': '预览',
+    'zh-TW': '預覽',
+  },
+  'admin.templates.action.edit': {
+    en: 'Edit',
+    'zh-CN': '编辑',
+    'zh-TW': '編輯',
+  },
+  'admin.templates.action.export': {
+    en: 'Export as JSON',
+    'zh-CN': '导出为JSON',
+    'zh-TW': '匯出為JSON',
+  },
+  'admin.templates.action.delete': {
+    en: 'Delete',
+    'zh-CN': '删除',
+    'zh-TW': '刪除',
+  },
+  'admin.templates.confirmDelete': {
+    en: 'Are you sure you want to delete this template?',
+    'zh-CN': '确定要删除此模板吗？',
+    'zh-TW': '確定要刪除此範本嗎？',
+  },
+  'admin.templates.error.loadFailed': {
+    en: 'Failed to load templates: {error}',
+    'zh-CN': '加载模板失败: {error}',
+    'zh-TW': '載入範本失敗: {error}',
+  },
+  'admin.templates.error.loadFailedNetwork': {
+    en: 'An error occurred while loading templates, please check your network connection',
+    'zh-CN': '加载模板时发生错误，请检查网络连接',
+    'zh-TW': '載入範本時發生錯誤，請檢查網路連線',
+  },
+  'admin.templates.error.unknown': {
+    en: 'Unknown error',
+    'zh-CN': '未知错误',
+    'zh-TW': '未知錯誤',
+  },
+  'admin.templates.success.delete': {
+    en: 'Deleted successfully',
+    'zh-CN': '删除成功',
+    'zh-TW': '刪除成功',
+  },
+  'admin.templates.error.delete': {
+    en: 'Failed to delete',
+    'zh-CN': '删除失败',
+    'zh-TW': '刪除失敗',
+  },
+  'admin.templates.import.title': {
+    en: 'Import School Template',
+    'zh-CN': '导入学校模板',
+    'zh-TW': '匯入學校範本',
+  },
+  'admin.templates.import.uploadFile': {
+    en: 'Upload JSON File',
+    'zh-CN': '上传 JSON 文件',
+    'zh-TW': '上傳 JSON 檔案',
+  },
+  'admin.templates.import.or': {
+    en: 'or',
+    'zh-CN': '或者',
+    'zh-TW': '或者',
+  },
+  'admin.templates.import.pasteJson': {
+    en: 'Paste JSON Content',
+    'zh-CN': '粘贴 JSON 内容',
+    'zh-TW': '貼上 JSON 內容',
+  },
+  'admin.templates.import.cancel': {
+    en: 'Cancel',
+    'zh-CN': '取消',
+    'zh-TW': '取消',
+  },
+  'admin.templates.import.importing': {
+    en: 'Importing...',
+    'zh-CN': '导入中...',
+    'zh-TW': '匯入中...',
+  },
+  'admin.templates.import.import': {
+    en: 'Import',
+    'zh-CN': '导入',
+    'zh-TW': '匯入',
+  },
+  'admin.templates.import.success': {
+    en: 'Imported successfully!',
+    'zh-CN': '导入成功！',
+    'zh-TW': '匯入成功！',
+  },
+  'admin.templates.import.error': {
+    en: 'Import failed: {error}',
+    'zh-CN': '导入失败: {error}',
+    'zh-TW': '匯入失敗: {error}',
+  },
+  'admin.templates.import.errorFormat': {
+    en: 'Import failed: JSON format error',
+    'zh-CN': '导入失败：JSON 格式错误',
+    'zh-TW': '匯入失敗：JSON 格式錯誤',
+  },
+  'admin.templates.import.errorNoInput': {
+    en: 'Please select a file or enter JSON',
+    'zh-CN': '请选择文件或输入 JSON',
+    'zh-TW': '請選擇檔案或輸入 JSON',
   },
   'admin.translations.title': {
     en: 'Translation Management',
