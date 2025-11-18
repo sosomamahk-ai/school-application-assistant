@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 import { MASTER_TEMPLATE_SCHOOL_ID } from '@/constants/templates';
+import { deserializeSchoolName, serializeSchoolName } from '@/utils/templates';
 import { MASTER_TEMPLATE_DATA } from '@/data/master-template';
 
 export default async function handler(
@@ -37,10 +38,12 @@ export default async function handler(
     };
 
     // 使用 upsert 来恢复或更新主模板
+    const schoolNameValue = serializeSchoolName(templateData.schoolName);
+
     const template = await prisma.schoolFormTemplate.upsert({
       where: { schoolId: MASTER_TEMPLATE_SCHOOL_ID },
       update: {
-        schoolName: templateData.schoolName as any,
+        schoolName: schoolNameValue,
         program: templateData.program,
         description: templateData.description || null,
         category: templateData.category || null,
@@ -50,7 +53,7 @@ export default async function handler(
       },
       create: {
         schoolId: templateData.schoolId,
-        schoolName: templateData.schoolName as any,
+        schoolName: schoolNameValue,
         program: templateData.program,
         description: templateData.description || null,
         category: templateData.category || null,
@@ -65,7 +68,7 @@ export default async function handler(
       template: {
         id: template.id,
         schoolId: template.schoolId,
-        schoolName: template.schoolName,
+        schoolName: deserializeSchoolName(template.schoolName),
         program: template.program,
         description: template.description,
         category: template.category,

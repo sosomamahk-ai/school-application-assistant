@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
+import { deserializeSchoolName } from '@/utils/templates';
 
 export default async function handler(
   req: NextApiRequest,
@@ -49,7 +50,7 @@ export default async function handler(
           id: application.id,
           template: {
             id: application.template.id,
-            schoolName: application.template.schoolName,
+            schoolName: deserializeSchoolName(application.template.schoolName),
             program: application.template.program,
             description: application.template.description,
             fields: application.template.fieldsData

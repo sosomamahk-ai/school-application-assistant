@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
+import { serializeSchoolName, deserializeSchoolName } from '@/utils/templates';
 
 export default async function handler(
   req: NextApiRequest,
@@ -31,10 +32,12 @@ export default async function handler(
     const fieldsData = cleanTemplateData.fieldsData || cleanTemplateData.fields || [];
 
     // 如果存在相同 schoolId，则更新；否则创建新记录
+    const schoolNameValue = serializeSchoolName(cleanTemplateData.schoolName);
+
     const template = await prisma.schoolFormTemplate.upsert({
       where: { schoolId: cleanTemplateData.schoolId },
       update: {
-        schoolName: cleanTemplateData.schoolName,
+        schoolName: schoolNameValue,
         program: cleanTemplateData.program,
         description: cleanTemplateData.description || null,
         category: cleanTemplateData.category || null,
@@ -44,7 +47,7 @@ export default async function handler(
       },
       create: {
         schoolId: cleanTemplateData.schoolId,
-        schoolName: cleanTemplateData.schoolName,
+        schoolName: schoolNameValue,
         program: cleanTemplateData.program,
         description: cleanTemplateData.description || null,
         category: cleanTemplateData.category || null,
@@ -59,7 +62,7 @@ export default async function handler(
       template: {
         id: template.id,
         schoolId: template.schoolId,
-        schoolName: template.schoolName,
+        schoolName: deserializeSchoolName(template.schoolName),
         program: template.program,
         description: template.description,
         category: template.category,
