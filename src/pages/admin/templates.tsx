@@ -3,11 +3,12 @@ import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
-import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter } from 'lucide-react';
+import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter, Save } from 'lucide-react';
 import jwt from 'jsonwebtoken';
 import type { JWTPayload } from '@/utils/auth';
 import { getTokenFromCookieHeader } from '@/utils/token';
 import { useTranslation } from '@/contexts/TranslationContext';
+import type { TranslationData } from '@/lib/translations';
 
 interface SchoolTemplate {
   id: string;
@@ -49,6 +50,8 @@ export default function TemplatesAdmin() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [translationsData, setTranslationsData] = useState<TranslationData>({});
+  const [savingTranslations, setSavingTranslations] = useState(false);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -84,8 +87,72 @@ export default function TemplatesAdmin() {
 
   useEffect(() => {
     fetchTemplates();
+    fetchTranslations();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchTemplates]);
+
+  const fetchTranslations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/translations', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTranslationsData(data.translations || {});
+      }
+    } catch (error) {
+      console.error('Error fetching translations:', error);
+    }
+  };
+
+  const handleTranslationChange = (
+    key: string,
+    language: 'en' | 'zh-CN' | 'zh-TW',
+    value: string
+  ) => {
+    setTranslationsData((prev) => {
+      const updated = {
+        ...prev,
+        [key]: {
+          ...(prev[key] || { en: '', 'zh-CN': '', 'zh-TW': '' }),
+          [language]: value,
+        },
+      };
+      return updated;
+    });
+  };
+
+  const handleSaveTranslations = async () => {
+    setSavingTranslations(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/translations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ translations: translationsData }),
+      });
+
+      if (response.ok) {
+        alert('翻译保存成功！');
+        await fetchTranslations();
+      } else {
+        const error = await response.json();
+        alert(`保存失败: ${error.error || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('Error saving translations:', error);
+      alert('保存失败，请重试');
+    } finally {
+      setSavingTranslations(false);
+    }
+  };
 
   const handleCreateNew = () => {
     router.push('/admin/templates/new');
@@ -389,6 +456,97 @@ export default function TemplatesAdmin() {
           </>
         )}
 
+        {/* Field Labels Translation Management */}
+        <div className="card mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">字段标签翻译管理</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                管理所有模板字段标签的多语言翻译。可以直接编辑并保存翻译。
+              </p>
+            </div>
+            <button
+              onClick={handleSaveTranslations}
+              disabled={savingTranslations}
+              className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+            >
+              <Save className="h-5 w-5" />
+              <span>{savingTranslations ? '保存中...' : '保存翻译'}</span>
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                    Key
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                    Simplified Chinese
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                    Traditional Chinese
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                    English
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {getAllTemplateFieldLabels(templates).map(({ labelKey, originalLabel }) => {
+                  const translation = translationsData[labelKey] || {
+                    en: originalLabel || '',
+                    'zh-CN': '',
+                    'zh-TW': '',
+                  };
+                  const isEmpty = !translation.en && !translation['zh-CN'] && !translation['zh-TW'];
+                  
+                  return (
+                    <tr key={labelKey} className={`hover:bg-gray-50 ${isEmpty ? 'bg-yellow-50' : ''}`}>
+                      <td className="px-6 py-4">
+                        <code className="text-sm font-mono text-gray-900">{labelKey}</code>
+                      </td>
+                      <td className="px-6 py-4">
+                        <input
+                          type="text"
+                          value={translation['zh-CN'] || ''}
+                          onChange={(e) => handleTranslationChange(labelKey, 'zh-CN', e.target.value)}
+                          placeholder="简体中文翻译"
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                            isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
+                          }`}
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <input
+                          type="text"
+                          value={translation['zh-TW'] || ''}
+                          onChange={(e) => handleTranslationChange(labelKey, 'zh-TW', e.target.value)}
+                          placeholder="繁體中文翻譯"
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                            isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
+                          }`}
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <input
+                          type="text"
+                          value={translation.en || ''}
+                          onChange={(e) => handleTranslationChange(labelKey, 'en', e.target.value)}
+                          placeholder="English translation"
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${
+                            isEmpty ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
+                          }`}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Import Modal */}
         {showImportModal && (
           <ImportModal
@@ -402,6 +560,47 @@ export default function TemplatesAdmin() {
       </div>
     </Layout>
   );
+}
+
+// Helper function to find a field by ID
+function findFieldById(fields: any[], fieldId: string): any | null {
+  for (const field of fields) {
+    if (field.id === fieldId) {
+      return field;
+    }
+    if (field.fields && Array.isArray(field.fields)) {
+      const found = findFieldById(field.fields, fieldId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Helper function to get all field labels from all templates
+function getAllTemplateFieldLabels(templates: SchoolTemplate[]): Array<{ labelKey: string; originalLabel: string }> {
+  const keysMap = new Map<string, string>();
+  
+  templates.forEach(template => {
+    if (template.fieldsData && Array.isArray(template.fieldsData)) {
+      const processField = (field: any) => {
+        if (field.id) {
+          const key = `template.field.${field.id}`;
+          // Store the original label if not already stored
+          if (!keysMap.has(key) && field.label) {
+            keysMap.set(key, field.label);
+          }
+        }
+        if (field.fields && Array.isArray(field.fields)) {
+          field.fields.forEach(processField);
+        }
+      };
+      template.fieldsData.forEach(processField);
+    }
+  });
+  
+  return Array.from(keysMap.entries())
+    .map(([labelKey, originalLabel]) => ({ labelKey, originalLabel }))
+    .sort((a, b) => a.labelKey.localeCompare(b.labelKey));
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => {
