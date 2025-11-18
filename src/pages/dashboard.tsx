@@ -73,7 +73,8 @@ export default function Dashboard() {
 
     fetchApplications();
     fetchTemplates();
-  }, [router, fetchApplications, fetchTemplates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchApplications, fetchTemplates]);
 
   const createApplication = async (templateId: string) => {
     try {

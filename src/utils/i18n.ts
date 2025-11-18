@@ -3,7 +3,7 @@
  * Handles multi-language text processing
  */
 
-import { Language } from '@/contexts/TranslationContext';
+import { Language } from '@/lib/translations';
 
 export interface LocalizedText {
   en: string;
