@@ -6,6 +6,7 @@ import { Save } from 'lucide-react';
 import { FormField } from '@/types';
 import { useTranslation } from '@/contexts/TranslationContext';
 import FormFieldInput from '@/components/FormFieldInput';
+import { MASTER_TEMPLATE_DATA } from '@/data/master-template';
 
 interface TemplateSection {
   id: string;
@@ -14,67 +15,80 @@ interface TemplateSection {
   fields: FormField[];
 }
 
+type RawTemplateOption = string | { label?: unknown; value?: unknown };
+
+type RawTemplateField = {
+  id: string;
+  label: string;
+  type?: string;
+  required?: boolean;
+  aiFillRule?: string;
+  placeholder?: string;
+  helpText?: string;
+  maxLength?: number;
+  options?: RawTemplateOption[];
+};
+
+type RawTemplateSection = {
+  id: string;
+  label?: string;
+  type?: string;
+  fields?: RawTemplateField[];
+};
+
+const normalizeOptions = (options?: RawTemplateOption[]): string[] | undefined => {
+  if (!Array.isArray(options)) {
+    return undefined;
+  }
+
+  const normalized = options
+    .map((option) => {
+      if (typeof option === 'string') {
+        const trimmed = option.trim();
+        return trimmed || null;
+      }
+      if (option && typeof option === 'object') {
+        const label = typeof option.label === 'string' ? option.label.trim() : '';
+        const value = typeof option.value === 'string' ? option.value.trim() : '';
+        return label || value || null;
+      }
+      return null;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  return normalized.length > 0 ? normalized : undefined;
+};
+
+const normalizeField = (field: RawTemplateField): FormField => ({
+  id: field.id,
+  label: field.label,
+  type: (field.type as FormField['type']) || 'text',
+  required: Boolean(field.required),
+  aiFillRule: typeof field.aiFillRule === 'string' ? field.aiFillRule : undefined,
+  placeholder: typeof field.placeholder === 'string' ? field.placeholder : undefined,
+  helpText: typeof field.helpText === 'string' ? field.helpText : undefined,
+  maxLength: typeof field.maxLength === 'number' ? field.maxLength : undefined,
+  options: normalizeOptions(field.options)
+});
+
+const MASTER_PROFILE_SECTIONS: TemplateSection[] = (MASTER_TEMPLATE_DATA.fieldsData as RawTemplateSection[])
+  .filter((section) => section.type === 'section' && Array.isArray(section.fields))
+  .map((section) => ({
+    id: section.id,
+    label: section.label ?? section.id,
+    type: section.type || 'section',
+    fields: (section.fields ?? []).map((field) => normalizeField(field))
+  }));
+
 export default function Profile() {
   const router = useRouter();
   const { t, language, translations } = useTranslation();
   const [profile, setProfile] = useState<any>(null);
-  const [sections, setSections] = useState<TemplateSection[]>([]);
   const [fieldValues, setFieldValues] = useState<{ [key: string]: any }>({});
-  const [activeTab, setActiveTab] = useState<string>('');
+  const sections = MASTER_PROFILE_SECTIONS;
+  const [activeTab, setActiveTab] = useState<string>(() => sections[0]?.id ?? '');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const fetchMainTemplate = useCallback(async () => {
-    try {
-      const response = await fetch('/api/templates?schoolId=template-master-all-fields');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.template && Array.isArray(data.template.fields)) {
-          // Parse sections from fieldsData
-          const parsedSections: TemplateSection[] = data.template.fields
-            .filter((item: any) => item.type === 'section' && Array.isArray(item.fields))
-            .map((item: any) => ({
-              id: item.id,
-              label: item.label,
-              type: item.type,
-              fields: item.fields || []
-            }));
-          
-          setSections(parsedSections);
-          
-          // Set first tab as active
-          setActiveTab(prev => prev || (parsedSections.length > 0 ? parsedSections[0].id : ''));
-        }
-      } else {
-        // Fallback: try to find any template starting with "template-"
-        const allTemplatesResponse = await fetch('/api/templates');
-        if (allTemplatesResponse.ok) {
-          const allData = await allTemplatesResponse.json();
-          if (allData.success && Array.isArray(allData.templates)) {
-            const mainTemplate = allData.templates.find((t: any) => 
-              t.schoolId && t.schoolId.startsWith('template-')
-            );
-            if (mainTemplate && Array.isArray(mainTemplate.fields)) {
-              const parsedSections: TemplateSection[] = mainTemplate.fields
-                .filter((item: any) => item.type === 'section' && Array.isArray(item.fields))
-                .map((item: any) => ({
-                  id: item.id,
-                  label: item.label,
-                  type: item.type,
-                  fields: item.fields || []
-                }));
-              
-              setSections(parsedSections);
-              
-              setActiveTab(prev => prev || (parsedSections.length > 0 ? parsedSections[0].id : ''));
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching main template:', error);
-    }
-  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -118,34 +132,8 @@ export default function Profile() {
       router.push('/auth/login');
       return;
     }
-    fetchMainTemplate();
     fetchProfile();
-  }, [router, fetchMainTemplate, fetchProfile]);
-
-  // Initialize field values when sections are loaded
-  useEffect(() => {
-    if (sections.length > 0 && profile) {
-      setFieldValues(prevValues => {
-        const values = { ...prevValues };
-        let updated = false;
-        
-        // Initialize any missing field values from profile
-        sections.forEach(section => {
-          section.fields.forEach(field => {
-            if (values[field.id] === undefined) {
-              // Try to get value from profile additional data
-              if (profile.additional && profile.additional[field.id] !== undefined) {
-                values[field.id] = profile.additional[field.id];
-                updated = true;
-              }
-            }
-          });
-        });
-        
-        return updated ? values : prevValues;
-      });
-    }
-  }, [sections, profile]);
+  }, [router, fetchProfile]);
 
   const saveProfile = async () => {
     setSaving(true);
@@ -306,7 +294,7 @@ export default function Profile() {
                       >
                         <FormFieldInput
                           field={field}
-                          value={fieldValues[field.id] || ''}
+                          value={fieldValues[field.id] ?? ''}
                           onChange={(value) => updateFieldValue(field.id, value)}
                         />
                       </div>
