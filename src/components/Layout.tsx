@@ -12,7 +12,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [userRole, setUserRole] = useState<string>('user');
 
   useEffect(() => {
@@ -47,13 +47,13 @@ export default function Layout({ children }: LayoutProps) {
               <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
             </Link>
             
-            <div className="flex items-center space-x-6">
+            <div className={`flex items-center ${language === 'en' ? 'space-x-4' : 'space-x-6'}`}>
               <Link 
                 href="/dashboard" 
                 className={`flex items-center space-x-1 ${router.pathname === '/dashboard' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
               >
                 <FileText className="h-5 w-5" />
-                <span className="font-medium">{t('dashboard.title')}</span>
+                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('dashboard.title')}</span>
               </Link>
               
               <Link 
@@ -61,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
                 className={`flex items-center space-x-1 ${router.pathname === '/profile' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
               >
                 <User className="h-5 w-5" />
-                <span className="font-medium">{t('profile.title')}</span>
+                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('profile.title')}</span>
               </Link>
 
               <Link 
@@ -69,31 +69,31 @@ export default function Layout({ children }: LayoutProps) {
                 className={`flex items-center space-x-1 ${router.pathname === '/settings' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
               >
                 <Settings className="h-5 w-5" />
-                <span className="font-medium">{t('settings.title')}</span>
+                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('settings.title')}</span>
               </Link>
 
               {isAdmin && (
-                <div className="flex items-center space-x-4">
+                <div className={`flex items-center ${language === 'en' ? 'space-x-3' : 'space-x-4'}`}>
                   <Link 
                     href="/admin/templates" 
                     className={`flex items-center space-x-1 ${router.pathname === '/admin/templates' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
                   >
                     <Shield className="h-5 w-5" />
-                    <span className="font-medium">{t('admin.templates.title')}</span>
+                    <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('admin.templates.title')}</span>
                   </Link>
                     <Link
                       href="/admin/users"
                       className={`flex items-center space-x-1 ${router.pathname === '/admin/users' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
                     >
                       <Users className="h-5 w-5" />
-                      <span className="font-medium">{t('admin.userManagement')}</span>
+                      <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('admin.userManagement')}</span>
                     </Link>
                   <Link 
                     href="/admin/translations" 
                     className={`flex items-center space-x-1 ${router.pathname === '/admin/translations' ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'}`}
                   >
                     <Settings className="h-5 w-5" />
-                    <span className="font-medium">{t('admin.translations.title')}</span>
+                    <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('admin.translations.title')}</span>
                   </Link>
                 </div>
               )}
@@ -105,7 +105,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
               >
                 <LogOut className="h-5 w-5" />
-                <span className="font-medium">{t('navbar.logout')}</span>
+                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
               </button>
             </div>
           </div>
