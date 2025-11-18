@@ -1055,25 +1055,30 @@ export const translations: TranslationData = {
     'zh-CN': '无法删除主模板（系统模板）',
     'zh-TW': '無法刪除主模板（系統範本）',
   },
-  'admin.templates.action.createDGS': {
-    en: 'Create DGS System Template',
-    'zh-CN': '创建拔萃女书院系统模板',
-    'zh-TW': '創建拔萃女書院系統範本',
+  'admin.templates.action.createMaster': {
+    en: 'Create Master Template',
+    'zh-CN': '创建主模板',
+    'zh-TW': '創建主範本',
   },
-  'admin.templates.confirmCreateDGS': {
-    en: 'Are you sure you want to create the DGS (Diocesan Girls\' School) system template? This will create a template with all available fields.',
-    'zh-CN': '确定要创建拔萃女书院系统模板吗？这将创建包含所有可用字段的模板。',
-    'zh-TW': '確定要創建拔萃女書院系統範本嗎？這將創建包含所有可用欄位的範本。',
+  'admin.templates.createMasterDesc': {
+    en: 'Create the master template with all available fields',
+    'zh-CN': '创建包含所有可用字段的主模板',
+    'zh-TW': '創建包含所有可用欄位的主範本',
   },
-  'admin.templates.success.createDGS': {
-    en: 'DGS system template created successfully!',
-    'zh-CN': '拔萃女书院系统模板创建成功！',
-    'zh-TW': '拔萃女書院系統範本創建成功！',
+  'admin.templates.confirmCreateMaster': {
+    en: 'Are you sure you want to create the master template? This will create a template with all available fields that can be used as a base for creating school-specific templates.',
+    'zh-CN': '确定要创建主模板吗？这将创建包含所有可用字段的模板，可以作为创建具体学校模板的基础。',
+    'zh-TW': '確定要創建主範本嗎？這將創建包含所有可用欄位的範本，可以作為創建具體學校範本的基礎。',
   },
-  'admin.templates.error.createDGS': {
-    en: 'Failed to create DGS system template',
-    'zh-CN': '创建拔萃女书院系统模板失败',
-    'zh-TW': '創建拔萃女書院系統範本失敗',
+  'admin.templates.success.createMaster': {
+    en: 'Master template created successfully!',
+    'zh-CN': '主模板创建成功！',
+    'zh-TW': '主範本創建成功！',
+  },
+  'admin.templates.error.createMaster': {
+    en: 'Failed to create master template',
+    'zh-CN': '创建主模板失败',
+    'zh-TW': '創建主範本失敗',
   },
   'admin.templates.import.title': {
     en: 'Import School Template',

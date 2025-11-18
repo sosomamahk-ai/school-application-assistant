@@ -304,12 +304,12 @@ export default function TemplatesAdmin() {
     setShowImportModal(true);
   };
 
-  const handleCreateDGS = async () => {
-    if (!confirm(t('admin.templates.confirmCreateDGS'))) return;
+  const handleCreateMaster = async () => {
+    if (!confirm(t('admin.templates.confirmCreateMaster'))) return;
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/templates/create-dgs', {
+      const response = await fetch('/api/admin/templates/create-master', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -319,16 +319,16 @@ export default function TemplatesAdmin() {
 
       if (response.ok) {
         const data = await response.json();
-        alert(t('admin.templates.success.createDGS'));
-        fetchTemplates();
+        alert(t('admin.templates.success.createMaster'));
+        fetchTemplates(); // Refresh templates list to show the newly created master template
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMessage = errorData.message || errorData.error || 'Failed to create DGS template';
-        alert(t('admin.templates.error.createDGS') + ': ' + errorMessage);
+        const errorMessage = errorData.message || errorData.error || 'Failed to create master template';
+        alert(t('admin.templates.error.createMaster') + ': ' + errorMessage);
       }
     } catch (error) {
-      console.error('Error creating DGS template:', error);
-      alert(t('admin.templates.error.createDGS'));
+      console.error('Error creating master template:', error);
+      alert(t('admin.templates.error.createMaster'));
     }
   };
 
@@ -379,14 +379,6 @@ export default function TemplatesAdmin() {
           </div>
           <div className="flex space-x-3">
             <button
-              onClick={handleCreateDGS}
-              className="btn-secondary flex items-center space-x-2"
-              title={t('admin.templates.action.createDGS')}
-            >
-              <Save className="h-5 w-5" />
-              <span>{t('admin.templates.action.createDGS')}</span>
-            </button>
-            <button
               onClick={handleImport}
               className="btn-secondary flex items-center space-x-2"
             >
@@ -420,6 +412,18 @@ export default function TemplatesAdmin() {
                     
                     <div className="border-t border-gray-100 my-2"></div>
                     <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">{t('admin.templates.createFromTemplate')}</div>
+                    
+                    {/* Create Master Template Option */}
+                    <button
+                      onClick={() => {
+                        handleCreateMaster();
+                        setShowCreateMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors border border-dashed border-gray-300 mb-2"
+                    >
+                      <div className="font-medium text-gray-900">{t('admin.templates.action.createMaster')}</div>
+                      <div className="text-sm text-gray-500">{t('admin.templates.createMasterDesc')}</div>
+                    </button>
                     
                     {systemTemplates.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-gray-500">

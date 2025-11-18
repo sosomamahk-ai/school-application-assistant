@@ -1,12 +1,13 @@
 /**
- * Create DGS System Template API
- * This endpoint creates the Diocesan Girls' School system template
+ * Create Master Template API
+ * This endpoint creates the master template with all available fields
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
-import { DGS_TEMPLATE_DATA } from '@/data/dgs-template';
+import { MASTER_TEMPLATE_DATA } from '@/data/master-template';
+import { MASTER_TEMPLATE_SCHOOL_ID } from '@/constants/templates';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,18 +26,18 @@ export default async function handler(
 
     // 准备模板数据
     const templateData = {
-      schoolId: DGS_TEMPLATE_DATA.schoolId,
-      schoolName: DGS_TEMPLATE_DATA.schoolName,
-      program: DGS_TEMPLATE_DATA.program,
-      description: DGS_TEMPLATE_DATA.description,
-      category: DGS_TEMPLATE_DATA.category,
-      fieldsData: DGS_TEMPLATE_DATA.fieldsData,
-      isActive: DGS_TEMPLATE_DATA.isActive
+      schoolId: MASTER_TEMPLATE_DATA.schoolId,
+      schoolName: MASTER_TEMPLATE_DATA.schoolName,
+      program: MASTER_TEMPLATE_DATA.program,
+      description: MASTER_TEMPLATE_DATA.description,
+      category: MASTER_TEMPLATE_DATA.category,
+      fieldsData: MASTER_TEMPLATE_DATA.fieldsData,
+      isActive: MASTER_TEMPLATE_DATA.isActive
     };
 
-    // 使用 upsert 来创建或更新系统模板
+    // 使用 upsert 来创建或更新主模板
     const template = await prisma.schoolFormTemplate.upsert({
-      where: { schoolId: DGS_TEMPLATE_DATA.schoolId },
+      where: { schoolId: MASTER_TEMPLATE_SCHOOL_ID },
       update: {
         schoolName: templateData.schoolName as any,
         program: templateData.program,
@@ -59,7 +60,7 @@ export default async function handler(
 
     res.status(200).json({
       success: true,
-      message: 'DGS system template created successfully',
+      message: 'Master template created successfully',
       template: {
         id: template.id,
         schoolId: template.schoolId,
@@ -71,10 +72,10 @@ export default async function handler(
       }
     });
   } catch (error: any) {
-    console.error('DGS template creation error:', error);
+    console.error('Master template creation error:', error);
     
     res.status(500).json({ 
-      error: 'Failed to create DGS system template',
+      error: 'Failed to create master template',
       message: error?.message || 'Unknown error occurred'
     });
   }
