@@ -137,7 +137,7 @@ export default function ApplicationPage() {
   const router = useRouter();
   const { applicationId } = router.query;
   const { language } = useTranslation();
-
+  
   const [application, setApplication] = useState<ApiApplication | null>(null);
   const [formData, setFormData] = useState<StructuredFormDataState>({});
   const [loading, setLoading] = useState(true);
@@ -160,9 +160,9 @@ export default function ApplicationPage() {
       setLoading(true);
 
       try {
-        const response = await fetch(`/api/applications/${applicationId}`, {
+      const response = await fetch(`/api/applications/${applicationId}`, {
           headers: { Authorization: `Bearer ${token}` }
-        });
+      });
 
         if (!response.ok) {
           throw new Error('Failed to fetch application');
@@ -175,12 +175,12 @@ export default function ApplicationPage() {
 
         setApplication(data.application);
         setFormData(data.application.formData || {});
-      } catch (error) {
-        console.error('Error fetching application:', error);
-      } finally {
+    } catch (error) {
+      console.error('Error fetching application:', error);
+    } finally {
         if (!cancelled) {
-          setLoading(false);
-        }
+      setLoading(false);
+    }
       }
     };
 
@@ -275,7 +275,7 @@ export default function ApplicationPage() {
       }
 
       if (nextStatus === 'submitted') {
-        router.push('/dashboard');
+          router.push('/dashboard');
       }
     } catch (error) {
       console.error('Error saving application:', error);
@@ -314,40 +314,40 @@ export default function ApplicationPage() {
       <Layout>
         <div className="space-y-6">
           <div className="flex flex-col justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-center">
-            <div>
+              <div>
               <h1 className="text-2xl font-bold text-gray-900">{formState.name}</h1>
-              <p className="text-gray-600">{application.template.program}</p>
+                <p className="text-gray-600">{application.template.program}</p>
               <p className="mt-2 text-sm text-gray-500">完成进度：{completion}%</p>
-            </div>
+              </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button
+                  <button
                 type="button"
                 onClick={() => handleSave()}
-                disabled={saving}
+                  disabled={saving}
                 className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
-              >
-                <Save className="h-5 w-5" />
-                <span>保存进度</span>
-              </button>
-              <button
+                >
+                  <Save className="h-5 w-5" />
+                  <span>保存进度</span>
+                </button>
+                <button
                 type="button"
                 onClick={() => handleSave('submitted')}
                 disabled={saving || completion < 100}
                 className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
-              >
-                <Send className="h-5 w-5" />
-                <span>提交申请</span>
-              </button>
+                >
+                  <Send className="h-5 w-5" />
+                  <span>提交申请</span>
+                </button>
+              </div>
             </div>
-          </div>
 
           {formTabs.length > 0 ? (
             <div className="rounded-2xl bg-white p-6 shadow-sm">
               <ApplicationForm
                 application={formState}
                 onApplicationChange={handleApplicationChange}
-              />
-            </div>
+                />
+              </div>
           ) : (
             <div className="rounded-2xl bg-white p-6 text-center text-gray-600 shadow-sm">
               当前申请没有可填写的字段。

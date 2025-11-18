@@ -1,7 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
-import { deserializeSchoolName, ensureFormDataStructure } from '@/utils/templates';
+import { deserializeSchoolName, ensureFormDataStructure, StructuredFormData } from '@/utils/templates';
+
+function normalizeStructuredFormData(value: unknown): StructuredFormData | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as StructuredFormData;
+  }
+  return undefined;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -44,12 +51,9 @@ export default async function handler(
         return res.status(404).json({ error: 'Application not found' });
       }
 
-      const formData = ensureFormDataStructure(application.formData, application.template.fieldsData);
-      const hasStructure =
-        application.formData &&
-        typeof application.formData === 'object' &&
-        !Array.isArray(application.formData) &&
-        '__structure' in (application.formData as Record<string, unknown>);
+      const existingFormData = normalizeStructuredFormData(application.formData);
+      const formData = ensureFormDataStructure(existingFormData, application.template.fieldsData);
+      const hasStructure = Boolean(existingFormData?.__structure);
 
       if (!hasStructure && formData !== application.formData) {
         try {
@@ -102,8 +106,9 @@ export default async function handler(
         return res.status(404).json({ error: 'Application not found' });
       }
 
+      const payloadFormData = normalizeStructuredFormData(formData);
       const nextFormData = formData !== undefined
-        ? ensureFormDataStructure(formData, application.template?.fieldsData)
+        ? ensureFormDataStructure(payloadFormData, application.template?.fieldsData)
         : undefined;
 
       const updated = await prisma.application.update({

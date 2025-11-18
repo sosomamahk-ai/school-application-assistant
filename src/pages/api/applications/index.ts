@@ -1,7 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
-import { buildInitialApplicationFormData, deserializeSchoolName, ensureFormDataStructure } from '@/utils/templates';
+import {
+  buildInitialApplicationFormData,
+  deserializeSchoolName,
+  ensureFormDataStructure,
+  StructuredFormData
+} from '@/utils/templates';
+
+function normalizeStructuredFormData(value: unknown): StructuredFormData | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as StructuredFormData;
+  }
+  return undefined;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -45,7 +57,10 @@ export default async function handler(
           schoolName: deserializeSchoolName(app.template.schoolName),
           program: app.template.program,
           status: app.status,
-          formData: ensureFormDataStructure(app.formData, app.template.fieldsData),
+          formData: ensureFormDataStructure(
+            normalizeStructuredFormData(app.formData),
+            app.template.fieldsData
+          ),
           createdAt: app.createdAt,
           updatedAt: app.updatedAt,
           submittedAt: app.submittedAt
