@@ -48,7 +48,7 @@ function school_app_render_iframe_shortcode($atts = array(), $default_path = '/'
     $atts = shortcode_atts(
         array(
             'path' => $default_path,
-            'height' => '1200px',
+            'height' => '1000px',
             'scrolling' => 'yes',
             'query' => ''
         ),
@@ -111,11 +111,10 @@ function school_app_enqueue_iframe_assets() {
     <style>
         .school-app-iframe {
             position: relative;
-            width: 100vw;
-            margin-left: calc(50% - 50vw);
-            margin-right: calc(50% - 50vw);
-            margin-top: 0;
-            margin-bottom: 0;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
         }
         .school-app-iframe iframe {
             display: block;
