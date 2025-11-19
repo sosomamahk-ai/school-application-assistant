@@ -80,11 +80,14 @@ export default function Register() {
         <title>{t('auth.register.title')} - {t('common.appName')}</title>
       </Head>
 
-      <div className="min-h-screen w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0">
+      <div
+        className="w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0"
+        style={{ minHeight: '800px' }}
+      >
         <div className="absolute top-4 right-4">
           <LanguageSwitch variant="minimal" />
         </div>
-        <div className="w-full max-w-md px-4 sm:px-6 flex flex-col max-h-[90vh] md:max-h-[85vh]">
+        <div className="w-full max-w-md px-4 sm:px-6 flex flex-col max-h-[95vh] md:max-h-[90vh]">
           <div className="flex-shrink-0 pt-4 text-center">
             <Link href="/" className="flex items-center justify-center space-x-2">
               <GraduationCap className="h-12 w-12 text-primary-600" />
