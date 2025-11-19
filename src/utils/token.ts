@@ -74,12 +74,29 @@ function resolveCookieAttributes() {
 
   const mustBeSecure = window.location.protocol === 'https:';
 
+  // 额外检查：如果 referrer 存在且与当前域名不同，强制认为是 iframe
+  // 这是最可靠的检测方法，因为 WordPress iframe 一定会有不同的 referrer
+  if (!isEmbedded && typeof document !== 'undefined' && document.referrer) {
+    try {
+      const referrerUrl = new URL(document.referrer);
+      const currentUrl = new URL(window.location.href);
+      if (referrerUrl.origin !== currentUrl.origin && referrerUrl.origin !== '') {
+        isEmbedded = true;
+        detectionMethod = 'referrer origin mismatch (most reliable)';
+      }
+    } catch (e) {
+      // URL 解析失败，忽略
+    }
+  }
+
   // 调试日志
   if (typeof console !== 'undefined' && console.log) {
     console.log('[Cookie Debug] Detection:', {
       isEmbedded,
       detectionMethod,
       protocol: window.location.protocol,
+      referrer: typeof document !== 'undefined' ? document.referrer : 'N/A',
+      currentOrigin: typeof window !== 'undefined' ? window.location.origin : 'N/A',
       willUseSameSiteNone: isEmbedded,
       willUseSecure: isEmbedded || mustBeSecure
     });

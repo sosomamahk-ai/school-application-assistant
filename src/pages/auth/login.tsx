@@ -53,24 +53,30 @@ export default function Login() {
       // Save token
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // 添加明显的日志标记
+      console.log('🔵 [LOGIN] 开始设置 cookie...');
+      console.log('🔵 [LOGIN] 调用 setAuthTokenCookie...');
+      
       setAuthTokenCookie(data.token);
 
-      // Debug: 验证 cookie 设置（仅在开发环境或 iframe 中）
+      // Debug: 验证 cookie 设置
+      console.log('🔵 [LOGIN] Cookie 设置完成，开始验证...');
       if (typeof window !== 'undefined') {
         try {
           const isEmbedded = window.self !== window.top;
           const tokenCookie = document.cookie.split(';').find(c => c.trim().startsWith('token='));
-          console.log('[Login Debug] Is embedded:', isEmbedded);
-          console.log('[Login Debug] Token cookie set:', !!tokenCookie);
+          console.log('🔵 [LOGIN Debug] Is embedded:', isEmbedded);
+          console.log('🔵 [LOGIN Debug] Token cookie set:', !!tokenCookie);
           if (tokenCookie) {
-            // 检查 cookie 属性（通过尝试读取来验证）
             const cookieStr = document.cookie;
-            console.log('[Login Debug] All cookies:', cookieStr);
-            // 注意：浏览器不会在 document.cookie 中显示 SameSite，需要通过开发者工具查看
-            console.log('[Login Debug] Please check Application/Storage tab for SameSite attribute');
+            console.log('🔵 [LOGIN Debug] All cookies:', cookieStr);
+            console.log('🔵 [LOGIN Debug] 请在 Application 标签中检查 SameSite 属性');
+          } else {
+            console.warn('⚠️ [LOGIN Debug] Token cookie 未找到！');
           }
         } catch (e) {
-          console.log('[Login Debug] Cookie check failed:', e);
+          console.error('❌ [LOGIN Debug] Cookie check failed:', e);
         }
       }
 
