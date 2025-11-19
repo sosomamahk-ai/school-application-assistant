@@ -21,50 +21,6 @@ export default async function handler(
       });
     }
 
-    // 检查数据库连接（带重试机制）
-    let connectionRetries = 0;
-    const maxRetries = 3;
-    let dbError: any = null;
-    
-    while (connectionRetries < maxRetries) {
-      try {
-        // 如果已经连接，直接查询（Prisma 会自动管理连接）
-        // 如果不是连接状态，尝试连接
-        await prisma.$connect();
-        dbError = null;
-        break;
-      } catch (error: any) {
-        dbError = error;
-        connectionRetries++;
-        
-        // 如果错误是连接相关的，等待后重试
-        if (
-          (error?.code === 'P1001' || 
-           error?.message?.includes('connect') || 
-           error?.message?.includes('ECONNREFUSED') ||
-           error?.message?.includes('timeout')) &&
-          connectionRetries < maxRetries
-        ) {
-          // 等待 500ms 后重试
-          await new Promise(resolve => setTimeout(resolve, 500));
-          continue;
-        }
-        
-        // 如果不是连接错误，或已达到最大重试次数，跳出循环
-        break;
-      }
-    }
-    
-    if (dbError) {
-      console.error('[Login API] Database connection failed after retries:', dbError);
-      return res.status(500).json({ 
-        error: 'Database connection failed',
-        message: 'Unable to connect to database. Please check DATABASE_URL configuration.',
-        details: process.env.NODE_ENV === 'development' ? dbError?.message : undefined,
-        retries: connectionRetries
-      });
-    }
-
     const identifierInput = typeof req.body.identifier === 'string'
       ? req.body.identifier
       : req.body.email;
@@ -81,25 +37,59 @@ export default async function handler(
 
     const identifier = rawIdentifier.toLowerCase();
 
-    // 尝试查询用户
+    // 尝试查询用户（带重试机制）
+    // Prisma 会自动管理连接，不需要手动调用 $connect()
     let user;
-    try {
-      user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { email: identifier },
-            { username: identifier }
-          ]
+    let connectionRetries = 0;
+    const maxRetries = 3;
+    
+    while (connectionRetries < maxRetries) {
+      try {
+        user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: identifier },
+              { username: identifier }
+            ]
+          },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            password: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        });
+        break; // 查询成功，跳出循环
+      } catch (dbQueryError: any) {
+        connectionRetries++;
+        const isConnectionError = 
+          dbQueryError?.code === 'P1001' || 
+          dbQueryError?.message?.includes('connect') || 
+          dbQueryError?.message?.includes('ECONNREFUSED') ||
+          dbQueryError?.message?.includes('timeout') ||
+          dbQueryError?.message?.includes('Can\'t reach database server');
+        
+        if (isConnectionError && connectionRetries < maxRetries) {
+          // 连接错误，等待后重试
+          console.warn(`[Login API] Database connection attempt ${connectionRetries}/${maxRetries} failed, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue;
         }
-      });
-    } catch (dbQueryError: any) {
-      console.error('[Login API] Database query failed:', dbQueryError);
-      await prisma.$disconnect().catch(() => {});
-      return res.status(500).json({ 
-        error: 'Database query failed',
-        message: 'Unable to query database. Please check database configuration.',
-        details: process.env.NODE_ENV === 'development' ? dbQueryError?.message : undefined
-      });
+        
+        // 不是连接错误或已达到最大重试次数
+        console.error('[Login API] Database query failed:', dbQueryError);
+        return res.status(500).json({ 
+          error: dbQueryError?.code === 'P1001' ? 'Database connection failed' : 'Database query failed',
+          message: isConnectionError 
+            ? 'Unable to connect to database. Please check DATABASE_URL configuration.'
+            : 'Unable to query database. Please check database configuration.',
+          details: process.env.NODE_ENV === 'development' ? dbQueryError?.message : undefined,
+          retries: connectionRetries
+        });
+      }
     }
 
     // 查询用户资料
@@ -143,15 +133,13 @@ export default async function handler(
       token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: '7d' });
     } catch (jwtError: any) {
       console.error('[Login API] JWT signing failed:', jwtError);
-      await prisma.$disconnect().catch(() => {});
       return res.status(500).json({ 
         error: 'Token generation failed',
         message: 'Unable to generate authentication token.'
       });
     }
 
-    // 断开数据库连接
-    await prisma.$disconnect().catch(() => {});
+    // Prisma 会自动管理连接，不需要手动断开
 
     res.status(200).json({
       success: true,
