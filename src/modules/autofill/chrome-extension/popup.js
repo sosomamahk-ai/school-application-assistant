@@ -24,7 +24,10 @@ const elements = {
   debugSection: document.getElementById('debugSection'),
   debugInfo: document.getElementById('debugInfo'),
   settingsBtn: document.getElementById('settingsBtn'),
+  schoolMappingBtn: document.getElementById('schoolMappingBtn'),
   clearCacheBtn: document.getElementById('clearCacheBtn'),
+  showFloatingPanelBtn: document.getElementById('showFloatingPanelBtn'),
+  exportFieldsBtn: document.getElementById('exportFieldsBtn'),
 };
 
 // 状态
@@ -34,6 +37,42 @@ let currentSchoolId = null;
 let currentFields = [];
 let currentMappings = [];
 let userProfile = null;
+
+const CONTENT_SCRIPT_FILES = [
+  'utils/detectSchool.js',
+  'utils/fillForm.js',
+  'content.js',
+  'floating-panel.js',
+];
+
+function isContentScriptMissingError(error) {
+  if (!error || !error.message) {
+    return false;
+  }
+  return (
+    error.message.includes('Could not establish connection') ||
+    error.message.includes('Receiving end does not exist')
+  );
+}
+
+async function injectContentScripts(tabId) {
+  if (!chrome.scripting?.executeScript) {
+    throw new Error('当前浏览器不支持脚本注入，请刷新页面后重试');
+  }
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: CONTENT_SCRIPT_FILES,
+  });
+  await new Promise(resolve => setTimeout(resolve, 300));
+}
+
+async function showFloatingPanelInTab(tabId) {
+  const response = await chrome.tabs.sendMessage(tabId, { action: 'showFloatingPanel' });
+  if (!response || response.success === false) {
+    throw new Error(response?.error || '浮动面板脚本尚未准备好');
+  }
+  return response;
+}
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async () => {
@@ -321,6 +360,9 @@ function setupEventListeners() {
   elements.fillBtn.addEventListener('click', handleFill);
   elements.clearCacheBtn.addEventListener('click', handleClearCache);
   elements.settingsBtn.addEventListener('click', handleSettings);
+  elements.schoolMappingBtn.addEventListener('click', handleSchoolMapping);
+  elements.showFloatingPanelBtn?.addEventListener('click', handleShowFloatingPanel);
+  elements.exportFieldsBtn?.addEventListener('click', handleExportFields);
   elements.schoolSelect.addEventListener('change', (e) => {
     currentSchoolId = e.target.value;
     elements.currentSchoolId.textContent = currentSchoolId || '未识别';
@@ -349,20 +391,19 @@ async function handleScan() {
     let response;
     try {
       response = await chrome.tabs.sendMessage(currentTab.id, { action: 'scan' });
+      if (!response) {
+        throw new Error('扫描脚本无响应');
+      }
     } catch (error) {
-      if (error.message.includes('Could not establish connection') || 
-          error.message.includes('Receiving end does not exist')) {
-        // Content script 未注入，尝试先注入
+      if (isContentScriptMissingError(error)) {
         try {
-          await chrome.scripting.executeScript({
-            target: { tabId: currentTab.id },
-            files: ['content.js']
-          });
-          // 等待一下让脚本加载
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await injectContentScripts(currentTab.id);
           response = await chrome.tabs.sendMessage(currentTab.id, { action: 'scan' });
+          if (!response) {
+            throw new Error('扫描脚本无响应');
+          }
         } catch (injectError) {
-          throw new Error('无法注入内容脚本，请刷新页面后重试');
+          throw new Error(injectError.message || '无法注入内容脚本，请刷新页面后重试');
         }
       } else {
         throw error;
@@ -482,10 +523,11 @@ async function handleFill() {
 
     // 如果有学校 ID，使用新的模板填充方式
     if (currentSchoolId) {
-      // 触发后台脚本的自动填充（使用模板）
+      // 触发后台脚本的自动填充（使用模板，传递手动选择的schoolId）
       const response = await chrome.runtime.sendMessage({
         action: 'triggerFill',
         tabId: currentTab.id,
+        schoolId: currentSchoolId, // 传递手动选择的schoolId
       });
 
       if (response && response.success) {
@@ -495,11 +537,16 @@ async function handleFill() {
       }
     } else {
       // 使用旧的填充方式
-      chrome.runtime.sendMessage({
+      const response = await chrome.runtime.sendMessage({
         action: 'triggerFill',
         tabId: currentTab.id,
       });
-      updateStatus('ready', '填充完成');
+      
+      if (response && response.success) {
+        updateStatus('ready', '填充完成');
+      } else {
+        throw new Error(response?.error || '填充失败');
+      }
     }
   } catch (error) {
     console.error('Fill error:', error);
@@ -530,6 +577,92 @@ async function handleClearCache() {
 function handleSettings() {
   // 打开字段管理页面
   chrome.tabs.create({ url: chrome.runtime.getURL('fields-manager.html') });
+}
+
+/**
+ * 处理学校映射管理
+ */
+function handleSchoolMapping() {
+  // 打开学校URL映射管理页面
+  chrome.tabs.create({ url: chrome.runtime.getURL('school-mapping-manager.html') });
+}
+
+/**
+ * 导出未映射字段
+ */
+function handleExportFields() {
+  try {
+    if (!currentFields || currentFields.length === 0) {
+      alert('请先扫描表单字段');
+      return;
+    }
+
+    const unmapped = currentFields.filter(field => !field.mappedField);
+    const fieldsToExport = unmapped.length > 0 ? unmapped : currentFields;
+
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      domain: currentDomain,
+      schoolId: currentSchoolId || null,
+      totalDetected: currentFields.length,
+      totalUnmapped: unmapped.length,
+      fields: fieldsToExport.map(field => ({
+        key: field.key,
+        label: field.label,
+        name: field.name,
+        placeholder: field.placeholder,
+        selector: field.selector,
+        type: field.type,
+        required: Boolean(field.required),
+        mappedField: field.mappedField || null,
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const sanitizedDomain = (currentDomain || 'page').replace(/[^a-z0-9.-]+/gi, '_');
+    const filenameParts = ['autofill-fields', currentSchoolId || 'unspecified', sanitizedDomain].filter(Boolean);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filenameParts.join('-')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+    updateStatus('ready', '字段已导出');
+  } catch (error) {
+    console.error('Export fields error:', error);
+    updateStatus('error', '导出失败');
+  }
+}
+
+/**
+ * 显示浮动面板
+ */
+async function handleShowFloatingPanel() {
+  try {
+    if (!currentTab) {
+      throw new Error('无法获取当前标签页');
+    }
+    await showFloatingPanelInTab(currentTab.id);
+    updateStatus('ready', '浮动面板已显示');
+  } catch (error) {
+    if (isContentScriptMissingError(error) && currentTab) {
+      try {
+        await injectContentScripts(currentTab.id);
+        await showFloatingPanelInTab(currentTab.id);
+        updateStatus('ready', '浮动面板已显示');
+        return;
+      } catch (injectError) {
+        console.error('Show floating panel error:', injectError);
+        updateStatus('error', injectError.message || '无法显示浮动面板，请刷新页面后重试');
+        return;
+      }
+    }
+    console.error('Show floating panel error:', error);
+    updateStatus('error', error.message || '无法显示浮动面板，请刷新页面后重试');
+  }
 }
 
 /**

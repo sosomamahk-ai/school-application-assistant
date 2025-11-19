@@ -276,6 +276,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   } else if (msg.action === "getFields") {
     // 获取当前字段
     sendResponse({ fields: currentFields, domain: currentDomain });
+  } else if (msg.action === "showFloatingPanel") {
+    // 显示浮动面板
+    if (typeof window.autofillFloatingPanel !== 'undefined') {
+      window.autofillFloatingPanel.show();
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, error: 'floating panel not ready' });
+    }
   } else if (msg.action === "highlightField") {
     // 高亮显示字段（用于调试）
     const el = document.querySelector(msg.selector);
@@ -337,4 +345,22 @@ if (document.readyState === 'loading') {
     currentFields = scanInputs();
     currentDomain = window.location.hostname;
   }, 1000);
+}
+
+if (typeof window !== 'undefined') {
+  window.fillForm = {
+    fillField,
+    fillFormWithData,
+    fillFields,
+  };
+
+  window.autofillContent = {
+    scanInputs,
+    fillField,
+    fillFields,
+    getCurrentFields: () => currentFields,
+    setCurrentFields: (fields) => { currentFields = fields; },
+    getCurrentDomain: () => currentDomain,
+    setCurrentDomain: (domain) => { currentDomain = domain; },
+  };
 }

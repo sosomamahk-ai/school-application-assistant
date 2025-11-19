@@ -684,19 +684,62 @@ async function getApplicationData(schoolId, userId) {
       },
     });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to get application data');
+    if (response.ok) {
+      return await response.json();
     }
 
-    return await response.json();
+    // 如果找不到学校申请数据，尝试从应用列表中获取
+    if (response.status === 404) {
+      const fallbackData = await getApplicationDataFromApplicationsApi(schoolId, token);
+      return fallbackData;
+    }
+
+    let errorMessage = 'Failed to get application data';
+    try {
+      const error = await response.json();
+      if (error?.error) {
+        errorMessage = error.error;
+      }
+    } catch {
+      // ignore json parse errors
+    }
+    throw new Error(errorMessage);
   } catch (error) {
     console.error('getApplicationData error:', error);
     throw error;
   }
+}
+
+/**
+ * 当 applicationData 表没有记录时，从应用列表中尝试获取对应学校的最新草稿数据
+ */
+async function getApplicationDataFromApplicationsApi(schoolId, token) {
+  try {
+    const apiUrl = await getApiBaseUrl();
+    const response = await fetch(`${apiUrl}/api/applications`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const applications = data.applications || [];
+    const matched = applications.find(app =>
+      app.templateSchoolId === schoolId ||
+      app.template?.schoolId === schoolId
+    );
+
+    if (matched?.formData) {
+      return matched.formData;
+    }
+  } catch (error) {
+    console.error('getApplicationDataFromApplicationsApi error:', error);
+  }
+  return null;
 }
 
 /**
@@ -750,13 +793,36 @@ async function detectSchoolIdFromTab(tabId) {
       return null;
     }
 
-    // 使用 detectSchool 工具（如果已加载）
-    // 注意：在 background.js 中无法直接使用 content script 的工具
-    // 所以我们需要在这里实现检测逻辑，或者通过消息传递给 content script
     const url = tab.url;
     
-    // 简单的 URL 模式匹配（可以扩展）
-    const patterns = [
+    // 加载用户自定义的映射
+    const result = await chrome.storage.local.get('autofill_school_mappings');
+    const mappings = result.autofill_school_mappings || [];
+    
+    // 遍历所有映射，找到第一个匹配的
+    for (const mapping of mappings) {
+      let matches = false;
+
+      if (mapping.type === 'regex') {
+        try {
+          const patternStr = mapping.pattern.replace(/^\/|\/[gimuy]*$/g, '');
+          const regex = new RegExp(patternStr, 'i');
+          matches = regex.test(url);
+        } catch (e) {
+          console.error('Invalid regex pattern:', mapping.pattern, e);
+          continue;
+        }
+      } else {
+        matches = url.toLowerCase().includes(mapping.pattern.toLowerCase());
+      }
+
+      if (matches) {
+        return mapping.schoolId;
+      }
+    }
+
+    // 如果没有用户自定义映射，使用默认模式
+    const defaultPatterns = [
       { pattern: /ox\.ac\.uk.*msc.*cs/i, schoolId: "oxford_msc_cs" },
       { pattern: /ox\.ac\.uk/i, schoolId: "oxford" },
       { pattern: /gradapply\.mit\.edu\/meche/i, schoolId: "mit_meche" },
@@ -766,7 +832,7 @@ async function detectSchoolIdFromTab(tabId) {
       { pattern: /cam\.ac\.uk.*graduate.*apply/i, schoolId: "cambridge_graduate" },
     ];
 
-    for (const { pattern, schoolId } of patterns) {
+    for (const { pattern, schoolId } of defaultPatterns) {
       if (pattern.test(url)) {
         return schoolId;
       }
@@ -853,11 +919,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   } else if (msg.action === 'triggerFill') {
     // 触发自动填充（新功能：使用学校模板和数据）
-    handleAutoFillWithTemplate(msg.tabId).then(() => {
+    const targetTabId = msg.tabId || sender?.tab?.id;
+    if (!targetTabId) {
+      sendResponse({ success: false, error: '无法确定需要填充的标签页' });
+      return true;
+    }
+    handleAutoFillWithTemplate(targetTabId, msg.schoolId || null).then(() => {
       sendResponse({ success: true });
     }).catch(err => {
       sendResponse({ success: false, error: String(err) });
     });
+    return true;
+  } else if (msg.action === 'reloadSchoolMappings') {
+    sendResponse({ success: true });
     return true;
   }
 });
@@ -865,10 +939,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 /**
  * 使用学校模板和数据自动填充
  */
-async function handleAutoFillWithTemplate(tabId) {
+async function handleAutoFillWithTemplate(tabId, manualSchoolId = null) {
   try {
-    // 1. 检测学校 ID
-    const schoolId = await detectSchoolIdFromTab(tabId);
+    // 1. 检测学校 ID（优先使用手动选择的）
+    let schoolId = manualSchoolId;
+    if (!schoolId) {
+      schoolId = await detectSchoolIdFromTab(tabId);
+    }
     if (!schoolId) {
       throw new Error('无法自动识别学校，请手动选择');
     }
@@ -892,7 +969,15 @@ async function handleAutoFillWithTemplate(tabId) {
     // 4. 获取申请数据
     const applicationData = await getApplicationData(schoolId, userId);
     if (!applicationData) {
-      throw new Error('未找到该学校的申请数据，请先填写并保存');
+      console.warn('No saved application data found, fallback to mapped autofill.');
+      await handleAutoFill(tabId);
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+        title: '已使用映射填充',
+        message: '未找到该学校的申请数据，已使用字段映射直接填充',
+      });
+      return;
     }
 
     // 5. 发送填充指令到 content script

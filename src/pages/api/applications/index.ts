@@ -42,6 +42,8 @@ export default async function handler(
         include: {
           template: {
             select: {
+              id: true,
+              schoolId: true,
               schoolName: true,
               program: true,
               fieldsData: true
@@ -55,6 +57,8 @@ export default async function handler(
         success: true,
         applications: applications.map(app => ({
           id: app.id,
+          templateId: app.templateId,
+          templateSchoolId: app.template.schoolId,
           schoolName: deserializeSchoolName(app.template.schoolName),
           program: app.template.program,
           status: app.status,
@@ -108,6 +112,8 @@ export default async function handler(
         success: true,
         application: {
           id: application.id,
+          templateId: application.templateId,
+          templateSchoolId: application.template.schoolId,
           schoolName: deserializeSchoolName(application.template.schoolName),
           program: application.template.program,
           status: application.status,

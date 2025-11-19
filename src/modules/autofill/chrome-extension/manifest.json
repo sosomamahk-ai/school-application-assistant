@@ -21,7 +21,8 @@
       "js": [
         "utils/detectSchool.js",
         "utils/fillForm.js",
-        "content.js"
+        "content.js",
+        "floating-panel.js"
       ],
       "run_at": "document_idle"
     }

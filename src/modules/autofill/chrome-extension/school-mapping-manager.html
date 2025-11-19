@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学校URL映射管理 - School Application Autofill</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+    }
+    body {
+      background: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    .container {
+      width: 100%;
+      max-width: 1400px;
+      height: 100vh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow: hidden;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #4682B4 0%, #36648B 100%);
+      color: white;
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .header h1 {
+      margin: 0;
+      color: white !important;
+      font-size: 24px;
+    }
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
+      gap: 24px;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+      align-items: stretch;
+    }
+    @media (max-width: 1200px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+    .mapping-editor {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+    }
+    .mapping-editor h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: #1f2937;
+      font-size: 18px;
+      border-bottom: 2px solid #4682B4;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .mapping-editor-content {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .mappings-container {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+    }
+    .mappings-container h3 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      color: #1f2937;
+      font-size: 18px;
+      border-bottom: 2px solid #4682B4;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #4682B4;
+      box-shadow: 0 0 0 3px rgba(70, 130, 180, 0.1);
+    }
+    .form-group small {
+      display: block;
+      color: #6b7280;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      flex-shrink: 0;
+    }
+    .mappings-list {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding-right: 8px;
+      min-height: 0;
+      max-height: 100%;
+    }
+    .mapping-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    .mapping-item:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+    .mapping-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .mapping-item-url {
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 13px;
+      word-break: break-all;
+      margin-bottom: 4px;
+    }
+    .mapping-item-school {
+      color: #4682B4;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .mapping-item-actions {
+      display: flex;
+      gap: 6px;
+      margin-left: 12px;
+      flex-shrink: 0;
+    }
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9ca3af;
+    }
+    .footer-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-shrink: 0;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer-actions .btn {
+      flex: 1;
+      max-width: 300px;
+      padding: 12px 24px;
+      font-size: 14px;
+    }
+    .pattern-type-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .pattern-type-selector label {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #d1d5db;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .pattern-type-selector input[type="radio"] {
+      display: none;
+    }
+    .pattern-type-selector input[type="radio"]:checked + label {
+      border-color: #4682B4;
+      background: #e0f2fe;
+      color: #4682B4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>🏫 学校URL映射管理</h1>
+      <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px;">添加URL模式和学校名称的映射，提高学校识别率</p>
+    </header>
+
+    <!-- 主要内容：左右并列布局 -->
+    <div class="main-content">
+      <!-- 左侧：添加新映射 -->
+      <div class="mapping-editor">
+        <h3>➕ 添加新映射</h3>
+        <div class="mapping-editor-content">
+          <div class="form-group">
+            <label>URL模式类型</label>
+            <div class="pattern-type-selector">
+              <input type="radio" id="patternTypeExact" name="patternType" value="exact" checked>
+              <label for="patternTypeExact">精确匹配</label>
+              <input type="radio" id="patternTypeRegex" name="patternType" value="regex">
+              <label for="patternTypeRegex">正则表达式</label>
+            </div>
+            <small>精确匹配：输入完整URL或URL的一部分（如：ox.ac.uk）<br>正则表达式：使用正则表达式模式（如：/ox\.ac\.uk.*apply/i）</small>
+          </div>
+          <div class="form-group">
+            <label>URL模式 *</label>
+            <input type="text" id="urlPattern" placeholder="例如: ox.ac.uk 或 /ox\.ac\.uk.*apply/i" />
+            <small id="patternHint">输入URL的一部分，插件会检查当前页面URL是否包含此文本</small>
+          </div>
+          <div class="form-group">
+            <label>学校ID *</label>
+            <input type="text" id="schoolId" placeholder="例如: oxford" list="schoolIdList" />
+            <datalist id="schoolIdList">
+              <!-- 动态加载学校列表 -->
+            </datalist>
+            <small>输入学校ID，必须与系统中的学校模板ID一致</small>
+          </div>
+          <div class="form-group">
+            <label>学校名称（可选）</label>
+            <input type="text" id="schoolName" placeholder="例如: Oxford University" />
+            <small>用于显示，帮助识别</small>
+          </div>
+          <div class="btn-group">
+            <button id="addMappingBtn" class="btn btn-primary">添加映射</button>
+            <button id="testPatternBtn" class="btn btn-secondary">测试模式</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：已配置的映射列表 -->
+      <div class="mappings-container">
+        <h3>📋 已配置的映射</h3>
+        <div class="mappings-list" id="mappingsList">
+          <!-- 动态生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部操作按钮 -->
+    <div class="footer-actions">
+      <button id="saveBtn" class="btn btn-primary">保存更改</button>
+      <button id="backBtn" class="btn btn-secondary">返回 Popup</button>
+    </div>
+  </div>
+
+  <script src="school-mapping-manager.js"></script>
+</body>
+</html>
+
