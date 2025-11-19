@@ -27,6 +27,8 @@
     { value: 'mit_meche', label: 'MIT - Mechanical Engineering' },
   ];
 
+  let availableTemplates = [];
+
   // 创建浮动面板
   function createFloatingPanel() {
   // 检查是否已存在
@@ -287,21 +289,17 @@ function setupFloatingPanelEvents(panel) {
   async function loadSchoolListForPanel() {
   try {
       ensureExtensionContext();
-      const apiUrl = await getApiBaseUrl();
-      const response = await fetch(`${apiUrl}/api/templates`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        const templates = data.templates || data || [];
-        populateSchoolSelect(templates.map(template => ({
-          value: template.schoolId,
-          label: `${template.schoolName || template.schoolId}${template.program ? ` - ${template.program}` : ''}`,
-        })));
+      const response = await chrome.runtime.sendMessage({ action: 'listTemplates' });
+      if (response?.success && Array.isArray(response.templates) && response.templates.length > 0) {
+        availableTemplates = response.templates;
+        populateSchoolSelect(
+          response.templates.map(template => ({
+            value: template.schoolId,
+            label: `${template.schoolName || template.schoolId}${template.program ? ` - ${template.program}` : ''}`.trim(),
+          })),
+          response.templates
+        );
         await autoDetectSchoolForPanel();
         return;
       }
@@ -313,10 +311,12 @@ function setupFloatingPanelEvents(panel) {
     await autoDetectSchoolForPanel();
   }
 
-  function populateSchoolSelect(options) {
+  function populateSchoolSelect(options, templates = []) {
     const select = document.getElementById('autofillPanelSchoolSelect');
     if (!select) return;
-
+    if (templates.length > 0) {
+      availableTemplates = templates;
+    }
     select.innerHTML = '<option value="">请选择学校...</option>';
     options.forEach(optionData => {
       const option = document.createElement('option');
@@ -332,19 +332,36 @@ function setupFloatingPanelEvents(panel) {
     if (!select) return;
 
     try {
+      ensureExtensionContext();
+      const response = await chrome.runtime.sendMessage({ action: 'detectSchoolId' });
+      const detected = response?.schoolId;
+      if (detected) {
+        const option = Array.from(select.options).find(opt => opt.value === detected);
+        if (option) {
+          select.value = detected;
+          updatePanelStatus('ready', `识别学校：${option.textContent}`);
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Auto detect school via background failed', error);
+    }
+
+    try {
       if (window.detectSchool?.detectSchoolId) {
-        const detected = await window.detectSchool.detectSchoolId(window.location.href);
-        if (detected) {
-          const option = Array.from(select.options).find(opt => opt.value === detected);
+        const fallback = await window.detectSchool.detectSchoolId(window.location.href);
+        if (fallback) {
+          const option = Array.from(select.options).find(opt => opt.value === fallback);
           if (option) {
-            select.value = detected;
+            select.value = fallback;
             updatePanelStatus('ready', `识别学校：${option.textContent}`);
             select.dispatchEvent(new Event('change', { bubbles: true }));
           }
         }
       }
     } catch (error) {
-      console.warn('Auto detect school failed', error);
+      console.warn('Local auto detect school failed', error);
     }
 }
 

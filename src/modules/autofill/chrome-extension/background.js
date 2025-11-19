@@ -663,6 +663,35 @@ async function getSchoolTemplate(schoolId) {
   }
 }
 
+async function listTemplatesFromApi() {
+  try {
+    const apiUrl = await getApiBaseUrl();
+    const token = await getStoredToken();
+    const response = await fetch(`${apiUrl}/api/templates`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to list templates');
+    }
+
+    const data = await response.json();
+    if (Array.isArray(data.templates)) {
+      return data.templates;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
+  } catch (error) {
+    console.error('listTemplatesFromApi error:', error);
+    return [];
+  }
+}
+
 /**
  * 获取申请数据
  * @param {string} schoolId - 学校 ID
@@ -889,6 +918,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // 获取学校模板
     getSchoolTemplate(msg.schoolId).then(template => {
       sendResponse({ success: true, template });
+    }).catch(err => {
+      sendResponse({ success: false, error: String(err) });
+    });
+    return true;
+  } else if (msg.action === 'listTemplates') {
+    listTemplatesFromApi().then(templates => {
+      sendResponse({ success: true, templates });
     }).catch(err => {
       sendResponse({ success: false, error: String(err) });
     });
