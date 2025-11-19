@@ -9,7 +9,15 @@
     "lint": "next lint",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "test:db": "node scripts/test-db-connection.js",
+    "test:supabase": "node scripts/test-supabase-direct.js",
+    "test:supabase-formats": "node scripts/test-supabase-url-encoding.js",
+    "test:postgres-standard": "node scripts/test-postgres-standard.js",
+    "test:direct": "node scripts/test-direct-connection.js",
+    "test:pooler": "node scripts/test-session-pooler.js",
+    "test:new-password": "node scripts/test-new-password.js",
+    "test:all-formats": "node scripts/test-all-username-formats.js"
   },
   "dependencies": {
     "next": "^14.0.4",

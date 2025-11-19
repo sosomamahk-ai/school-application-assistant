@@ -486,7 +486,7 @@ export default function ApplicationPage() {
                     onFieldFocus={(field) => setActiveFieldId(field.id)}
                   />
                 </div>
-                <div className="min-w-0 sticky top-6">
+                <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
                   {activeGuidanceField ? (
                     <AIGuidancePanel
                       field={activeGuidanceField}

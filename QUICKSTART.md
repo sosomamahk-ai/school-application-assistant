@@ -28,7 +28,7 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/school_app"
 OPENAI_API_KEY="sk-your-openai-api-key-here"
 
 # JWT Secret（任意随机字符串）
-JWT_SECRET="my-super-secret-jwt-key-change-this"
+JWT_SECRET="[YOUR-JWT-SECRET]"
 
 # 应用 URL
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
