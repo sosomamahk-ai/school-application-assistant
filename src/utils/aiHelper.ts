@@ -17,41 +17,41 @@ export async function generateFieldGuidance(
   if (USE_MOCK_MODE) {
     return {
       fieldId: field.id,
-      explanation: `This field asks for your ${field.label.toLowerCase()}. It's an important part of your application that helps admissions officers understand your background and qualifications.`,
+      explanation: `该字段用于填写“${field.label}”，帮助招生官了解你的背景与优势。`,
       requirements: [
-        field.required ? 'This field is required' : 'This field is optional',
-        'Be specific and provide concrete details',
-        'Keep your response clear and well-organized'
+        field.required ? '此字段为必填项' : '此字段为选填项',
+        '内容需具体，尽量提供可量化的事实',
+        '结构清晰，突出重点'
       ],
       examples: [
-        'Use specific examples from your experience',
-        'Show your unique perspective and voice',
-        'Connect your response to your goals and aspirations'
+        '结合个人经历举例说明',
+        '强调与你申请方向相关的能力或成果',
+        '保持语言真诚、自然'
       ],
       suggestedContent: userProfile.basicInfo?.fullName 
-        ? `Consider highlighting aspects that showcase your strengths and align with your goals.` 
+        ? '可以结合个人经历，突出你的核心竞争力与未来规划。' 
         : undefined
     };
   }
 
-  const prompt = `You are an expert college application advisor. Help the user understand and fill out this application field.
+  const prompt = `你是一名资深的留学申请顾问，请使用简体中文帮助申请者理解并填写以下字段。
 
-Field Label: ${field.label}
-Field Type: ${field.type}
-Required: ${field.required ? 'Yes' : 'No'}
-${field.helpText ? `Help Text: ${field.helpText}` : ''}
-${field.aiFillRule ? `AI Fill Rule: ${field.aiFillRule}` : ''}
+字段名称：${field.label}
+字段类型：${field.type}
+是否必填：${field.required ? '是' : '否'}
+${field.helpText ? `额外提示：${field.helpText}` : ''}
+${field.aiFillRule ? `AI 填写规则：${field.aiFillRule}` : ''}
 
-User's Profile Information:
+申请者背景信息：
 ${JSON.stringify(userProfile, null, 2)}
 
-Please provide:
-1. A clear explanation of what this field is asking for
-2. Specific requirements or format expectations
-3. 2-3 brief examples or tips
-${userProfile ? '4. A suggested response based on the user\'s profile (if applicable)' : ''}
+请按照 JSON 结构返回以下内容（必须使用 explanation, requirements, examples, suggestedContent 四个键）：
+1. explanation：详细说明该字段需要填写的内容与目的
+2. requirements：列出 3-4 条填写要求或格式建议
+3. examples：提供 2-3 条简短示例或提示
+4. suggestedContent：若根据用户资料可生成参考答案，请提供；否则返回 null
 
-Format your response as JSON with keys: explanation, requirements (array), examples (array), suggestedContent (string or null)`;
+务必使用简体中文输出 JSON。`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -59,7 +59,7 @@ Format your response as JSON with keys: explanation, requirements (array), examp
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful college application advisor. Always respond with valid JSON.'
+          content: '你是一名专业的留学申请顾问。无论何时都必须输出合法 JSON，并且使用简体中文。'
         },
         {
           role: 'user',
@@ -90,8 +90,8 @@ Format your response as JSON with keys: explanation, requirements (array), examp
     // Fallback guidance
     return {
       fieldId: field.id,
-      explanation: `Please provide your ${field.label.toLowerCase()}.`,
-      requirements: field.required ? ['This field is required'] : [],
+      explanation: `请填写你的「${field.label}」。`,
+      requirements: field.required ? ['该字段为必填项'] : [],
       examples: []
     };
   }
@@ -107,39 +107,39 @@ export async function generateEssayContent(
 ): Promise<string> {
   // Mock mode: return simulated essay
   if (USE_MOCK_MODE) {
-    const userName = userProfile.basicInfo?.fullName || 'the applicant';
-    return `Throughout my academic journey, I have always been driven by a deep curiosity and passion for learning. This essay explores my experiences and aspirations for ${field.label.toLowerCase()}.
+    const userName = userProfile.basicInfo?.fullName || '申请者';
+    return `在我的求学历程中，好奇心与求知欲始终驱动着我不断探索。以下是一篇围绕“${field.label}”主题的示例文章，展示我如何结合个人经历与未来规划：
 
-Growing up, I discovered that challenges are opportunities for growth. Each obstacle I've faced has shaped my perspective and strengthened my determination to make a meaningful impact. Whether through academic pursuits, extracurricular activities, or community involvement, I've learned the value of perseverance and dedication.
+自幼我便相信，挑战是成长的起点。每一次困难都塑造了我坚韧的性格，也让我更加坚定地追求能够真正创造价值的目标。不论是在课堂、社团还是社区服务中，我都学会了如何自我驱动，并在合作中找到前进的力量。
 
-My experiences have taught me the importance of collaboration and diverse perspectives. Working with peers from different backgrounds has enriched my understanding and helped me develop strong communication and leadership skills. These experiences have prepared me to contribute meaningfully to a vibrant academic community.
+这些经历不仅培养了我系统思考与沟通协作的能力，也帮助我明确了未来方向。我希望在更广阔的舞台上，将个人热情与社会责任结合，持续创造积极影响。
 
-Looking forward, I am excited about the opportunities to expand my knowledge and pursue my goals. I am committed to making the most of every learning opportunity and contributing positively to the community. This next chapter represents not just personal growth, but a chance to create lasting impact through dedication and innovation.
+展望未来，我期待在贵校学习，与来自世界各地的同学共同成长，拓展视野并实践所学。无论遇到何种挑战，我都将以开放与坚定的态度迎接，让每一次努力都成为走向理想的脚步。
 
-[This is a simulated AI response. Add your OpenAI API key for personalized content generation.]`;
+[以上内容为模拟示例，接入 OpenAI API Key 后即可获得基于个人背景的专属文本。]`;
   }
 
-  const prompt = `You are an expert essay writer for college applications. Generate a high-quality essay draft.
+  const prompt = `你是一名资深的申请文书导师，请使用简体中文撰写一篇高质量草稿。
 
-Essay Prompt: ${field.label}
-${field.helpText ? `Additional Context: ${field.helpText}` : ''}
-${field.maxLength ? `Maximum Length: ${field.maxLength} characters` : ''}
-${additionalPrompt ? `User's Additional Requirements: ${additionalPrompt}` : ''}
+题目：${field.label}
+${field.helpText ? `题目补充：${field.helpText}` : ''}
+${field.maxLength ? `字数上限：${field.maxLength} 字符` : ''}
+${additionalPrompt ? `申请者额外要求：${additionalPrompt}` : ''}
 
-User's Background:
-- Full Name: ${userProfile.basicInfo?.fullName || 'Not provided'}
-- Education: ${JSON.stringify(userProfile.education || [])}
-- Experiences: ${JSON.stringify(userProfile.experiences || [])}
-- Previous Essays: ${JSON.stringify(userProfile.essays || {})}
+申请者背景：
+- 姓名：${userProfile.basicInfo?.fullName || '未提供'}
+- 教育经历：${JSON.stringify(userProfile.education || [])}
+- 重要经历：${JSON.stringify(userProfile.experiences || [])}
+- 既有文书：${JSON.stringify(userProfile.essays || {})}
 
-Please write a well-structured essay that:
-1. Has a clear introduction that hooks the reader
-2. Develops the main points with specific examples from the user's background
-3. Shows personal growth and motivation
-4. Connects to future goals
-5. Has a strong conclusion
+写作要求：
+1. 首段点题并吸引读者
+2. 结合具体经历展开论述，体现成长
+3. 说明优势、动机与未来目标
+4. 语言真诚、有个人特色
+5. 结尾呼应主题，给人以希望
 
-Write in first person and maintain an authentic, personal voice. The essay should be compelling and memorable.`;
+全篇必须使用第一人称，语气真挚自然，并使用简体中文输出。`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -147,7 +147,7 @@ Write in first person and maintain an authentic, personal voice. The essay shoul
       messages: [
         {
           role: 'system',
-          content: 'You are an expert college essay writer. Write compelling, authentic essays that showcase the applicant\'s unique story.'
+          content: '你是一名专业的文书写作者，请始终使用简体中文，文章需真诚且富有感染力。'
         },
         {
           role: 'user',
@@ -177,30 +177,30 @@ export async function improveContent(
   if (USE_MOCK_MODE) {
     return {
       suggestions: [
-        'Consider adding more specific examples to illustrate your points',
-        'Strengthen the introduction to better hook the reader',
-        'Connect your experiences more explicitly to your future goals',
-        'Vary sentence structure for better flow and readability',
-        'Add more descriptive details to make your story more vivid'
+        '补充更具体的细节或数据，以增强说服力',
+        '优化开头句式，使主题更突出',
+        '明确点出该经历与你的目标之间的联系',
+        '适当调整段落结构，提升行文节奏',
+        '加入感受或反思，增强个人色彩'
       ],
-      improvedVersion: currentContent + '\n\n[Enhanced version with improved clarity, stronger examples, and better flow. This is a simulated improvement. Add your OpenAI API key for personalized content enhancement.]'
+      improvedVersion: `${currentContent}\n\n[此处为模拟改写示例，接入 OpenAI API Key 后可获得针对你内容的专属优化版本。]`
     };
   }
 
-  const prompt = `You are an expert college application advisor reviewing an essay or response.
+  const prompt = `你是一名留学申请写作指导老师，请使用简体中文审阅并优化以下内容。
 
-Field: ${field.label}
-Current Content:
+字段：${field.label}
+当前内容：
 "${currentContent}"
 
-User's Background:
+申请者背景：
 ${JSON.stringify(userProfile, null, 2)}
 
-Please provide:
-1. 3-5 specific suggestions for improvement
-2. An improved version of the content
+请输出合法 JSON（键名必须为 suggestions 与 improvedVersion）：
+1. suggestions：提供 3-5 条具体的修改建议
+2. improvedVersion：根据建议给出完整的优化版本
 
-Format as JSON with keys: suggestions (array of strings), improvedVersion (string)`;
+所有说明必须使用简体中文。`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -208,7 +208,7 @@ Format as JSON with keys: suggestions (array of strings), improvedVersion (strin
       messages: [
         {
           role: 'system',
-          content: 'You are an expert editor for college applications. Provide constructive feedback. Always respond with valid JSON.'
+          content: '你是一名专业编辑，请输出合法 JSON，并始终使用简体中文提供建议与改写内容。'
         },
         {
           role: 'user',
@@ -245,29 +245,29 @@ export async function chatWithAI(
   // Mock mode: return simulated chat response
   if (USE_MOCK_MODE) {
     const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
-    return `Thank you for your question! I'm here to help you with your application. ${
+    return `感谢你的提问！我会用中文协助你完善申请材料。${
       context.currentField 
-        ? `For the "${context.currentField.label}" field, I recommend being specific and authentic in your response.` 
-        : 'Feel free to ask me anything about filling out your application.'
-    } 
+        ? `针对“${context.currentField.label}”这一字段，建议你结合真实经历，突出个人特点。`
+        : '如果你对申请流程或填表有任何疑问，随时告诉我。'
+    }
 
-Remember to showcase your unique experiences and perspective. Is there anything specific about this section you'd like help with?
+请多展示独特的经历与思考。如果你能提供更具体的问题或内容，我可以给出更精准的建议。
 
-[This is a simulated AI response. Add your OpenAI API key for personalized guidance.]`;
+[当前为模拟应答，接入 OpenAI API Key 后即可获得个性化指导。]`;
   }
 
-  const systemMessage = `You are a helpful and knowledgeable college application assistant. Your role is to:
-1. Guide users through filling out their application forms
-2. Explain what information is needed for each field
-3. Provide examples and suggestions
-4. Help users craft compelling essays and responses
-5. Answer questions about the application process
+  const systemMessage = `你是一名专业且友善的申请顾问，必须使用简体中文回答。职责包括：
+1. 指导用户填写各项申请表格
+2. 解释每个字段需要提供的具体信息
+3. 给出示例、灵感与优化建议
+4. 帮助润色和提升申请文书
+5. 回答与申请流程相关的问题
 
-Current Context:
-${context.userProfile ? `User Profile: ${JSON.stringify(context.userProfile)}` : ''}
-${context.currentField ? `Current Field: ${context.currentField.label} (${context.currentField.type})` : ''}
+当前上下文：
+${context.userProfile ? `用户资料：${JSON.stringify(context.userProfile)}` : ''}
+${context.currentField ? `当前字段：${context.currentField.label}（${context.currentField.type}）` : ''}
 
-Be friendly, encouraging, and provide actionable advice.`;
+请使用积极鼓励的语气，并提供可操作的建议。`;
 
   try {
     const response = await openai.chat.completions.create({

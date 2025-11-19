@@ -75,6 +75,38 @@ export default function ApplicationForm({ application, onApplicationChange, onFi
     });
   };
 
+  const handleClearTabContent = (tabId: string) => {
+    const targetTab = currentApp.tabs.find((tab) => tab.id === tabId);
+    if (!targetTab) {
+      return;
+    }
+
+    const confirmed = window.confirm('确定删除当前页面的全部内容吗？该操作不可撤销。');
+    if (!confirmed) {
+      return;
+    }
+
+    setCurrentApp((previous) => {
+      const updatedTabs = previous.tabs.map((tab) => {
+        if (tab.id !== tabId) {
+          return tab;
+        }
+
+        const clearedFields = tab.fields.map((field) => {
+          const emptyValue =
+            field.type === 'checkbox' ? false : field.type === 'number' ? null : '';
+          return { ...field, value: emptyValue };
+        });
+
+        return { ...tab, fields: clearedFields };
+      });
+
+      const nextApplication: ApplicationFormState = { ...previous, tabs: updatedTabs };
+      onApplicationChange?.(nextApplication);
+      return nextApplication;
+    });
+  };
+
   const renderFieldInput = (tabId: string, field: ApplicationField) => {
     const notifyFocus = () => {
       onFieldFocus?.(field);
@@ -190,6 +222,19 @@ export default function ApplicationForm({ application, onApplicationChange, onFi
             </button>
           ))}
         </nav>
+      )}
+
+      {activeTab && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+          <span>如需移除该页面内容，可点击右侧按钮，清空后可重新填写。</span>
+          <button
+            type="button"
+            onClick={() => handleClearTabContent(activeTab.id)}
+            className="rounded-md border border-red-200 px-3 py-1 text-red-600 hover:bg-red-100"
+          >
+            删除此页面内容
+          </button>
+        </div>
       )}
 
       {activeTab && (

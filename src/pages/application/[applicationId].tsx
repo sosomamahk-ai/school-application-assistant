@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { Save, Send, Loader2 } from 'lucide-react';
+import { Save, Download, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 import ApplicationForm, {
@@ -32,6 +32,162 @@ interface ApiApplication {
 type StructuredFormDataState = StructuredFormData | Record<string, any>;
 const FALLBACK_TAB_TITLE = '申请内容';
 type TemplateFieldOption = { label?: unknown; value?: unknown } | string;
+
+const fieldHasValue = (field: ApplicationField): boolean => {
+  if (field.type === 'checkbox') {
+    return Boolean(field.value);
+  }
+  return field.value !== undefined && field.value !== null && field.value !== '';
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const formatFieldValue = (field: ApplicationField): string => {
+  if (!fieldHasValue(field)) {
+    return '（未填写）';
+  }
+
+  if (field.type === 'checkbox') {
+    return field.value ? '是' : '否';
+  }
+
+  return String(field.value ?? '');
+};
+
+const buildPrintableHtml = ({
+  schoolName,
+  programName,
+  completion,
+  tabs
+}: {
+  schoolName: string;
+  programName?: string;
+  completion: number;
+  tabs: ApplicationTab[];
+}) => {
+  const generatedAt = new Date().toLocaleString('zh-CN');
+  const tabSections = tabs
+    .map((tab) => {
+      const rows = tab.fields
+        .map(
+          (field) => `
+            <tr>
+              <td>${escapeHtml(field.label)}</td>
+              <td>${escapeHtml(formatFieldValue(field))}</td>
+            </tr>
+          `
+        )
+        .join('');
+
+      return `
+        <section class="tab-section">
+          <h2>${escapeHtml(tab.title)}</h2>
+          <table>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </section>
+      `;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+  <html lang="zh-CN">
+    <head>
+      <meta charset="UTF-8" />
+      <title>${escapeHtml(schoolName)} - 申请导出</title>
+      <style>
+        body {
+          font-family: "Noto Sans SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+          margin: 0;
+          padding: 24px;
+          background: #f8fafc;
+          color: #0f172a;
+        }
+        .container {
+          max-width: 960px;
+          margin: 0 auto;
+          background: #ffffff;
+          padding: 32px;
+          border-radius: 16px;
+          box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
+        }
+        header {
+          border-bottom: 1px solid #e2e8f0;
+          margin-bottom: 24px;
+          padding-bottom: 16px;
+        }
+        header h1 {
+          margin: 0 0 8px;
+          font-size: 28px;
+        }
+        .meta {
+          font-size: 14px;
+          color: #475569;
+        }
+        .progress-bar {
+          margin-top: 16px;
+          background: #e2e8f0;
+          border-radius: 999px;
+          height: 10px;
+          overflow: hidden;
+        }
+        .progress-bar span {
+          display: block;
+          height: 100%;
+          background: #0ea5e9;
+          width: ${completion}%;
+        }
+        .tab-section {
+          margin-bottom: 32px;
+        }
+        .tab-section h2 {
+          font-size: 20px;
+          margin-bottom: 12px;
+          color: #0f172a;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          background: #f8fafc;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+        td {
+          border: 1px solid #e2e8f0;
+          padding: 12px 16px;
+          vertical-align: top;
+        }
+        td:first-child {
+          width: 35%;
+          font-weight: 600;
+          background: #e2e8f0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <header>
+          <h1>${escapeHtml(schoolName)}</h1>
+          <div class="meta">
+            ${programName ? `<div>项目：${escapeHtml(programName)}</div>` : ''}
+            <div>导出时间：${escapeHtml(generatedAt)}</div>
+            <div>完成进度：${completion}%</div>
+          </div>
+          <div class="progress-bar"><span></span></div>
+        </header>
+        ${tabSections}
+      </div>
+    </body>
+  </html>`;
+};
 
 function normalizeFieldOptions(options?: unknown): ApplicationField['options'] {
   if (!Array.isArray(options)) {
@@ -190,13 +346,24 @@ export default function ApplicationPage() {
   const router = useRouter();
   const { applicationId } = router.query;
   const { language } = useTranslation();
-  
+
   const [application, setApplication] = useState<ApiApplication | null>(null);
   const [formData, setFormData] = useState<StructuredFormDataState>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [saveNotification, setSaveNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [exportScope, setExportScope] = useState<'all' | 'filled'>('all');
+  const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!applicationId || typeof applicationId !== 'string') {
@@ -425,7 +592,7 @@ export default function ApplicationPage() {
     return Math.round((filled / allFields.length) * 100);
   }, [formTabs]);
 
-  const handleSave = async (nextStatus?: 'submitted') => {
+  const handleSave = async () => {
     if (!applicationId || typeof applicationId !== 'string') {
       return;
     }
@@ -447,7 +614,7 @@ export default function ApplicationPage() {
         },
         body: JSON.stringify({
           formData,
-          status: nextStatus ?? application?.status
+          status: application?.status
         })
       });
 
@@ -456,16 +623,53 @@ export default function ApplicationPage() {
       }
 
       await syncApplicationData(formData);
-
-      if (nextStatus === 'submitted') {
-          router.push('/dashboard');
+      setSaveNotification({ type: 'success', message: '进度已成功保存。' });
+      if (notificationTimerRef.current) {
+        clearTimeout(notificationTimerRef.current);
       }
+      notificationTimerRef.current = setTimeout(() => setSaveNotification(null), 3000);
     } catch (error) {
       console.error('Error saving application:', error);
+      setSaveNotification({ type: 'error', message: '保存失败，请稍后重试。' });
       alert('保存失败，请稍后再试。');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleExport = () => {
+    if (!formState) {
+      return;
+    }
+
+    const tabsToExport =
+      exportScope === 'filled'
+        ? formState.tabs.filter((tab) => tab.fields.some((field) => fieldHasValue(field)))
+        : formState.tabs;
+
+    if (tabsToExport.length === 0) {
+      alert('当前没有可导出的页面内容，请先填写或取消筛选条件。');
+      return;
+    }
+
+    const schoolName = formState.name;
+    const programName = application?.template.program;
+    const html = buildPrintableHtml({
+      schoolName,
+      programName,
+      completion,
+      tabs: tabsToExport
+    });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const dateLabel = new Date().toISOString().split('T')[0];
+    link.href = url;
+    link.download = `${schoolName}-申请-${exportScope === 'filled' ? '仅有内容' : '全部'}-${dateLabel}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -496,33 +700,68 @@ export default function ApplicationPage() {
 
       <Layout>
         <div className="space-y-6">
+          {saveNotification && (
+            <div
+              className={`rounded-2xl border px-4 py-3 text-sm ${
+                saveNotification.type === 'success'
+                  ? 'border-green-200 bg-green-50 text-green-700'
+                  : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {saveNotification.message}
+            </div>
+          )}
           <div className="flex flex-col justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-center">
-              <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">{formState.name}</h1>
-                <p className="text-gray-600">{application.template.program}</p>
-              <p className="mt-2 text-sm text-gray-500">完成进度：{completion}%</p>
-              </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                type="button"
-                onClick={() => handleSave()}
-                  disabled={saving}
-                className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
-                >
-                  <Save className="h-5 w-5" />
-                  <span>保存进度</span>
-                </button>
-                <button
-                type="button"
-                onClick={() => handleSave('submitted')}
-                disabled={saving || completion < 100}
-                className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
-                >
-                  <Send className="h-5 w-5" />
-                  <span>提交申请</span>
-                </button>
+              <p className="text-gray-600">{application.template.program}</p>
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>完成进度</span>
+                  <span>{completion}%</span>
+                </div>
+                <div className="mt-2 h-2 w-full rounded-full bg-gray-100">
+                  <div
+                    className="h-2 rounded-full bg-primary-600 transition-all"
+                    style={{ width: `${completion}%` }}
+                  />
+                </div>
               </div>
             </div>
+            <div className="flex flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+              <div className="flex flex-col text-sm text-gray-600">
+                <label htmlFor="exportScope" className="mb-1">
+                  导出范围
+                </label>
+                <select
+                  id="exportScope"
+                  value={exportScope}
+                  onChange={(event) => setExportScope(event.currentTarget.value as 'all' | 'filled')}
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                >
+                  <option value="all">全部页面</option>
+                  <option value="filled">仅导出有内容的页面</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                <Download className="h-5 w-5" />
+                <span>导出申请</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                <Save className="h-5 w-5" />
+                <span>保存进度</span>
+              </button>
+            </div>
+          </div>
 
           {formTabs.length > 0 ? (
             <div className="rounded-2xl bg-white p-6 shadow-sm">
