@@ -8,6 +8,7 @@
 |------|------|------|
 | `quick-start-iframe.php` | iframe 嵌入方式（最简单） | ⭐ |
 | `api-integration.php` | 完整 API 集成（推荐） | ⭐⭐⭐ |
+| `hide-header-on-login.php` | 隐藏 WordPress Header（登录后） | ⭐⭐ |
 
 ---
 
@@ -241,6 +242,34 @@ module.exports = {
     /* 添加 !important 提高优先级 */
     background: #0ea5e9 !important;
 }
+```
+
+### Q5: 即使设置了 Elementor Canvas，登录后还是显示 WordPress Header
+
+**原因**: 
+- 某些主题会强制显示 header
+- WordPress Admin Bar（登录后的顶部工具栏）默认显示
+- Elementor Canvas 模板可能无法完全覆盖主题设置
+
+**解决方案**: 使用 `hide-header-on-login.php` 代码片段
+
+1. 在 WordPress 后台，进入 **Code Snippets** → **Add New**
+2. 复制 `hide-header-on-login.php` 的内容
+3. 根据需要修改配置（默认会自动检测包含应用 shortcode 的页面）
+4. 保存并激活
+
+**详细说明**: 请查看 `HIDE_HEADER_GUIDE.md` 获取完整指南。
+
+**快速配置示例**:
+```php
+// 只在登录用户查看时隐藏 header（推荐）
+define('HIDE_HEADER_LOGGED_IN_ONLY', true);
+
+// 指定特定页面 ID 隐藏 header
+define('HIDE_HEADER_PAGE_IDS', array(123, 456));
+
+// 指定特定页面 slug 隐藏 header
+define('HIDE_HEADER_PAGE_SLUGS', array('dashboard', 'applications'));
 ```
 
 ---

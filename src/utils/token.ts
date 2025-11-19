@@ -89,6 +89,35 @@ function resolveCookieAttributes() {
     }
   }
 
+  // 最终检查：尝试检测 window.frameElement（如果存在，说明在 iframe 中）
+  if (!isEmbedded && typeof window !== 'undefined') {
+    try {
+      // window.frameElement 在跨域时会返回 null，但不会抛出异常
+      // 如果不在 iframe 中，frameElement 是 null
+      // 如果在同源 iframe 中，frameElement 是 iframe 元素
+      if (window.frameElement !== null && window.frameElement !== undefined) {
+        isEmbedded = true;
+        detectionMethod = 'window.frameElement detected';
+      }
+    } catch (e) {
+      // 某些浏览器可能不支持，忽略
+    }
+  }
+
+  // 最后的后备方案：检查 localStorage 中是否有 iframe 标记
+  // 这个标记可以在 WordPress snippet 中设置，或者通过其他方式设置
+  if (!isEmbedded && typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    try {
+      const iframeFlag = localStorage.getItem('__is_in_iframe__');
+      if (iframeFlag === 'true') {
+        isEmbedded = true;
+        detectionMethod = 'localStorage flag';
+      }
+    } catch (e) {
+      // localStorage 可能被禁用，忽略
+    }
+  }
+
   // 调试日志
   if (typeof console !== 'undefined' && console.log) {
     console.log('[Cookie Debug] Detection:', {
