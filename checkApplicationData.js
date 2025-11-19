@@ -1,0 +1,33 @@
+// checkApplicationData.js
+const fetch = require('node-fetch');
+
+const API_BASE = 'https://school-application-assistant.vercel.app';
+const SCHOOL_ID = process.env.SCHOOL_ID || 'singapore_international_school';
+const USER_ID = process.env.USER_ID;           // 必填
+const TOKEN = process.env.AUTOFILL_TOKEN;      // 必填
+
+if (!USER_ID || !TOKEN) {
+  console.error('请先设置 USER_ID 和 AUTOFILL_TOKEN 环境变量');
+  process.exit(1);
+}
+
+async function call(path) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Authorization': `Bearer ${TOKEN}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  const data = await res.json();
+  return { status: res.status, data };
+}
+
+(async () => {
+  console.log('--- /api/applicationData ---');
+  const appData = await call(`/api/applicationData/${SCHOOL_ID}/${USER_ID}`);
+  console.log(appData);
+
+  console.log('\n--- /api/applications ---');
+  const apps = await call('/api/applications');
+  console.log(apps);
+})();

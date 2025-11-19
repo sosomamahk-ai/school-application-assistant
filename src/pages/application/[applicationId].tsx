@@ -19,6 +19,7 @@ interface ApiApplication {
   id: string;
   template: {
     id: string;
+    schoolId: string;
     schoolName: string | LocalizedText;
     program: string;
     description?: string;
@@ -195,6 +196,7 @@ export default function ApplicationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!applicationId || typeof applicationId !== 'string') {
@@ -208,6 +210,18 @@ export default function ApplicationPage() {
       if (!token) {
         router.push('/auth/login');
         return;
+      }
+
+      try {
+        const [, payload] = token.split('.');
+        if (payload) {
+          const decoded = JSON.parse(atob(payload));
+          if (decoded?.userId) {
+            setCurrentUserId(decoded.userId);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to decode token payload', err);
       }
 
       setLoading(true);
@@ -348,6 +362,38 @@ export default function ApplicationPage() {
     [activeField]
   );
 
+  const syncApplicationData = useCallback(
+    async (dataToSync: StructuredFormDataState) => {
+      if (!application?.template?.schoolId || !currentUserId) {
+        return;
+      }
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return;
+      }
+      try {
+        const response = await fetch('/api/applicationData/save', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            schoolId: application.template.schoolId,
+            userId: currentUserId,
+            data: dataToSync
+          })
+        });
+        if (!response.ok) {
+          console.warn('Failed to sync application data', await response.text());
+        }
+      } catch (error) {
+        console.error('Error syncing application data:', error);
+      }
+    },
+    [application?.template?.schoolId, currentUserId]
+  );
+
   const formState = useMemo<ApplicationFormState | null>(() => {
     if (!application) {
       return null;
@@ -408,6 +454,8 @@ export default function ApplicationPage() {
       if (!response.ok) {
         throw new Error('Failed to save application');
       }
+
+      await syncApplicationData(formData);
 
       if (nextStatus === 'submitted') {
           router.push('/dashboard');

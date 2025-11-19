@@ -78,6 +78,7 @@ export default async function handler(
           id: application.id,
           template: {
             id: application.template.id,
+            schoolId: application.template.schoolId,
             schoolName: deserializeSchoolName(application.template.schoolName),
             program: application.template.program,
             description: application.template.description,
