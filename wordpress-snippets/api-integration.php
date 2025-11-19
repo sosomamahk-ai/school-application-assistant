@@ -1,4 +1,4 @@
-<?php
+
 /**
  * School Application Assistant - Vercel 页面 iframe 嵌入方案
  *
@@ -18,7 +18,7 @@
 
 if (!defined('SCHOOL_APP_WEB_URL')) {
     // 这里替换成你的生产域名，例如 https://school-app.vercel.app
-    define('SCHOOL_APP_WEB_URL', 'https://your-vercel-app.vercel.app');
+    define('SCHOOL_APP_WEB_URL', 'https://school-application-assistant.vercel.app/');
 }
 
 /**
@@ -79,17 +79,17 @@ function school_app_render_iframe_shortcode($atts = array(), $default_path = '/'
 
 // === 短代码 ===
 function school_app_login_shortcode($atts = array()) {
-    return school_app_render_iframe_shortcode($atts, '/login');
+    return school_app_render_iframe_shortcode($atts, '/auth/login');
 }
 add_shortcode('school_app_login', 'school_app_login_shortcode');
 
 function school_app_register_shortcode($atts = array()) {
-    return school_app_render_iframe_shortcode($atts, '/register');
+    return school_app_render_iframe_shortcode($atts, '/auth/register');
 }
 add_shortcode('school_app_register', 'school_app_register_shortcode');
 
 function school_app_dashboard_shortcode($atts = array()) {
-    return school_app_render_iframe_shortcode($atts, '/applications');
+    return school_app_render_iframe_shortcode($atts, '/dashboard');
 }
 add_shortcode('school_app_dashboard', 'school_app_dashboard_shortcode');
 

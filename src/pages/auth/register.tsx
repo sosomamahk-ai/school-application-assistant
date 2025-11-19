@@ -80,16 +80,16 @@ export default function Register() {
         <title>{t('auth.register.title')} - {t('common.appName')}</title>
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="min-h-[80vh] w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0">
         <div className="absolute top-4 right-4">
           <LanguageSwitch variant="minimal" />
         </div>
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <Link href="/" className="flex items-center justify-center space-x-2">
+        <div className="w-full max-w-md px-4 sm:px-6">
+          <Link href="/" className="flex items-center justify-center space-x-2 pt-4">
             <GraduationCap className="h-12 w-12 text-primary-600" />
             <span className="text-2xl font-bold text-gray-900">{t('common.appNameShort')}</span>
           </Link>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+          <h2 className="mt-4 text-center text-3xl font-bold text-gray-900">
             {t('auth.register.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
@@ -98,10 +98,8 @@ export default function Register() {
               {t('auth.register.signIn')}
             </Link>
           </p>
-        </div>
 
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10">
+          <div className="mt-6 bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10">
             <form className="space-y-6" onSubmit={handleSubmit}>
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
