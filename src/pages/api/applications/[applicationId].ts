@@ -103,7 +103,8 @@ export default async function handler(
         include: {
           template: {
             select: {
-              fieldsData: true
+              fieldsData: true,
+              schoolId: true
             }
           }
         }
@@ -128,6 +129,25 @@ export default async function handler(
           submittedAt: status === 'submitted' ? new Date() : undefined
         }
       });
+
+      if (application.template?.schoolId && nextFormData) {
+        await prisma.applicationData.upsert({
+          where: {
+            schoolId_userId: {
+              schoolId: application.template.schoolId,
+              userId: profile.userId
+            }
+          },
+          update: {
+            data: nextFormData
+          },
+          create: {
+            schoolId: application.template.schoolId,
+            userId: profile.userId,
+            data: nextFormData
+          }
+        });
+      }
 
       res.status(200).json({
         success: true,
