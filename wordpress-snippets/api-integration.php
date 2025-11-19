@@ -34,16 +34,21 @@ function school_app_build_embed_url($path = '/', $query = array()) {
     $base = rtrim(SCHOOL_APP_WEB_URL, '/');
     $relative = '/' . ltrim($path, '/');
 
-    if (empty($query)) {
-        return $base . $relative;
+    // 自动添加 embed=true 参数，帮助 Next.js 检测 iframe 环境
+    $query_params = array('embed' => 'true');
+    
+    if (!empty($query)) {
+        if (is_string($query)) {
+            // 解析字符串格式的查询参数
+            parse_str(ltrim($query, '?&'), $parsed);
+            $query_params = array_merge($query_params, $parsed);
+        } else {
+            // 合并数组格式的查询参数
+            $query_params = array_merge($query_params, $query);
+        }
     }
 
-    if (is_string($query)) {
-        $query_string = ltrim($query, '?&');
-    } else {
-        $query_string = http_build_query($query);
-    }
-
+    $query_string = http_build_query($query_params);
     return $base . $relative . (strlen($query_string) ? '?' . $query_string : '');
 }
 
