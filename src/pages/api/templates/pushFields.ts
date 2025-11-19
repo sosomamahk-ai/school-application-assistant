@@ -56,17 +56,47 @@ export default async function handler(
     }
 
     // 查找或创建学校模板
+    const existingTemplate = await prisma.schoolFormTemplate.findUnique({
+      where: { schoolId },
+      select: {
+        id: true,
+        schoolName: true,
+        program: true,
+        fieldsData: true,
+        isActive: true,
+      },
+    });
+
+    const mergedFields = (() => {
+      if (!existingTemplate?.fieldsData || !Array.isArray(existingTemplate.fieldsData)) {
+        return fields;
+      }
+
+      const fieldMap = new Map<string, any>();
+      existingTemplate.fieldsData.forEach((field: any) => {
+        if (field?.key) {
+          fieldMap.set(field.key, field);
+        }
+      });
+      fields.forEach((field: any) => {
+        if (field?.key) {
+          fieldMap.set(field.key, { ...fieldMap.get(field.key), ...field });
+        }
+      });
+      return Array.from(fieldMap.values());
+    })();
+
     const template = await prisma.schoolFormTemplate.upsert({
       where: { schoolId },
       update: {
-        fieldsData: fields as any,
+        fieldsData: mergedFields as any,
         updatedAt: new Date(),
       },
       create: {
         schoolId,
         schoolName: schoolId.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
         program: 'General',
-        fieldsData: fields as any,
+        fieldsData: mergedFields as any,
         isActive: true,
       },
     });
