@@ -150,9 +150,9 @@ export default function Dashboard() {
   };
 
   const getCategoryLabel = (category: string | null | undefined): string => {
-    if (!category) return t('admin.templates.categories.international');
+    if (!category) return t('admin.templates.category.international');
     const categoryKey = categoryMap[category] || 'international';
-    return t(`admin.templates.categories.${categoryKey}`) || category;
+    return t(`admin.templates.category.${categoryKey}`) || category;
   };
 
   // Filter templates by category and search term
@@ -348,7 +348,7 @@ export default function Dashboard() {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {t('admin.templates.allCategories') || '全部'}
+                    {t('admin.templates.category.all') || '全部'}
                   </button>
                   {sortedCategories.map((cat) => (
                     <button
@@ -360,7 +360,7 @@ export default function Dashboard() {
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {t(`admin.templates.categories.${cat}`) || cat}
+                      {t(`admin.templates.category.${cat}`) || cat}
                     </button>
                   ))}
                 </div>
@@ -376,7 +376,7 @@ export default function Dashboard() {
                         ? (t('admin.templates.noTemplatesSearch')?.replace('{keyword}', searchTerm) || `没有找到与"${searchTerm}"匹配的学校`)
                         : (selectedCategory === 'all'
                           ? t('admin.templates.noTemplates') || '还没有任何学校模板'
-                          : (t('admin.templates.noCategoryTemplates')?.replace('{category}', t(`admin.templates.categories.${selectedCategory}`)) || `还没有"${t(`admin.templates.categories.${selectedCategory}`)}"类别的学校`))}
+                          : (t('admin.templates.noCategoryTemplates')?.replace('{category}', t(`admin.templates.category.${selectedCategory}`)) || `还没有"${t(`admin.templates.category.${selectedCategory}`)}"类别的学校`))}
                     </h3>
                     {searchTerm && (
                       <button

@@ -971,19 +971,19 @@ export const translations: TranslationData = {
     'zh-TW': '國際學校',
   },
   'admin.templates.category.hkSecondary': {
-    en: 'Hong Kong Secondary School',
+    en: 'Local Secondary',
     'zh-CN': '香港本地中学',
     'zh-TW': '香港本地中學',
   },
   'admin.templates.category.hkPrimary': {
-    en: 'Hong Kong Primary School',
+    en: 'Local Primary',
     'zh-CN': '香港本地小学',
     'zh-TW': '香港本地小學',
   },
   'admin.templates.category.hkKindergarten': {
-    en: 'Hong Kong Kindergarten',
-    'zh-CN': '香港幼稚园',
-    'zh-TW': '香港幼稚園',
+    en: 'Kindergarten',
+    'zh-CN': '幼稚园',
+    'zh-TW': '幼稚園',
   },
   'admin.templates.category.university': {
     en: 'University',
