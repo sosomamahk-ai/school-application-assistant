@@ -17,7 +17,8 @@
     "test:direct": "node scripts/test-direct-connection.js",
     "test:pooler": "node scripts/test-session-pooler.js",
     "test:new-password": "node scripts/test-new-password.js",
-    "test:all-formats": "node scripts/test-all-username-formats.js"
+    "test:all-formats": "node scripts/test-all-username-formats.js",
+    "check:env": "ts-node --project tsconfig.scripts.json scripts/check-env.ts"
   },
   "dependencies": {
     "next": "^14.0.4",

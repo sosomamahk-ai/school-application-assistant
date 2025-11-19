@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 
 type FieldKind = 'text' | 'textarea' | 'select' | 'checkbox' | 'date' | 'number';
 
@@ -35,13 +35,20 @@ interface ApplicationFormProps {
 export default function ApplicationForm({ application, onApplicationChange, onFieldFocus }: ApplicationFormProps) {
   const [currentApp, setCurrentApp] = useState<ApplicationFormState>(application);
   const [activeTabId, setActiveTabId] = useState<string>(() => application.tabs[0]?.id ?? '');
+  const activeTabIdRef = useRef(activeTabId);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
 
   useEffect(() => {
     setCurrentApp(application);
-    if (!application.tabs.some((tab) => tab.id === activeTabId)) {
+    // Reset activeTabId if current tab no longer exists
+    if (application.tabs.length > 0 && !application.tabs.some((tab) => tab.id === activeTabIdRef.current)) {
       setActiveTabId(application.tabs[0]?.id ?? '');
     }
-  }, [application, activeTabId]);
+  }, [application]);
 
   const activeTab = useMemo<ApplicationTab | undefined>(
     () => currentApp.tabs.find((tab) => tab.id === activeTabId && tab.fields.length > 0),

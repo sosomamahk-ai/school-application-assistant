@@ -91,6 +91,23 @@ export default async function handler(
       code: error?.code,
       stack: error?.stack
     });
+    
+    // Check for database connection errors
+    if (error?.code === 'P1001' || error?.message?.includes('connect') || error?.message?.includes('ECONNREFUSED')) {
+      return res.status(500).json({ 
+        error: 'Database connection failed',
+        message: 'Unable to connect to database. Please check DATABASE_URL configuration.'
+      });
+    }
+    
+    // Check for missing JWT_SECRET
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        message: 'JWT_SECRET is not configured'
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Internal server error',
       message: process.env.NODE_ENV === 'development' ? error?.message : undefined

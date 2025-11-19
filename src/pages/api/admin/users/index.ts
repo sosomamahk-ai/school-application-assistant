@@ -69,6 +69,28 @@ export default async function handler(
     });
   } catch (error: any) {
     console.error('Admin users list error:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack
+    });
+    
+    // Check for database connection errors
+    if (error?.code === 'P1001' || error?.message?.includes('connect') || error?.message?.includes('ECONNREFUSED')) {
+      return res.status(500).json({ 
+        error: 'Database connection failed',
+        message: 'Unable to connect to database. Please check DATABASE_URL configuration.'
+      });
+    }
+    
+    // Check for Prisma client errors
+    if (error?.code?.startsWith('P')) {
+      return res.status(500).json({ 
+        error: 'Database error',
+        message: process.env.NODE_ENV === 'development' ? error?.message : 'Database operation failed'
+      });
+    }
+    
     res.status(500).json({
       error: 'Internal server error',
       message: process.env.NODE_ENV === 'development' ? error?.message : undefined

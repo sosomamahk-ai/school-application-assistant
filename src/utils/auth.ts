@@ -19,10 +19,15 @@ function extractToken(req: NextApiRequest): string | null {
 
 export async function authenticate(req: NextApiRequest): Promise<string | null> {
   try {
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not configured');
+      return null;
+    }
+
     const token = extractToken(req);
     if (!token) return null;
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
     
     return decoded.userId;
   } catch (error) {
@@ -33,10 +38,15 @@ export async function authenticate(req: NextApiRequest): Promise<string | null> 
 
 export async function authenticateAdmin(req: NextApiRequest): Promise<{ userId: string; role: string } | null> {
   try {
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not configured');
+      return null;
+    }
+
     const token = extractToken(req);
     if (!token) return null;
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
     
     // 检查是否是管理员
     if (decoded.role !== 'admin') {
