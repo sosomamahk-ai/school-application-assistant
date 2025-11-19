@@ -20,6 +20,7 @@ export default async function handler(
             schoolName: true,
             program: true,
             description: true,
+            category: true,
             fieldsData: true
           }
         });
@@ -36,6 +37,7 @@ export default async function handler(
             schoolName: deserializeSchoolName(template.schoolName),
             program: template.program,
             description: template.description,
+            category: template.category,
             fields: template.fieldsData
           }
         });
@@ -50,6 +52,7 @@ export default async function handler(
           schoolName: true,
           program: true,
           description: true,
+          category: true,
           fieldsData: true
         }
       });
@@ -62,6 +65,7 @@ export default async function handler(
           schoolName: deserializeSchoolName(template.schoolName),
           program: template.program,
           description: template.description,
+          category: template.category,
           fields: template.fieldsData
         }))
       });
