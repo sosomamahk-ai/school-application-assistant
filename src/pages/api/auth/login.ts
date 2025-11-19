@@ -21,15 +21,47 @@ export default async function handler(
       });
     }
 
-    // 检查数据库连接
-    try {
-      await prisma.$connect();
-    } catch (dbError: any) {
-      console.error('[Login API] Database connection failed:', dbError);
+    // 检查数据库连接（带重试机制）
+    let connectionRetries = 0;
+    const maxRetries = 3;
+    let dbError: any = null;
+    
+    while (connectionRetries < maxRetries) {
+      try {
+        // 如果已经连接，直接查询（Prisma 会自动管理连接）
+        // 如果不是连接状态，尝试连接
+        await prisma.$connect();
+        dbError = null;
+        break;
+      } catch (error: any) {
+        dbError = error;
+        connectionRetries++;
+        
+        // 如果错误是连接相关的，等待后重试
+        if (
+          (error?.code === 'P1001' || 
+           error?.message?.includes('connect') || 
+           error?.message?.includes('ECONNREFUSED') ||
+           error?.message?.includes('timeout')) &&
+          connectionRetries < maxRetries
+        ) {
+          // 等待 500ms 后重试
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue;
+        }
+        
+        // 如果不是连接错误，或已达到最大重试次数，跳出循环
+        break;
+      }
+    }
+    
+    if (dbError) {
+      console.error('[Login API] Database connection failed after retries:', dbError);
       return res.status(500).json({ 
         error: 'Database connection failed',
         message: 'Unable to connect to database. Please check DATABASE_URL configuration.',
-        details: process.env.NODE_ENV === 'development' ? dbError?.message : undefined
+        details: process.env.NODE_ENV === 'development' ? dbError?.message : undefined,
+        retries: connectionRetries
       });
     }
 
