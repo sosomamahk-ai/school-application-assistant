@@ -50,7 +50,8 @@ function school_app_render_iframe_shortcode($atts = array(), $default_path = '/'
             'path' => $default_path,
             'height' => '1000px',
             'scrolling' => 'yes',
-            'query' => ''
+            'query' => '',
+            'container_class' => ''
         ),
         $atts,
         'school_app_iframe'
@@ -60,7 +61,7 @@ function school_app_render_iframe_shortcode($atts = array(), $default_path = '/'
 
     ob_start();
     ?>
-    <div class="school-app-iframe" data-path="<?php echo esc_attr($atts['path']); ?>">
+    <div class="school-app-embed-container <?php echo esc_attr($atts['container_class']); ?>" data-path="<?php echo esc_attr($atts['path']); ?>">
         <iframe
             src="<?php echo esc_url($src); ?>"
             loading="lazy"
@@ -109,14 +110,14 @@ add_shortcode('school_app_templates', 'school_app_templates_shortcode');
 function school_app_enqueue_iframe_assets() {
     ?>
     <style>
-        .school-app-iframe {
+        .school-app-embed-container {
             position: relative;
             width: 100%;
             max-width: none;
             margin: 0;
             padding: 0;
         }
-        .school-app-iframe iframe {
+        .school-app-embed-container iframe {
             display: block;
             width: 100%;
             background: #fff;
