@@ -82,7 +82,7 @@ export default function Register() {
 
       <div
         className="w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0"
-        style={{ minHeight: '800px' }}
+        style={{ minHeight: 'max(800px, 100vh)' }}
       >
         <div className="absolute top-4 right-4">
           <LanguageSwitch variant="minimal" />
