@@ -111,24 +111,18 @@ function school_app_enqueue_iframe_assets() {
     <style>
         .school-app-iframe {
             position: relative;
-            width: 100%;
-            margin: 20px auto;
-            max-width: 1280px;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            margin-top: 0;
+            margin-bottom: 0;
         }
         .school-app-iframe iframe {
+            display: block;
+            width: 100%;
             background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(15,23,42,.08);
-        }
-        @media (max-width: 768px) {
-            .school-app-iframe {
-                padding: 0 10px;
-                max-width: 100%;
-            }
-            .school-app-iframe iframe {
-                border-radius: 0;
-                box-shadow: none;
-            }
+            border-radius: 0;
+            box-shadow: none;
         }
     </style>
     <script>

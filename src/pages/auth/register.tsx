@@ -84,7 +84,7 @@ export default function Register() {
         <div className="absolute top-4 right-4">
           <LanguageSwitch variant="minimal" />
         </div>
-        <div className="w-full max-w-md px-4 sm:px-6">
+        <div className="w-full max-w-md px-4 sm:px-6 transform -translate-y-28 md:-translate-y-32">
           <Link href="/" className="flex items-center justify-center space-x-2 pt-4">
             <GraduationCap className="h-12 w-12 text-primary-600" />
             <span className="text-2xl font-bold text-gray-900">{t('common.appNameShort')}</span>
