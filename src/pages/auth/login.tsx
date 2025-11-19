@@ -70,7 +70,7 @@ export default function Login() {
         <title>{t('auth.login.title')} - {t('common.appName')}</title>
       </Head>
 
-      <div className="min-h-[100vh] w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0">
+      <div className="min-h-screen w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0">
         <div className="absolute top-4 right-4">
           <LanguageSwitch variant="minimal" />
         </div>

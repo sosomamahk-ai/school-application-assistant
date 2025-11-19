@@ -80,26 +80,28 @@ export default function Register() {
         <title>{t('auth.register.title')} - {t('common.appName')}</title>
       </Head>
 
-      <div className="min-h-[80vh] w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0">
+      <div className="min-h-screen w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-0">
         <div className="absolute top-4 right-4">
           <LanguageSwitch variant="minimal" />
         </div>
-        <div className="w-full max-w-md px-4 sm:px-6 transform -translate-y-28 md:-translate-y-32">
-          <Link href="/" className="flex items-center justify-center space-x-2 pt-4">
-            <GraduationCap className="h-12 w-12 text-primary-600" />
-            <span className="text-2xl font-bold text-gray-900">{t('common.appNameShort')}</span>
-          </Link>
-          <h2 className="mt-4 text-center text-3xl font-bold text-gray-900">
-            {t('auth.register.title')}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {t('auth.register.hasAccount')}{' '}
-            <Link href="/auth/login" className="font-medium text-primary-600 hover:text-primary-500">
-              {t('auth.register.signIn')}
+        <div className="w-full max-w-md px-4 sm:px-6 flex flex-col max-h-[90vh] md:max-h-[85vh]">
+          <div className="flex-shrink-0 pt-4 text-center">
+            <Link href="/" className="flex items-center justify-center space-x-2">
+              <GraduationCap className="h-12 w-12 text-primary-600" />
+              <span className="text-2xl font-bold text-gray-900">{t('common.appNameShort')}</span>
             </Link>
-          </p>
+            <h2 className="mt-4 text-3xl font-bold text-gray-900">
+              {t('auth.register.title')}
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              {t('auth.register.hasAccount')}{' '}
+              <Link href="/auth/login" className="font-medium text-primary-600 hover:text-primary-500">
+                {t('auth.register.signIn')}
+              </Link>
+            </p>
+          </div>
 
-          <div className="mt-6 bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10">
+          <div className="mt-6 bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10 flex-1 overflow-y-auto">
             <form className="space-y-6" onSubmit={handleSubmit}>
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
