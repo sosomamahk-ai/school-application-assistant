@@ -101,6 +101,7 @@ export default async function handler(
         include: {
           template: {
             select: {
+              schoolId: true,
               schoolName: true,
               program: true
             }
