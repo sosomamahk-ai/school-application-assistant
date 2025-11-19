@@ -15,6 +15,7 @@ const DEFAULT_MAPPINGS = [
 
 let currentMappings = [];
 let editingIndex = -1;
+let availableTemplates = [];
 
 // DOM 元素
 const elements = {
@@ -23,6 +24,7 @@ const elements = {
   urlPattern: document.getElementById('urlPattern'),
   schoolId: document.getElementById('schoolId'),
   schoolName: document.getElementById('schoolName'),
+  templateSelect: document.getElementById('templateSelect'),
   patternHint: document.getElementById('patternHint'),
   addMappingBtn: document.getElementById('addMappingBtn'),
   testPatternBtn: document.getElementById('testPatternBtn'),
@@ -74,20 +76,33 @@ async function loadSchoolList() {
     if (response.ok) {
       const data = await response.json();
       const templates = data.templates || data || [];
+      availableTemplates = templates;
       
-      // 清空现有选项
       elements.schoolIdList.innerHTML = '';
-      
-      // 添加学校选项
       templates.forEach(template => {
         const option = document.createElement('option');
         option.value = template.schoolId || template.id;
         option.textContent = `${template.schoolName || template.schoolId} - ${template.program || ''}`;
         elements.schoolIdList.appendChild(option);
       });
+
+      if (elements.templateSelect) {
+        elements.templateSelect.innerHTML = '<option value="">请选择学校模版...</option>';
+        templates.forEach(template => {
+          const option = document.createElement('option');
+          option.value = template.schoolId || template.id;
+          option.textContent = `${template.schoolName || template.schoolId}${template.program ? ` - ${template.program}` : ''}`;
+          elements.templateSelect.appendChild(option);
+        });
+      }
+    } else if (elements.templateSelect) {
+      elements.templateSelect.innerHTML = '<option value="">无法加载学校模版，请手动输入 schoolId</option>';
     }
   } catch (error) {
     console.error('Load school list error:', error);
+    if (elements.templateSelect) {
+      elements.templateSelect.innerHTML = '<option value="">无法加载学校模版，请手动输入 schoolId</option>';
+    }
   }
 }
 
@@ -208,6 +223,9 @@ function addMapping() {
   elements.urlPattern.value = '';
   elements.schoolId.value = '';
   elements.schoolName.value = '';
+  if (elements.templateSelect) {
+    elements.templateSelect.value = '';
+  }
   elements.patternTypeExact.checked = true;
   updatePatternHint();
 }
@@ -221,6 +239,9 @@ function editMapping(index) {
   elements.urlPattern.value = mapping.pattern;
   elements.schoolId.value = mapping.schoolId;
   elements.schoolName.value = mapping.schoolName || '';
+  if (elements.templateSelect) {
+    elements.templateSelect.value = mapping.schoolId || '';
+  }
   
   if (mapping.type === 'regex') {
     elements.patternTypeRegex.checked = true;
@@ -317,6 +338,17 @@ function setupEventListeners() {
   elements.saveBtn.addEventListener('click', saveMappings);
   elements.backBtn.addEventListener('click', () => {
     window.close();
+  });
+  elements.templateSelect?.addEventListener('change', (event) => {
+    const selectedId = event.target.value;
+    if (!selectedId) {
+      return;
+    }
+    const template = availableTemplates.find(t => (t.schoolId || t.id) === selectedId);
+    elements.schoolId.value = selectedId;
+    if (template) {
+      elements.schoolName.value = template.schoolName || template.schoolId || '';
+    }
   });
 
   // 模式类型切换

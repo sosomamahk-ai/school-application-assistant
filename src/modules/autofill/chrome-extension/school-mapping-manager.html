@@ -269,6 +269,13 @@
             <small id="patternHint">输入URL的一部分，插件会检查当前页面URL是否包含此文本</small>
           </div>
           <div class="form-group">
+            <label>选择学校模版（推荐）</label>
+            <select id="templateSelect" class="autofill-select">
+              <option value="">正在加载学校列表...</option>
+            </select>
+            <small>从系统模版列表中选择，自动填入准确的 schoolId，避免拼写错误</small>
+          </div>
+          <div class="form-group">
             <label>学校ID *</label>
             <input type="text" id="schoolId" placeholder="例如: oxford" list="schoolIdList" />
             <datalist id="schoolIdList">
