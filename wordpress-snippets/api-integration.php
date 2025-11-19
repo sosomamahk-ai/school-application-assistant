@@ -5,9 +5,15 @@
  * 使用说明：
  * 1. 按需修改 SCHOOL_APP_WEB_URL，指向你在 Vercel 上的生产网址（保持 https）。
  * 2. 将整个文件复制到 WordPress Code Snippets / functions.php 并启用。
- * 3. 在 WordPress 页面使用短代码： [school_app_login]、[school_app_register]、
- *    [school_app_dashboard]、[school_app_profile]、[school_app_templates]
- * 4. 所有短代码都支持参数：height（默认 1200px）、path（可覆盖默认路径）。
+ * 3. 在 WordPress 页面使用短代码：
+ *    - [school_app_login] - 登录页面
+ *    - [school_app_register] - 注册页面
+ *    - [school_app_dashboard] - 申请列表
+ *    - [school_app_profile] - 个人资料
+ *    - [school_app_templates] - 模板管理（管理员）
+ *    - [school_app_users] - 用户管理（管理员）
+ *    - [school_app_translations] - 翻译管理（管理员）
+ * 4. 所有短代码都支持参数：height（默认 1000px）、path（可覆盖默认路径）。
  * 5. 在 Vercel 端允许被 iframe 嵌入：设置 Content-Security-Policy 中的 frame-ancestors
  *    或在中间件里添加响应头 `X-Frame-Options: ALLOWALL`（按需限制域名）。
  * 6. 登录若依赖 cookie，需要把 auth cookie 设置为 `SameSite=None; Secure`，这样 WordPress
@@ -100,9 +106,19 @@ function school_app_profile_shortcode($atts = array()) {
 add_shortcode('school_app_profile', 'school_app_profile_shortcode');
 
 function school_app_templates_shortcode($atts = array()) {
-    return school_app_render_iframe_shortcode($atts, '/templates');
+    return school_app_render_iframe_shortcode($atts, '/admin/templates');
 }
 add_shortcode('school_app_templates', 'school_app_templates_shortcode');
+
+function school_app_users_shortcode($atts = array()) {
+    return school_app_render_iframe_shortcode($atts, '/admin/users');
+}
+add_shortcode('school_app_users', 'school_app_users_shortcode');
+
+function school_app_translations_shortcode($atts = array()) {
+    return school_app_render_iframe_shortcode($atts, '/admin/translations');
+}
+add_shortcode('school_app_translations', 'school_app_translations_shortcode');
 
 /**
  * 注入基础样式 & JS（只负责容器样式，页面 UI 交给 Vercel）
@@ -130,7 +146,7 @@ function school_app_enqueue_iframe_assets() {
             if (!event.data || typeof event.data !== 'object') return;
             if (event.data.type !== 'school-app-resize') return;
 
-            var iframes = document.querySelectorAll('.school-app-iframe iframe');
+            var iframes = document.querySelectorAll('.school-app-embed-container iframe');
             iframes.forEach(function(frame) {
                 if (frame.contentWindow === event.source) {
                     frame.style.minHeight = (event.data.height || 800) + 'px';
