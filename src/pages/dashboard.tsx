@@ -338,11 +338,11 @@ export default function Dashboard() {
               </div>
 
               {/* Tabs */}
-              <div className="px-6 pt-4 border-b border-gray-200 overflow-x-auto">
-                <div className="flex space-x-2 min-w-max">
+              <div className="px-6 pt-4 pb-0 border-b border-gray-200 overflow-x-auto overflow-y-hidden flex-shrink-0">
+                <div className="flex space-x-2 min-w-max pb-2">
                   <button
                     onClick={() => setSelectedCategory('all')}
-                    className={`px-4 py-2 rounded-t-lg font-medium transition-colors whitespace-nowrap ${
+                    className={`px-4 py-2.5 rounded-t-lg font-medium transition-colors whitespace-nowrap ${
                       selectedCategory === 'all'
                         ? 'bg-primary-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -354,7 +354,7 @@ export default function Dashboard() {
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`px-4 py-2 rounded-t-lg font-medium transition-colors whitespace-nowrap ${
+                      className={`px-4 py-2.5 rounded-t-lg font-medium transition-colors whitespace-nowrap ${
                         selectedCategory === cat
                           ? 'bg-primary-500 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
