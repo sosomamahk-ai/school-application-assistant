@@ -875,6 +875,31 @@ async function detectSchoolIdFromTab(tabId) {
 }
 
 /**
+ * 确保内容脚本已注入（包含 iframe）
+ */
+async function ensureContentScripts(tabId) {
+  if (!chrome.scripting?.executeScript) {
+    return;
+  }
+
+  const files = [
+    'utils/detectSchool.js',
+    'utils/fillForm.js',
+    'content.js',
+    'floating-panel.js',
+  ];
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      files,
+    });
+  } catch (error) {
+    console.warn('ensureContentScripts error:', error);
+  }
+}
+
+/**
  * 消息监听（处理来自popup/content script的消息）
  */
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -977,6 +1002,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
  */
 async function handleAutoFillWithTemplate(tabId, manualSchoolId = null) {
   try {
+    await ensureContentScripts(tabId);
+
     // 1. 检测学校 ID（优先使用手动选择的）
     let schoolId = manualSchoolId;
     if (!schoolId) {
