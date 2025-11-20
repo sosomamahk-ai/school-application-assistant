@@ -7,7 +7,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/contexts/TranslationContext';
-import { Languages, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import type { Language } from '@/lib/translations';
 
 interface LanguageSwitchProps {
@@ -15,10 +15,16 @@ interface LanguageSwitchProps {
   className?: string;
 }
 
-const LANGUAGE_OPTIONS: { code: Language; label: string; nativeLabel: string }[] = [
-  { code: 'en', label: 'English', nativeLabel: 'English' },
-  { code: 'zh-CN', label: 'Simplified Chinese', nativeLabel: '简体中文' },
-  { code: 'zh-TW', label: 'Traditional Chinese', nativeLabel: '繁體中文' },
+const LANGUAGE_OPTIONS: {
+  code: Language;
+  label: string;
+  nativeLabel: string;
+  shortLabel: string;
+  flag: string;
+}[] = [
+  { code: 'zh-CN', label: 'Simplified Chinese', nativeLabel: '简体中文', shortLabel: '简体', flag: '🇨🇳' },
+  { code: 'zh-TW', label: 'Traditional Chinese', nativeLabel: '繁體中文', shortLabel: '繁体', flag: '🇭🇰' },
+  { code: 'en', label: 'English', nativeLabel: 'English', shortLabel: '英文', flag: '🇺🇸' },
 ];
 
 export default function LanguageSwitch({ variant = 'default', className = '' }: LanguageSwitchProps) {
@@ -29,6 +35,7 @@ export default function LanguageSwitch({ variant = 'default', className = '' }: 
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
   const currentLanguage = LANGUAGE_OPTIONS.find(lang => lang.code === language) || LANGUAGE_OPTIONS[0];
+  const getShortLabel = (lang = currentLanguage) => lang.shortLabel || lang.nativeLabel || lang.label;
 
   // Calculate dropdown position
   useEffect(() => {
@@ -108,7 +115,10 @@ export default function LanguageSwitch({ variant = 'default', className = '' }: 
                 : 'text-gray-700'
             }`}
           >
-            <span>{lang.nativeLabel}</span>
+            <span className="flex items-center space-x-2">
+              <span className="text-lg leading-none">{lang.flag}</span>
+              <span>{lang.shortLabel}</span>
+            </span>
             {language === lang.code && (
               <span className="text-primary-600">✓</span>
             )}
@@ -125,12 +135,12 @@ export default function LanguageSwitch({ variant = 'default', className = '' }: 
           <button
             ref={buttonRef}
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors"
-            aria-label="Switch Language"
+            className="flex items-center space-x-2 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors"
+            aria-label={`切换语言：${currentLanguage.label}`}
             aria-expanded={showDropdown}
           >
-            <Languages className="h-4 w-4" />
-            <span>{currentLanguage.nativeLabel}</span>
+            <span className="text-lg leading-none">{currentLanguage.flag}</span>
+            <span>{getShortLabel()}</span>
             <ChevronDown className={`h-3 w-3 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
           </button>
         </div>
@@ -148,13 +158,13 @@ export default function LanguageSwitch({ variant = 'default', className = '' }: 
           <button
             ref={buttonRef}
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
-            aria-label="Switch Language"
+            className="flex items-center space-x-3 px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
+            aria-label={`切换语言：${currentLanguage.label}`}
             aria-expanded={showDropdown}
           >
-            <Languages className="h-5 w-5 text-gray-600" />
+            <span className="text-xl leading-none">{currentLanguage.flag}</span>
             <span className="text-sm font-medium text-gray-700">
-              {currentLanguage.nativeLabel}
+              {getShortLabel()}
             </span>
             <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
           </button>
@@ -173,13 +183,13 @@ export default function LanguageSwitch({ variant = 'default', className = '' }: 
         <button
           ref={buttonRef}
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
-          aria-label="Switch Language"
+          className="flex items-center space-x-3 px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
+          aria-label={`切换语言：${currentLanguage.label}`}
           aria-expanded={showDropdown}
         >
-          <Languages className="h-5 w-5 text-gray-600" />
+          <span className="text-xl leading-none">{currentLanguage.flag}</span>
           <span className="text-sm font-medium text-gray-700">
-            {currentLanguage.nativeLabel}
+            {getShortLabel()}
           </span>
           <ChevronDown className={`h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
         </button>

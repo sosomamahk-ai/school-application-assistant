@@ -24,7 +24,7 @@ const VALID_LANGUAGES: Language[] = ['en', 'zh-CN', 'zh-TW'];
 
 function detectLanguage(): Language {
   if (typeof window === 'undefined') {
-    return 'en';
+    return 'zh-CN';
   }
 
   const savedLanguage = localStorage.getItem('language') as Language;
@@ -46,7 +46,7 @@ function detectLanguage(): Language {
 }
 
 export function TranslationProvider({ children }: TranslationProviderProps) {
-  const [language, setLanguageState] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>('zh-CN');
 
   const [translations, setTranslations] = useState<TranslationData>(defaultTranslations);
 

@@ -147,15 +147,17 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             )}
           </nav>
-          <div className="p-4 border-t border-gray-200 space-y-3">
-            <LanguageSwitch variant="minimal" />
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center space-x-2 text-gray-700 hover:text-red-600 py-2 rounded-lg hover:bg-gray-50"
-            >
-              <LogOut className="h-5 w-5" />
-              <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-            </button>
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex items-center justify-between gap-4">
+              <LanguageSwitch variant="minimal" />
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 text-gray-700 hover:text-red-600 py-2 px-3 rounded-lg hover:bg-gray-50"
+              >
+                <LogOut className="h-5 w-5" />
+                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+              </button>
+            </div>
           </div>
         </aside>
 
