@@ -256,11 +256,45 @@ const setCache = (data: WordPressSchoolResponse) => {
   };
 };
 
+const fetchViaProxy = async (forceRefresh?: boolean): Promise<WordPressSchoolResponse> => {
+  const url = `/api/wordpress/schools${forceRefresh ? '?refresh=true' : ''}`;
+  const response = await fetch(url, {
+    headers: { Accept: 'application/json' }
+  });
+  if (!response.ok) {
+    throw new Error(`Proxy API responded with ${response.status}`);
+  }
+  return response.json();
+};
+
 export const getWordPressSchools = async (
   options?: FetchOptions & { forceRefresh?: boolean }
 ): Promise<WordPressSchoolResponse> => {
   const { forceRefresh, ...rest } = options ?? {};
 
+  // In browser environment, use our API proxy to avoid CORS issues
+  if (typeof window !== 'undefined') {
+    if (shouldUseCache(forceRefresh)) {
+      return cache!.data;
+    }
+    if (!inFlightPromise) {
+      inFlightPromise = fetchViaProxy(forceRefresh)
+        .then((data) => {
+          setCache(data);
+          return data;
+        })
+        .catch((error) => {
+          console.error('[wordpressSchoolService] Failed to load schools via proxy', error);
+          throw error;
+        })
+        .finally(() => {
+          inFlightPromise = null;
+        });
+    }
+    return inFlightPromise;
+  }
+
+  // Server-side: directly fetch from WordPress
   if (shouldUseCache(forceRefresh)) {
     return cache!.data;
   }
