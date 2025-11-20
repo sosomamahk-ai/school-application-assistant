@@ -81,29 +81,23 @@ body.wordpress-iframe .max-w-7xl {
   width: 100% !important;
 }
 
-/* WordPress环境：设置固定高度，避免超出视口 */
+/* WordPress环境：优化iframe内页面滚动与布局
+   - 不再强制 100vh 和 overflow: hidden，避免干扰 sticky 和移动端布局
+   - 保持最小高度为视口高度，允许正常滚动
+*/
 html.wordpress-embed,
 html.wordpress-iframe,
 body.wordpress-embed,
 body.wordpress-iframe {
-  height: 100vh !important;
-  max-height: 100vh !important;
-  overflow: hidden !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
 
 body.wordpress-embed > div#__next,
 body.wordpress-iframe > div#__next {
-  height: 100vh !important;
-  max-height: 100vh !important;
-  overflow: hidden !important;
-}
-
-/* WordPress环境：确保sidebar可以滚动且固定在顶部 */
-body.wordpress-embed aside,
-body.wordpress-iframe aside {
-  position: sticky !important;
-  top: 0 !important;
-  max-height: 100vh !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
   overflow-y: auto !important;
 }
 
