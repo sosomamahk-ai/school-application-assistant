@@ -1,5 +1,4 @@
 import { ReactNode, useState, useEffect } from 'react';
-import clsx from 'clsx';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
@@ -31,7 +30,6 @@ export default function Layout({ children }: LayoutProps) {
   const [userRole, setUserRole] = useState<string>('user');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isWordPress, setIsWordPress] = useState(false);
-  const [wpSidebarOpen, setWpSidebarOpen] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -57,7 +55,6 @@ export default function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     setMobileMenuOpen(false);
-    setWpSidebarOpen(false);
   }, [router.pathname]);
 
   const isAdmin = userRole === 'admin';
@@ -132,79 +129,47 @@ export default function Layout({ children }: LayoutProps) {
       </Link>
     ));
 
-  // WordPress环境：使用左侧sidebar布局
   if (isWordPress) {
-    const sidebar = (
-      <aside
-        className={clsx(
-          'bg-white shadow-sm flex-shrink-0 w-64 h-screen overflow-y-auto transition-transform duration-200',
-          'lg:static lg:translate-x-0 lg:flex',
-          {
-            'fixed inset-y-0 left-0 z-50 flex translate-x-0': wpSidebarOpen,
-            'hidden lg:flex -translate-x-full lg:translate-x-0': !wpSidebarOpen
-          }
-        )}
-      >
-        <div className="h-full flex flex-col relative">
-          <button
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 lg:hidden"
-            onClick={() => setWpSidebarOpen(false)}
-            aria-label="Close sidebar"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <div className="p-6 border-b border-gray-200">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-primary-600" />
-              <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
-            </Link>
-          </div>
-          <nav className="flex-1 p-4 space-y-2">
-            {renderLinks(primaryLinks)}
-            {isAdmin && (
-              <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
-                {renderLinks(adminLinks)}
-              </div>
-            )}
-          </nav>
-          <div className="p-4 border-t border-gray-200 space-y-3">
-            <LanguageSwitch variant="minimal" />
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center space-x-2 text-gray-700 hover:text-red-600 py-2 rounded-lg hover:bg-gray-50"
-            >
-              <LogOut className="h-5 w-5" />
-              <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-            </button>
-          </div>
-        </div>
-      </aside>
-    );
-
     return (
       <div className="min-h-screen bg-gray-50 flex">
-        {wpSidebarOpen && <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setWpSidebarOpen(false)} />}
-        {/* Sidebar Navigation */}
-        {sidebar}
+        <aside className="w-64 bg-white shadow-sm flex-shrink-0 hidden lg:flex sticky top-0 self-start h-screen overflow-y-auto">
+          <div className="h-full flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <Link href="/dashboard" className="flex items-center space-x-2">
+                <GraduationCap className="h-8 w-8 text-primary-600" />
+                <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
+              </Link>
+            </div>
+            <nav className="flex-1 p-4 space-y-2 min-w-0">
+              {renderLinks(primaryLinks)}
+              {isAdmin && (
+                <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
+                  {renderLinks(adminLinks)}
+                </div>
+              )}
+            </nav>
+            <div className="p-4 border-t border-gray-200 space-y-3">
+              <LanguageSwitch variant="minimal" />
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center space-x-2 text-gray-700 hover:text-red-600 py-2 rounded-lg hover:bg-gray-50"
+              >
+                <LogOut className="h-5 w-5" />
+                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+              </button>
+            </div>
+          </div>
+        </aside>
 
-        {/* Mobile Top Navigation */}
-        <div className="lg:hidden w-full">
-          <nav className="bg-white shadow-sm">
-            <div className="px-4 sm:px-6">
-              <div className="flex justify-between items-center h-16">
-                <Link href="/dashboard" className="flex items-center space-x-2">
-                  <GraduationCap className="h-6 w-6 text-primary-600" />
-                  <span className="text-lg font-bold text-gray-900">{t('common.appNameShort')}</span>
-                </Link>
-                
-                <div className="flex items-center space-x-2">
-                  <button
-                    className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
-                    onClick={() => setWpSidebarOpen(true)}
-                    aria-label="Open sidebar menu"
-                  >
-                    <LayoutDashboard className="h-5 w-5" />
-                  </button>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="lg:hidden w-full">
+            <nav className="bg-white shadow-sm">
+              <div className="px-4 sm:px-6">
+                <div className="flex justify-between items-center h-16">
+                  <Link href="/dashboard" className="flex items-center space-x-2">
+                    <GraduationCap className="h-6 w-6 text-primary-600" />
+                    <span className="text-lg font-bold text-gray-900">{t('common.appNameShort')}</span>
+                  </Link>
                   <button
                     className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
                     onClick={() => setMobileMenuOpen((prev) => !prev)}
@@ -214,40 +179,32 @@ export default function Layout({ children }: LayoutProps) {
                   </button>
                 </div>
               </div>
-            </div>
-          </nav>
+            </nav>
 
-          {/* Mobile Navigation Menu */}
-          <div className={`bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'}`}>
-            <div className="px-4 sm:px-6 py-4 space-y-4">
-              <div className="space-y-2">
-                {renderLinks(primaryLinks, true)}
-              </div>
-
-              {isAdmin && (
-                <div className="pt-3 border-t border-gray-100 space-y-2">
-                  {renderLinks(adminLinks, true)}
+            <div className={`bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'}`}>
+              <div className="px-4 sm:px-6 py-4 space-y-4">
+                <div className="space-y-2">{renderLinks(primaryLinks, true)}</div>
+                {isAdmin && (
+                  <div className="pt-3 border-t border-gray-100 space-y-2">
+                    {renderLinks(adminLinks, true)}
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <LanguageSwitch variant="minimal" />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 text-gray-700 hover:text-red-600"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+                  </button>
                 </div>
-              )}
-
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                <LanguageSwitch variant="minimal" />
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-red-600"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-                </button>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Main Content - Full Width in WordPress */}
-        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
+          <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+        </div>
       </div>
     );
   }
