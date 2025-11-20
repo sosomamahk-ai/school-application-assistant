@@ -62,6 +62,7 @@ export interface Translations {
   auth: {
     login: {
       title: string;
+      subtitle: string;
       email: string;
       emailOption: string;
       emailPlaceholder: string;
@@ -369,6 +370,7 @@ export const translations: Record<Language, Translations> = {
     auth: {
       login: {
         title: 'Sign in to your account',
+        subtitle: 'Please sign in to your account',
         email: 'Email address',
         emailOption: 'Use email',
         emailPlaceholder: 'you@example.com',
@@ -674,6 +676,7 @@ export const translations: Record<Language, Translations> = {
     auth: {
       login: {
         title: '登录到您的账户',
+        subtitle: '请使用您的账号进行登录',
         email: '邮箱地址',
         emailOption: '邮箱登录',
         emailPlaceholder: '请输入邮箱地址',
@@ -979,6 +982,7 @@ export const translations: Record<Language, Translations> = {
     auth: {
       login: {
         title: '登入您的帳戶',
+        subtitle: '請使用您的帳號進行登入',
         email: '電子郵件地址',
         emailOption: '電子郵件登入',
         emailPlaceholder: '請輸入電子郵件地址',

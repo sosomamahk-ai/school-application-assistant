@@ -252,7 +252,7 @@ export default function Auth() {
         }
 
         .overlay {
-          background: linear-gradient(120deg, #3498db, #8e44ad);
+          background: linear-gradient(120deg, #4682B4, #5F9EA0);
           color: #fff;
           position: relative;
           left: -100%;
@@ -337,7 +337,7 @@ export default function Auth() {
           top: 100%;
           width: 0%;
           height: 2px;
-          background: linear-gradient(120deg, #3498db, #8e44ad);
+          background: linear-gradient(120deg, #4682B4, #5F9EA0);
           transition: 0.5s;
         }
 
@@ -357,7 +357,7 @@ export default function Auth() {
         }
 
         .form-container button {
-          background: linear-gradient(120deg, #3498db, #8e44ad);
+          background: linear-gradient(120deg, #4682B4, #5F9EA0);
           border: none;
           background-size: 200%;
           color: #fff;
@@ -405,12 +405,13 @@ export default function Auth() {
           border-radius: 5px;
           cursor: pointer;
           transition: all 0.3s;
+          color: #374151;
         }
 
         .login-method-toggle button.active {
-          background: #3498db;
+          background: #4682B4;
           color: #fff;
-          border-color: #3498db;
+          border-color: #4682B4;
         }
 
         @media (max-width: 768px) {
@@ -438,12 +439,19 @@ export default function Auth() {
         }
       `}} />
 
-      <div className="min-h-screen w-full bg-gradient-to-b from-primary-50 to-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom, #E6F2F8, #ffffff)' }}>
         <div className="absolute top-4 right-4 z-50">
           <LanguageSwitch variant="minimal" />
         </div>
 
-        <div className={`auth-container ${isSignUp ? 'right-panel-active' : ''}`} id="auth-box">
+        <div className={`auth-container ${isSignUp ? 'right-panel-active' : ''}`} id="auth-box" style={{ marginTop: '80px' }}>
+          {/* Logo and Title - Above the container */}
+          <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 text-center w-full">
+            <Link href="/" className="flex items-center justify-center space-x-2 mb-2">
+              <GraduationCap className="h-10 w-10" style={{ color: '#4682B4' }} />
+              <span className="text-2xl font-bold" style={{ color: '#1e293b' }}>{t('common.appNameShort')}</span>
+            </Link>
+          </div>
           {/* Sign Up Form */}
           <div className="form-container sign-up-container">
             <form onSubmit={handleRegister}>
@@ -512,7 +520,8 @@ export default function Auth() {
           {/* Sign In Form */}
           <div className="form-container sign-in-container">
             <form onSubmit={handleLogin}>
-              <h1 className="text-2xl font-bold mb-4">{t('auth.login.title')}</h1>
+              <h1 className="text-2xl font-bold mb-2">{t('auth.login.title')}</h1>
+              <p className="text-sm text-gray-600 mb-6">{t('auth.login.subtitle') || '请使用您的账号进行登录'}</p>
               
               {error && !isSignUp && (
                 <div className="error-message">{error}</div>
