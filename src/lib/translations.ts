@@ -131,6 +131,11 @@ export const translations: TranslationData = {
     'zh-CN': '登录到您的账户',
     'zh-TW': '登入您的帳戶',
   },
+  'auth.login.subtitle': {
+    en: 'Please sign in to your account',
+    'zh-CN': '请使用您的账号进行登录',
+    'zh-TW': '請使用您的帳號進行登入',
+  },
   'auth.login.email': {
     en: 'Email address',
     'zh-CN': '邮箱地址',
@@ -260,6 +265,16 @@ export const translations: TranslationData = {
     en: 'Already have an account?',
     'zh-CN': '已有账户？',
     'zh-TW': '已有帳戶？',
+  },
+  'auth.register.noAccount': {
+    en: "Don't have an account?",
+    'zh-CN': '还没有账户？',
+    'zh-TW': '還沒有帳戶？',
+  },
+  'auth.register.joinUs': {
+    en: 'Join us now and start your journey with us',
+    'zh-CN': '立即注册加入我们，和我们一起开始旅程吧',
+    'zh-TW': '立即註冊加入我們，和我們一起開始旅程吧',
   },
   'auth.register.signIn': {
     en: 'Sign in',

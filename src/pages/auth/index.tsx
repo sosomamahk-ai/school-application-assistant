@@ -444,14 +444,15 @@ export default function Auth() {
           <LanguageSwitch variant="minimal" />
         </div>
 
+        {/* Logo and Title - Above the container */}
+        <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 text-center w-full z-50">
+          <Link href="/" className="flex items-center justify-center space-x-2 mb-2">
+            <GraduationCap className="h-10 w-10" style={{ color: '#4682B4' }} />
+            <span className="text-2xl font-bold" style={{ color: '#1e293b' }}>{t('common.appNameShort')}</span>
+          </Link>
+        </div>
+
         <div className={`auth-container ${isSignUp ? 'right-panel-active' : ''}`} id="auth-box" style={{ marginTop: '80px' }}>
-          {/* Logo and Title - Above the container */}
-          <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 text-center w-full">
-            <Link href="/" className="flex items-center justify-center space-x-2 mb-2">
-              <GraduationCap className="h-10 w-10" style={{ color: '#4682B4' }} />
-              <span className="text-2xl font-bold" style={{ color: '#1e293b' }}>{t('common.appNameShort')}</span>
-            </Link>
-          </div>
           {/* Sign Up Form */}
           <div className="form-container sign-up-container">
             <form onSubmit={handleRegister}>
