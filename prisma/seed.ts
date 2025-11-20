@@ -281,16 +281,89 @@ const sampleTemplates = [
   }
 ];
 
+const schoolMeta = {
+  'harvard-graduate': {
+    name: 'Harvard University (GSAS)',
+    shortName: 'Harvard GSAS',
+    campusLocation: 'Cambridge, MA',
+    gradeRange: 'Graduate',
+    officialLink: 'https://gsas.harvard.edu/admissions',
+    applicationStart: new Date('2024-09-01T00:00:00.000Z'),
+    applicationEnd: new Date('2024-12-15T23:59:59.000Z'),
+    interviewTime: new Date('2025-02-10T00:00:00.000Z'),
+    examTime: null,
+    resultTime: new Date('2025-03-25T00:00:00.000Z'),
+    requiredDocuments: [
+      'Online application form',
+      'Statement of purpose',
+      'Resume/CV',
+      'Three recommendation letters',
+      'Official transcripts'
+    ],
+    requirements: [
+      'Minimum GPA 3.0/4.0',
+      'TOEFL/IELTS for non-native English speakers'
+    ]
+  },
+  'stanford-mba': {
+    name: 'Stanford GSB MBA',
+    shortName: 'Stanford GSB',
+    campusLocation: 'Stanford, CA',
+    gradeRange: 'MBA',
+    officialLink: 'https://www.gsb.stanford.edu/programs/mba/admission',
+    applicationStart: new Date('2024-06-01T00:00:00.000Z'),
+    applicationEnd: new Date('2024-09-10T23:59:59.000Z'),
+    interviewTime: new Date('2024-10-15T00:00:00.000Z'),
+    examTime: null,
+    resultTime: new Date('2024-12-05T00:00:00.000Z'),
+    requiredDocuments: [
+      'Online application form',
+      'Two recommendation letters',
+      'GMAT/GRE score report',
+      'TOEFL/IELTS (if applicable)'
+    ],
+    requirements: [
+      'Undergraduate degree or equivalent',
+      'Minimum 2 years work experience recommended'
+    ]
+  },
+  'mit-engineering': {
+    name: 'MIT School of Engineering',
+    shortName: 'MIT SoE',
+    campusLocation: 'Cambridge, MA',
+    gradeRange: 'Graduate',
+    officialLink: 'https://soe.mit.edu/graduate-admissions',
+    applicationStart: new Date('2024-07-15T00:00:00.000Z'),
+    applicationEnd: new Date('2024-12-01T23:59:59.000Z'),
+    interviewTime: new Date('2025-02-01T00:00:00.000Z'),
+    examTime: null,
+    resultTime: new Date('2025-03-20T00:00:00.000Z'),
+    requiredDocuments: [
+      'Online application',
+      'Official transcripts',
+      'Statement of objectives',
+      'Three letters of recommendation',
+      'GRE (optional for some departments)'
+    ],
+    requirements: [
+      'Demonstrated research experience',
+      'Strong quantitative background'
+    ]
+  }
+} as const;
+
 async function main() {
   console.log('Starting seed...');
 
   // Clear existing templates
+  await prisma.application.deleteMany();
+  await prisma.school.deleteMany();
   await prisma.schoolFormTemplate.deleteMany();
-  console.log('Cleared existing templates');
+  console.log('Cleared existing applications, schools, and templates');
 
   // Create sample templates
   for (const template of sampleTemplates) {
-    await prisma.schoolFormTemplate.create({
+    const createdTemplate = await prisma.schoolFormTemplate.create({
       data: {
         schoolId: template.schoolId,
         schoolName: template.schoolName,
@@ -301,6 +374,29 @@ async function main() {
       }
     });
     console.log(`Created template: ${template.schoolName} - ${template.program}`);
+
+    const meta = schoolMeta[template.schoolId as keyof typeof schoolMeta];
+    if (meta) {
+      await prisma.school.create({
+        data: {
+          name: meta?.name || template.schoolName as string,
+          templateId: createdTemplate.id,
+          shortName: meta.shortName,
+          campusLocation: meta.campusLocation,
+          gradeRange: meta.gradeRange,
+          officialLink: meta.officialLink,
+          applicationStart: meta.applicationStart,
+          applicationEnd: meta.applicationEnd,
+          interviewTime: meta.interviewTime,
+          examTime: meta.examTime ?? undefined,
+          resultTime: meta.resultTime,
+          requiredDocuments: meta.requiredDocuments as any,
+          requirements: meta.requirements as any,
+          metadataSource: 'seed'
+        }
+      });
+      console.log(`Linked school metadata for ${template.schoolName}`);
+    }
   }
 
   console.log('Seed completed successfully!');
