@@ -98,6 +98,15 @@ body.wordpress-iframe > div#__next {
   overflow: hidden !important;
 }
 
+/* WordPress环境：确保sidebar可以滚动且固定在顶部 */
+body.wordpress-embed aside,
+body.wordpress-iframe aside {
+  position: sticky !important;
+  top: 0 !important;
+  max-height: 100vh !important;
+  overflow-y: auto !important;
+}
+
 /* 手机端全局字体大小调整 */
 @media (max-width: 640px) {
   body {
