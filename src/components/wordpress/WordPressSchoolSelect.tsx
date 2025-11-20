@@ -57,17 +57,16 @@ export default function WordPressSchoolSelect({
   }, [open]);
 
   const filteredSchools = useMemo(() => {
-    if (!search.trim()) {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) {
       return schools;
     }
-    const keyword = search.trim().toLowerCase();
     return schools.filter((school) => {
       const tokens = [
         school.title,
-        school.category,
-        school.acf?.district,
-        school.acf?.curriculum,
-        school.acf?.website
+        school.acf?.name_chinese,
+        school.acf?.name_english,
+        school.acf?.name_short
       ]
         .filter(Boolean)
         .map((token) => String(token).toLowerCase());
