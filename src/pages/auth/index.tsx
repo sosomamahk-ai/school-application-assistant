@@ -215,6 +215,28 @@ export default function Auth() {
           height: 100%;
           justify-content: center;
           text-align: center;
+          overflow-y: auto;
+        }
+
+        .form-container form h1 {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          color: #1e293b !important;
+          font-size: 1.5rem !important;
+          font-weight: bold !important;
+          margin-bottom: 0.5rem !important;
+          margin-top: 0 !important;
+          padding: 0 !important;
+        }
+
+        .form-container form p {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          color: #6b7280 !important;
+          font-size: 0.875rem !important;
+          margin-bottom: 1.5rem !important;
         }
 
         .sign-in-container {
@@ -352,8 +374,25 @@ export default function Auth() {
 
         button.ghost {
           background: transparent;
-          border-color: #fff;
+          border: 2px solid #fff;
           color: #fff;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: bold;
+          padding: 12px 45px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+
+        button.ghost:hover {
+          background: rgba(255, 255, 255, 0.2);
+          transform: scale(1.05);
+        }
+
+        button.ghost:active {
+          transform: scale(0.95);
         }
 
         .form-container button {
@@ -439,20 +478,22 @@ export default function Auth() {
         }
       `}} />
 
-      <div className="min-h-screen w-full flex flex-col items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom, #E6F2F8, #ffffff)' }}>
+      <div className="min-h-screen w-full flex flex-col items-center p-4 relative" style={{ background: 'linear-gradient(to bottom, #E6F2F8, #ffffff)' }}>
+        {/* Language Switch */}
         <div className="absolute top-4 right-4 z-50">
           <LanguageSwitch variant="minimal" />
         </div>
 
-        {/* Logo and Title - Above the container */}
-        <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 text-center w-full z-50">
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-2">
+        {/* Logo and Title - At the top of the page */}
+        <div className="w-full flex justify-center mb-8 mt-8">
+          <Link href="/" className="flex items-center justify-center space-x-2">
             <GraduationCap className="h-10 w-10" style={{ color: '#4682B4' }} />
             <span className="text-2xl font-bold" style={{ color: '#1e293b' }}>{t('common.appNameShort')}</span>
           </Link>
         </div>
 
-        <div className={`auth-container ${isSignUp ? 'right-panel-active' : ''}`} id="auth-box" style={{ marginTop: '80px' }}>
+        {/* Auth Container */}
+        <div className={`auth-container ${isSignUp ? 'right-panel-active' : ''}`} id="auth-box">
           {/* Sign Up Form */}
           <div className="form-container sign-up-container">
             <form onSubmit={handleRegister}>
