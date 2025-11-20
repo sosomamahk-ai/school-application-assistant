@@ -1,12 +1,15 @@
+/* eslint-disable @next/next/no-img-element */
 import { useMemo } from 'react';
 import DataGrid, { Column, RowsChangeData } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
-import { AlertCircle, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RefreshCw, Trash2, LinkIcon } from 'lucide-react';
 import type { RowValidationMap, School, TemplateOption } from './types';
+import type { WordPressSchool, WordPressSchoolType } from '@/types/wordpress';
 
 interface SchoolGridProps {
   rows: School[];
   templates: TemplateOption[];
+  wordpressSchools: WordPressSchool[];
   onRowsChange: (rows: School[], data: RowsChangeData<School>) => void;
   dirtyMap: Record<string, boolean>;
   onSaveRow: (row: School) => Promise<void>;
@@ -14,6 +17,7 @@ interface SchoolGridProps {
   onDeleteRow: (row: School) => void;
   savingRowId?: string | null;
   validationMap: RowValidationMap;
+  onRequestWordPressBinding: (row: School) => void;
 }
 
 const TemplateEditor = (props: any) => {
@@ -62,24 +66,100 @@ const DateCellEditor = ({ row, column, onRowChange }: any) => (
   />
 );
 
+const buildWordPressKey = (id?: number | null, type?: WordPressSchoolType | null) =>
+  id ? `${type ?? 'profile'}-${id}` : null;
+
 export default function SchoolGrid({
   rows,
   templates,
+  wordpressSchools,
   onRowsChange,
   dirtyMap,
   onSaveRow,
   onResetRow,
   onDeleteRow,
   savingRowId,
-  validationMap
+  validationMap,
+  onRequestWordPressBinding
 }: SchoolGridProps) {
   const templateOptions = useMemo(
     () => templates.map((tpl) => ({ id: tpl.id, label: tpl.label })),
     [templates]
   );
+  const wordpressMap = useMemo(() => {
+    const map = new Map<string, WordPressSchool>();
+    wordpressSchools.forEach((school) => {
+      map.set(`${school.type}-${school.id}`, school);
+    });
+    return map;
+  }, [wordpressSchools]);
 
   const columns: Column<School>[] = useMemo(
     () => [
+      {
+        key: 'wordpressSchool',
+        name: 'WordPress 学校',
+        width: 320,
+        resizable: true,
+        formatter: ({ row }: { row: School }) => {
+          const key = buildWordPressKey(row.wordpressSchoolId, row.wordpressSchoolType ?? null);
+          const wpSchool = key ? wordpressMap.get(key) : undefined;
+
+          if (!wpSchool) {
+            return (
+              <button
+                type="button"
+                className="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 hover:border-primary-300 hover:text-primary-600"
+                onClick={() => onRequestWordPressBinding(row)}
+              >
+                绑定 WordPress 学校
+              </button>
+            );
+          }
+
+          return (
+            <div className="flex flex-col gap-2 rounded-xl border border-gray-100 bg-gray-50/60 p-2">
+              <div className="flex items-center gap-3">
+                {wpSchool.logo ? (
+                  <img
+                    src={wpSchool.logo}
+                    alt={wpSchool.title}
+                    className="h-10 w-10 rounded-lg border border-gray-100 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary-600">
+                    {wpSchool.title.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">{wpSchool.title}</p>
+                  <p className="text-xs text-gray-500">
+                    {[wpSchool.category, wpSchool.acf?.district].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <a
+                  href={wpSchool.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
+                >
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  查看学校资料
+                </a>
+                <button
+                  type="button"
+                  className="text-gray-500 hover:text-primary-600"
+                  onClick={() => onRequestWordPressBinding(row)}
+                >
+                  更换
+                </button>
+              </div>
+            </div>
+          );
+        }
+      },
       { key: 'name', name: '学校名称', editor: TextCellEditor, width: 220 },
       { key: 'shortName', name: '简称', editor: TextCellEditor, width: 140 },
       {
@@ -145,7 +225,17 @@ export default function SchoolGrid({
         }
       }
     ],
-    [dirtyMap, onDeleteRow, onResetRow, onSaveRow, templateOptions, savingRowId, validationMap]
+    [
+      dirtyMap,
+      onDeleteRow,
+      onResetRow,
+      onSaveRow,
+      templateOptions,
+      savingRowId,
+      validationMap,
+      wordpressMap,
+      onRequestWordPressBinding
+    ]
   );
 
   return (
@@ -158,6 +248,7 @@ export default function SchoolGrid({
         rowKeyGetter={(row: School) => row.id}
         defaultColumnOptions={{ resizable: true }}
         rowClass={(row: School) => (validationMap[row.id]?.length ? 'bg-red-50/60' : undefined)}
+        rowHeight={96}
       />
     </div>
   );

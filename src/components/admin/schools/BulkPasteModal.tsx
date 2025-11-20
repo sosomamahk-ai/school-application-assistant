@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { parsePastedTable, AdminSchoolPayload } from '@/utils/admin/schoolImport';
 import type { TemplateOption } from './types';
+import WordPressSchoolInfoCard from '@/components/wordpress/WordPressSchoolInfoCard';
 
 interface BulkImportPanelProps {
   templates: TemplateOption[];
   onSubmit: (rows: AdminSchoolPayload[]) => Promise<void>;
 }
 
-const PREVIEW_COLUMNS: Array<{ key: keyof AdminSchoolPayload | 'templateLabel'; label: string }> = [
+const PREVIEW_COLUMNS: Array<{ key: keyof AdminSchoolPayload | 'templateLabel' | 'wordpressMeta'; label: string }> = [
+  { key: 'wordpressMeta', label: 'WordPress 学校' },
   { key: 'name', label: '学校名称' },
   { key: 'templateLabel', label: '映射模板' },
   { key: 'applicationStart', label: '开始申请' },
@@ -35,6 +37,11 @@ export default function BulkImportPanel({ templates, onSubmit }: BulkImportPanel
   }, [templates]);
 
   const templateIdSet = useMemo(() => new Set(templates.map((tpl) => tpl.id)), [templates]);
+  const templateMap = useMemo(() => {
+    const map = new Map<string, TemplateOption>();
+    templates.forEach((tpl) => map.set(tpl.id, tpl));
+    return map;
+  }, [templates]);
 
   const formatIssues = (issues: { line: number; message: string }[]) =>
     issues.map((issue) => `第 ${issue.line} 行：${issue.message}`);
@@ -57,7 +64,11 @@ export default function BulkImportPanel({ templates, onSubmit }: BulkImportPanel
       }
     });
 
-    setParsedRows(result.rows);
+    const sanitizedRows = result.rows.map((row) => ({
+      ...row,
+      templateId: row.templateId?.trim() || row.templateId
+    }));
+    setParsedRows(sanitizedRows);
     setParsedHeaders(result.headers);
     setMessages([...formatIssues(result.issues), ...templateIssues]);
     setParsedAt(Date.now());
@@ -209,6 +220,23 @@ export default function BulkImportPanel({ templates, onSubmit }: BulkImportPanel
                         return (
                           <td key={column.key} className="px-3 py-2">
                             {templateLabelMap.get(row.templateId) || `ID: ${row.templateId}`}
+                          </td>
+                        );
+                      }
+                      if (column.key === 'wordpressMeta') {
+                        const tpl = templateMap.get(row.templateId);
+                        return (
+                          <td key={column.key} className="px-3 py-2">
+                            {tpl?.wordpressSchool ? (
+                              <WordPressSchoolInfoCard
+                                school={tpl.wordpressSchool}
+                                variant="compact"
+                                showAction
+                                actionLabel="查看学校资料"
+                              />
+                            ) : (
+                              <p className="text-xs text-gray-400">未匹配 WordPress 学校</p>
+                            )}
                           </td>
                         );
                       }

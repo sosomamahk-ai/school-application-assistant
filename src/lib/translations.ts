@@ -119,6 +119,21 @@ export const translations: TranslationData = {
     'zh-CN': '设置',
     'zh-TW': '設定',
   },
+  'navbar.schools': {
+    en: 'Available Schools',
+    'zh-CN': '可申请学校',
+    'zh-TW': '可申請學校',
+  },
+  'navbar.applicationsOverview': {
+    en: 'Applications Overview',
+    'zh-CN': '申请进度',
+    'zh-TW': '申請進度',
+  },
+  'navbar.adminSchools': {
+    en: 'School Mapping Management',
+    'zh-CN': '学校映射管理',
+    'zh-TW': '學校映射管理',
+  },
   'navbar.logout': {
     en: 'Logout',
     'zh-CN': '退出',

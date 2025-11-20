@@ -6,6 +6,11 @@ import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from '@/contexts/TranslationContext';
 import type { TranslationData } from '@/lib/translations';
+import WordPressSchoolSelect from '@/components/wordpress/WordPressSchoolSelect';
+import WordPressSchoolInfoCard from '@/components/wordpress/WordPressSchoolInfoCard';
+import { useWordPressSchools } from '@/hooks/useWordPressSchools';
+import type { WordPressSchool } from '@/types/wordpress';
+import { buildWordPressTemplateId, matchWordPressSchoolFromTemplate } from '@/services/wordpressSchoolService';
 
 interface Field {
   id: string;
@@ -35,6 +40,14 @@ export default function NewTemplate() {
   const [saving, setSaving] = useState(false);
   const [savingTranslations, setSavingTranslations] = useState(false);
   const [translationsData, setTranslationsData] = useState<TranslationData>({});
+  const {
+    data: wordpressData,
+    loading: wordpressLoading,
+    error: wordpressError,
+    refetch: refetchWordPress
+  } = useWordPressSchools();
+  const wordpressSchools = useMemo(() => wordpressData?.all ?? [], [wordpressData]);
+  const [selectedWordPressSchool, setSelectedWordPressSchool] = useState<WordPressSchool | null>(null);
   const [template, setTemplate] = useState({
     schoolId: '',
     schoolName: '',
@@ -44,6 +57,32 @@ export default function NewTemplate() {
     isActive: true,
   });
   const [fields, setFields] = useState<Field[]>([]);
+
+  useEffect(() => {
+    if (!selectedWordPressSchool) {
+      return;
+    }
+    setTemplate((prev) => ({
+      ...prev,
+      schoolId: buildWordPressTemplateId(selectedWordPressSchool),
+      schoolName: selectedWordPressSchool.title,
+      category: selectedWordPressSchool.category || prev.category,
+      program: prev.program || selectedWordPressSchool.acf?.program || ''
+    }));
+  }, [selectedWordPressSchool]);
+
+  useEffect(() => {
+    if (!template.schoolId || !wordpressSchools.length) {
+      return;
+    }
+    const matched = matchWordPressSchoolFromTemplate(
+      { schoolId: template.schoolId, schoolName: template.schoolName },
+      wordpressSchools
+    );
+    if (matched && matched.id !== selectedWordPressSchool?.id) {
+      setSelectedWordPressSchool(matched);
+    }
+  }, [template.schoolId, template.schoolName, wordpressSchools, selectedWordPressSchool]);
 
   // Fetch translations data
   useEffect(() => {
@@ -117,8 +156,12 @@ export default function NewTemplate() {
 
   const handleSave = async () => {
     // 验证必填字段
-    if (!template.schoolId || !template.schoolName || !template.program) {
-      alert('请填写必填字段：学校ID、学校名称、项目名称');
+    if (!template.schoolId) {
+      alert('请先从 WordPress 学校列表中选择要绑定的学校');
+      return;
+    }
+    if (!template.schoolName || !template.program) {
+      alert('请填写必填字段：学校名称、项目名称');
       return;
     }
 
@@ -296,17 +339,46 @@ export default function NewTemplate() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">基本信息</h2>
           <div className="space-y-4">
             <div>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  绑定 WordPress 学校<span className="text-red-500">*</span>
+                </label>
+                {wordpressError && (
+                  <button
+                    type="button"
+                    onClick={() => refetchWordPress()}
+                    className="text-xs text-red-500 underline"
+                  >
+                    重试加载
+                  </button>
+                )}
+              </div>
+              <WordPressSchoolSelect
+                value={selectedWordPressSchool}
+                onChange={setSelectedWordPressSchool}
+                schools={wordpressSchools}
+                loading={wordpressLoading}
+                error={wordpressError}
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                选择后系统会自动生成学校 ID，并展示 WordPress 中的校区、课程等信息。
+              </p>
+              <div className="mt-4">
+                <WordPressSchoolInfoCard school={selectedWordPressSchool} />
+              </div>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                学校ID（英文，唯一标识）<span className="text-red-500">*</span>
+                学校ID（自动生成）<span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={template.schoolId}
-                onChange={(e) => setTemplate({ ...template, schoolId: e.target.value })}
-                className="input-field"
-                placeholder="例如：tsinghua-university-2024"
+                readOnly
+                className="input-field bg-gray-50"
+                placeholder="请先选择 WordPress 学校"
               />
-              <p className="text-sm text-gray-500 mt-1">只能使用小写字母、数字和连字符</p>
             </div>
 
             <div>

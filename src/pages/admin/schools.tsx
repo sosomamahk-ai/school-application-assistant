@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import clsx from 'clsx';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/router';
 import { useTranslation } from '@/contexts/TranslationContext';
-import { Search, PlusCircle, RefreshCw, Save } from 'lucide-react';
+import { Search, PlusCircle, RefreshCw, Save, AlertCircle, X } from 'lucide-react';
 import type { RowsChangeData } from 'react-data-grid';
 import BulkImportPanel from '@/components/admin/schools/BulkPasteModal';
 import SchoolGrid from '@/components/admin/schools/SchoolGrid';
 import type { RowValidationMap, School as GridSchool, TemplateOption } from '@/components/admin/schools/types';
 import type { AdminSchoolPayload } from '@/utils/admin/schoolImport';
+import { useWordPressSchools } from '@/hooks/useWordPressSchools';
+import WordPressSchoolSelect from '@/components/wordpress/WordPressSchoolSelect';
+import WordPressSchoolInfoCard from '@/components/wordpress/WordPressSchoolInfoCard';
+import type { WordPressSchool } from '@/types/wordpress';
+import { matchWordPressSchoolFromTemplate } from '@/services/wordpressSchoolService';
 
 interface ApiSchool {
   id: string;
@@ -24,19 +30,39 @@ interface ApiSchool {
   notes: string | null;
 }
 
-const mapApiSchool = (school: ApiSchool): GridSchool => ({
-  id: school.id,
-  name: school.name,
-  shortName: school.shortName,
-  templateId: school.templateId,
-  applicationStart: school.applicationStart || '',
-  applicationEnd: school.applicationEnd || '',
-  interviewTime: school.interviewTime || '',
-  examTime: school.examTime || '',
-  resultTime: school.resultTime || '',
-  officialLink: school.officialLink || '',
-  notes: school.notes || ''
-});
+interface ApiTemplate {
+  id: string;
+  schoolId: string;
+  schoolName: string | Record<string, string>;
+  program: string;
+  category?: string | null;
+  description?: string | null;
+}
+
+const buildWordPressKey = (id?: number | null, type?: WordPressSchool['type'] | null) =>
+  id ? `${type ?? 'profile'}-${id}` : null;
+
+const mapApiSchool = (
+  school: ApiSchool,
+  templateWordPressMap: Map<string, WordPressSchool | null>
+): GridSchool => {
+  const matched = templateWordPressMap.get(school.templateId) ?? null;
+  return {
+    id: school.id,
+    name: school.name,
+    shortName: school.shortName,
+    templateId: school.templateId,
+    applicationStart: school.applicationStart || '',
+    applicationEnd: school.applicationEnd || '',
+    interviewTime: school.interviewTime || '',
+    examTime: school.examTime || '',
+    resultTime: school.resultTime || '',
+    officialLink: school.officialLink || '',
+    notes: school.notes || '',
+    wordpressSchoolId: matched?.id ?? null,
+    wordpressSchoolType: matched?.type ?? null
+  };
+};
 
 const DATE_FIELDS: Array<{ key: keyof GridSchool; label: string }> = [
   { key: 'applicationStart', label: '开始申请' },
@@ -49,15 +75,64 @@ const DATE_FIELDS: Array<{ key: keyof GridSchool; label: string }> = [
 export default function AdminSchoolsPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const {
+    data: wordpressData,
+    loading: wordpressLoading,
+    error: wordpressError,
+    refetch: refetchWordPress
+  } = useWordPressSchools();
+  const wordpressSchools = useMemo(() => wordpressData?.all ?? [], [wordpressData]);
   const [loading, setLoading] = useState(true);
   const [schools, setSchools] = useState<GridSchool[]>([]);
   const [originalRows, setOriginalRows] = useState<Record<string, GridSchool>>({});
   const [dirtyMap, setDirtyMap] = useState<Record<string, boolean>>({});
-  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [templateRecords, setTemplateRecords] = useState<ApiTemplate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [savingRowId, setSavingRowId] = useState<string | null>(null);
   const [savingAll, setSavingAll] = useState(false);
   const [activeTab, setActiveTab] = useState<'manual' | 'bulk'>('manual');
+  const [activeWordPressRowId, setActiveWordPressRowId] = useState<string | null>(null);
+
+  const templates = useMemo<TemplateOption[]>(() => {
+    return templateRecords.map((tpl) => {
+      const wordpressSchool = matchWordPressSchoolFromTemplate(
+        { schoolId: tpl.schoolId, schoolName: tpl.schoolName },
+        wordpressSchools
+      );
+      return {
+        id: tpl.id,
+        label: `${tpl.schoolId} ｜ ${tpl.program}`,
+        schoolId: tpl.schoolId,
+        schoolName: typeof tpl.schoolName === 'string'
+          ? tpl.schoolName
+          : tpl.schoolName?.['zh-CN'] ||
+            tpl.schoolName?.['zh'] ||
+            tpl.schoolName?.['en'] ||
+            '',
+        program: tpl.program,
+        category: tpl.category,
+        wordpressSchool: wordpressSchool ?? undefined
+      };
+    });
+  }, [templateRecords, wordpressSchools]);
+
+  const templateWordPressMap = useMemo(() => {
+    const map = new Map<string, WordPressSchool | null>();
+    templates.forEach((tpl) => {
+      map.set(tpl.id, tpl.wordpressSchool ?? null);
+    });
+    return map;
+  }, [templates]);
+
+  const templateIdSet = useMemo(() => new Set(templates.map((tpl) => tpl.id)), [templates]);
+
+  const wordpressIndexByKey = useMemo(() => {
+    const map = new Map<string, WordPressSchool>();
+    wordpressSchools.forEach((school) => {
+      map.set(`${school.type}-${school.id}`, school);
+    });
+    return map;
+  }, [wordpressSchools]);
 
   const fetchTemplates = useCallback(async () => {
     const response = await fetch('/api/admin/templates', {
@@ -65,12 +140,7 @@ export default function AdminSchoolsPage() {
     });
     if (response.ok) {
       const data = await response.json();
-      setTemplates(
-        (data.templates || []).map((tpl: any) => ({
-          id: tpl.id,
-          label: `${tpl.schoolId} ｜ ${tpl.program}`
-        }))
-      );
+      setTemplateRecords(data.templates || []);
     }
   }, []);
 
@@ -89,7 +159,9 @@ export default function AdminSchoolsPage() {
         return;
       }
       const data = await response.json();
-      const mapped: GridSchool[] = (data.schools || []).map(mapApiSchool);
+      const mapped: GridSchool[] = (data.schools || []).map((item: ApiSchool) =>
+        mapApiSchool(item, templateWordPressMap)
+      );
       const original: Record<string, GridSchool> = {};
       mapped.forEach((row) => {
         original[row.id] = { ...row };
@@ -102,7 +174,7 @@ export default function AdminSchoolsPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, searchTerm]);
+  }, [router, searchTerm, templateWordPressMap]);
 
   useEffect(() => {
     const tokenInStorage = localStorage.getItem('token');
@@ -119,8 +191,6 @@ export default function AdminSchoolsPage() {
     }, 300);
     return () => clearTimeout(handler);
   }, [fetchSchools]);
-
-  const templateIdSet = useMemo(() => new Set(templates.map((tpl) => tpl.id)), [templates]);
 
   const validateRow = useCallback(
     (row: GridSchool) => {
@@ -159,6 +229,34 @@ export default function AdminSchoolsPage() {
     return map;
   }, [schools, validateRow]);
 
+  const applyWordPressToRow = useCallback(
+    (row: GridSchool, wpSchool: WordPressSchool | null): GridSchool => {
+      if (!wpSchool) {
+        return {
+          ...row,
+          wordpressSchoolId: null,
+          wordpressSchoolType: null
+        };
+      }
+      const matchedTemplate = templates.find(
+        (tpl) =>
+          tpl.wordpressSchool &&
+          tpl.wordpressSchool.id === wpSchool.id &&
+          tpl.wordpressSchool.type === wpSchool.type
+      );
+      return {
+        ...row,
+        wordpressSchoolId: wpSchool.id,
+        wordpressSchoolType: wpSchool.type,
+        name: wpSchool.title,
+        shortName: row.shortName || wpSchool.acf?.short_name || row.shortName,
+        officialLink: wpSchool.acf?.website || wpSchool.url || row.officialLink,
+        templateId: matchedTemplate ? matchedTemplate.id : row.templateId
+      };
+    },
+    [templates]
+  );
+
   const handleRowsChange = (nextRows: GridSchool[], data: RowsChangeData<GridSchool>) => {
     setSchools(nextRows);
     const indexes = data?.indexes || [];
@@ -174,6 +272,24 @@ export default function AdminSchoolsPage() {
       return next;
     });
   };
+
+  const handleWordPressSelection = useCallback(
+    (selection: WordPressSchool | null) => {
+      if (!activeWordPressRowId) {
+        setActiveWordPressRowId(null);
+        return;
+      }
+      setSchools((prev) =>
+        prev.map((row) => {
+          if (row.id !== activeWordPressRowId) return row;
+          return applyWordPressToRow(row, selection);
+        })
+      );
+      setDirtyMap((prev) => ({ ...prev, [activeWordPressRowId]: true }));
+      setActiveWordPressRowId(null);
+    },
+    [activeWordPressRowId, applyWordPressToRow]
+  );
 
   const buildRowPayload = (row: GridSchool): AdminSchoolPayload => ({
     templateId: row.templateId,
@@ -237,7 +353,7 @@ export default function AdminSchoolsPage() {
           }
           return false;
         }
-        const updatedRow = mapApiSchool((await response.json()).school as ApiSchool);
+        const updatedRow = mapApiSchool((await response.json()).school as ApiSchool, templateWordPressMap);
         setSchools((prev) => prev.map((item) => (item.id === row.id ? updatedRow : item)));
         setOriginalRows((prev) => ({ ...prev, [row.id]: updatedRow }));
         setDirtyMap((prev) => ({ ...prev, [row.id]: false }));
@@ -254,7 +370,7 @@ export default function AdminSchoolsPage() {
         }
       }
     },
-    [fetchSchools, validateRow]
+    [fetchSchools, validateRow, templateWordPressMap]
   );
 
   const handleSaveRow = async (row: GridSchool) => {
@@ -325,7 +441,9 @@ export default function AdminSchoolsPage() {
       resultTime: '',
       officialLink: '',
       notes: '',
-      isNew: true
+      isNew: true,
+      wordpressSchoolId: null,
+      wordpressSchoolType: null
     };
     setSchools((prev) => [newRow, ...prev]);
     setDirtyMap((prev) => ({ ...prev, [tempId]: true }));
@@ -379,6 +497,16 @@ export default function AdminSchoolsPage() {
   const dirtyRows = schools.filter((row) => row.id.startsWith('temp-') || dirtyMap[row.id]);
   const dirtyCount = dirtyRows.length;
   const hasBlockingErrors = dirtyRows.some((row) => validationMap[row.id]?.length);
+  const activeRow = useMemo(
+    () => schools.find((row) => row.id === activeWordPressRowId) ?? null,
+    [activeWordPressRowId, schools]
+  );
+  const activeWordPressKey = activeRow
+    ? buildWordPressKey(activeRow.wordpressSchoolId, activeRow.wordpressSchoolType)
+    : null;
+  const activeWordPressSchool: WordPressSchool | null = activeWordPressKey
+    ? wordpressIndexByKey.get(activeWordPressKey) ?? null
+    : null;
 
   return (
     <>
@@ -416,6 +544,33 @@ export default function AdminSchoolsPage() {
               </button>
             </div>
           </div>
+
+          {(wordpressLoading || wordpressError) && (
+            <div
+              className={clsx(
+                'flex items-center gap-2 rounded-xl px-4 py-2 text-sm',
+                wordpressError
+                  ? 'border border-red-100 bg-red-50 text-red-600'
+                  : 'border border-primary-100 bg-primary-50 text-primary-700'
+              )}
+            >
+              <AlertCircle className="h-4 w-4" />
+              {wordpressError ? (
+                <>
+                  WordPress 学校数据加载失败：{wordpressError}
+                  <button
+                    type="button"
+                    className="text-xs underline"
+                    onClick={() => refetchWordPress()}
+                  >
+                    重试
+                  </button>
+                </>
+              ) : (
+                '正在同步 WordPress 学校数据...'
+              )}
+            </div>
+          )}
 
           {activeTab === 'manual' && (
             <div className="space-y-5">
@@ -475,6 +630,7 @@ export default function AdminSchoolsPage() {
                     <SchoolGrid
                       rows={schools}
                       templates={templates}
+                      wordpressSchools={wordpressSchools}
                       onRowsChange={handleRowsChange}
                       dirtyMap={dirtyMap}
                       onSaveRow={handleSaveRow}
@@ -482,6 +638,7 @@ export default function AdminSchoolsPage() {
                       onDeleteRow={handleDeleteRow}
                       savingRowId={savingRowId}
                       validationMap={validationMap}
+                      onRequestWordPressBinding={(row) => setActiveWordPressRowId(row.id)}
                     />
                   )}
                 </div>
@@ -494,7 +651,105 @@ export default function AdminSchoolsPage() {
           )}
         </div>
       </Layout>
+      {activeRow && (
+        <WordPressPickerModal
+          row={activeRow}
+          current={activeWordPressSchool}
+          schools={wordpressSchools}
+          loading={wordpressLoading}
+          error={wordpressError}
+          onClose={() => setActiveWordPressRowId(null)}
+          onSelect={handleWordPressSelection}
+        />
+      )}
     </>
+  );
+}
+
+interface WordPressPickerModalProps {
+  row: GridSchool;
+  current: WordPressSchool | null;
+  schools: WordPressSchool[];
+  loading: boolean;
+  error: string | null;
+  onClose: () => void;
+  onSelect: (selection: WordPressSchool | null) => void;
+}
+
+function WordPressPickerModal({
+  row,
+  current,
+  schools,
+  loading,
+  error,
+  onClose,
+  onSelect
+}: WordPressPickerModalProps) {
+  const [selected, setSelected] = useState<WordPressSchool | null>(current ?? null);
+
+  useEffect(() => {
+    setSelected(current ?? null);
+  }, [current]);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900">绑定 WordPress 学校</h3>
+            <p className="text-sm text-gray-500">
+              当前行：{row.name || '未命名'}（模板 ID：{row.templateId || '未选择'}）
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <WordPressSchoolSelect
+            value={selected}
+            onChange={setSelected}
+            schools={schools}
+            loading={loading}
+            error={error}
+          />
+        </div>
+
+        <div className="mt-6">
+          <WordPressSchoolInfoCard school={selected} />
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            className="text-sm text-gray-500 underline"
+            onClick={() => {
+              setSelected(null);
+              onSelect(null);
+            }}
+          >
+            解除绑定
+          </button>
+          <div className="flex gap-3">
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              取消
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!selected}
+              onClick={() => {
+                if (!selected) return;
+                onSelect(selected);
+              }}
+            >
+              绑定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
