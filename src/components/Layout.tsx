@@ -1,7 +1,20 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { GraduationCap, User, FileText, LogOut, Settings, Shield, Users, Menu, X } from 'lucide-react';
+import {
+  GraduationCap,
+  User,
+  FileText,
+  LogOut,
+  Settings,
+  Shield,
+  Users,
+  Menu,
+  X,
+  BookOpen,
+  ListChecks,
+  LayoutDashboard
+} from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import LanguageSwitch from './LanguageSwitch';
 import { clearAuthTokenCookie } from '@/utils/token';
@@ -46,6 +59,11 @@ export default function Layout({ children }: LayoutProps) {
 
   const isAdmin = userRole === 'admin';
 
+  const getLabel = (key: string, fallback: string) => {
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
+
   const primaryLinks = [
     {
       href: '/dashboard',
@@ -61,6 +79,16 @@ export default function Layout({ children }: LayoutProps) {
       href: '/settings',
       label: t('settings.title'),
       icon: Settings
+    },
+    {
+      href: '/schools',
+      label: getLabel('navbar.schools', '可申请学校'),
+      icon: BookOpen
+    },
+    {
+      href: '/applications/overview',
+      label: getLabel('navbar.applicationsOverview', '申请进度'),
+      icon: ListChecks
     }
   ];
 
@@ -79,6 +107,11 @@ export default function Layout({ children }: LayoutProps) {
       href: '/admin/translations',
       label: t('admin.translations.title'),
       icon: Settings
+    },
+    {
+      href: '/admin/schools',
+      label: getLabel('navbar.adminSchools', '学校映射管理'),
+      icon: LayoutDashboard
     }
   ];
 
