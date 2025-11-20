@@ -131,37 +131,35 @@ export default function Layout({ children }: LayoutProps) {
 
   if (isWordPress) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <aside className="w-64 bg-white shadow-sm flex-shrink-0 hidden lg:flex sticky top-0 self-start h-screen overflow-y-auto">
-          <div className="h-full flex flex-col">
-            <div className="p-6 border-b border-gray-200">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <GraduationCap className="h-8 w-8 text-primary-600" />
-                <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
-              </Link>
-            </div>
-            <nav className="flex-1 p-4 space-y-2 min-w-0">
-              {renderLinks(primaryLinks)}
-              {isAdmin && (
-                <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
-                  {renderLinks(adminLinks)}
-                </div>
-              )}
-            </nav>
-            <div className="p-4 border-t border-gray-200 space-y-3">
-              <LanguageSwitch variant="minimal" />
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center space-x-2 text-gray-700 hover:text-red-600 py-2 rounded-lg hover:bg-gray-50"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-              </button>
-            </div>
+      <div className="min-h-screen bg-gray-50">
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white shadow-sm flex-col z-20">
+          <div className="p-6 border-b border-gray-200">
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <GraduationCap className="h-8 w-8 text-primary-600" />
+              <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
+            </Link>
+          </div>
+          <nav className="flex-1 p-4 space-y-2 min-w-0 overflow-y-auto">
+            {renderLinks(primaryLinks)}
+            {isAdmin && (
+              <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
+                {renderLinks(adminLinks)}
+              </div>
+            )}
+          </nav>
+          <div className="p-4 border-t border-gray-200 space-y-3">
+            <LanguageSwitch variant="minimal" />
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center space-x-2 text-gray-700 hover:text-red-600 py-2 rounded-lg hover:bg-gray-50"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+            </button>
           </div>
         </aside>
 
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="lg:pl-64 flex flex-col min-h-screen">
           <div className="lg:hidden w-full">
             <nav className="bg-white shadow-sm">
               <div className="px-4 sm:px-6">
@@ -181,13 +179,15 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </nav>
 
-            <div className={`bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'}`}>
+            <div
+              className={`bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${
+                mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'
+              }`}
+            >
               <div className="px-4 sm:px-6 py-4 space-y-4">
                 <div className="space-y-2">{renderLinks(primaryLinks, true)}</div>
                 {isAdmin && (
-                  <div className="pt-3 border-t border-gray-100 space-y-2">
-                    {renderLinks(adminLinks, true)}
-                  </div>
+                  <div className="pt-3 border-t border-gray-100 space-y-2">{renderLinks(adminLinks, true)}</div>
                 )}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <LanguageSwitch variant="minimal" />
