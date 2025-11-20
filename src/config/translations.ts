@@ -92,6 +92,8 @@ export interface Translations {
       hasAccount: string;
       signIn: string;
       alreadyHaveAccount: string;
+      noAccount: string;
+      joinUs: string;
     };
     errors: {
       passwordMismatch: string;
@@ -397,6 +399,8 @@ export const translations: Record<Language, Translations> = {
         hasAccount: 'Already have an account?',
         signIn: 'Sign in',
         alreadyHaveAccount: 'Already have an account?',
+        noAccount: "Don't have an account?",
+        joinUs: 'Join us now and start your journey with us',
       },
       errors: {
         passwordMismatch: 'Passwords do not match',
@@ -700,6 +704,8 @@ export const translations: Record<Language, Translations> = {
         hasAccount: '已有账户？',
         signIn: '登录',
         alreadyHaveAccount: '已有账户？',
+        noAccount: '还没有账户？',
+        joinUs: '立即注册加入我们，和我们一起开始旅程吧',
       },
       errors: {
         passwordMismatch: '两次输入的密码不一致',
@@ -1003,6 +1009,8 @@ export const translations: Record<Language, Translations> = {
         hasAccount: '已有帳戶？',
         signIn: '登入',
         alreadyHaveAccount: '已有帳戶？',
+        noAccount: '還沒有帳戶？',
+        joinUs: '立即註冊加入我們，和我們一起開始旅程吧',
       },
       errors: {
         passwordMismatch: '兩次輸入的密碼不一致',

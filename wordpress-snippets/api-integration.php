@@ -6,8 +6,9 @@
  * 1. 按需修改 SCHOOL_APP_WEB_URL，指向你在 Vercel 上的生产网址（保持 https）。
  * 2. 将整个文件复制到 WordPress Code Snippets / functions.php 并启用。
  * 3. 在 WordPress 页面使用短代码：
- *    - [school_app_login] - 登录页面
- *    - [school_app_register] - 注册页面
+ *    - [school_app_auth] - 合并的登录/注册页面（推荐，可在同一页面切换）
+ *    - [school_app_login] - 单独的登录页面
+ *    - [school_app_register] - 单独的注册页面
  *    - [school_app_dashboard] - 申请列表
  *    - [school_app_profile] - 个人资料
  *    - [school_app_templates] - 模板管理（管理员）
@@ -90,11 +91,19 @@ function school_app_render_iframe_shortcode($atts = array(), $default_path = '/'
 }
 
 // === 短代码 ===
+// 合并的登录/注册页面（推荐）
+function school_app_auth_shortcode($atts = array()) {
+    return school_app_render_iframe_shortcode($atts, '/auth');
+}
+add_shortcode('school_app_auth', 'school_app_auth_shortcode');
+
+// 单独的登录页面
 function school_app_login_shortcode($atts = array()) {
     return school_app_render_iframe_shortcode($atts, '/auth/login');
 }
 add_shortcode('school_app_login', 'school_app_login_shortcode');
 
+// 单独的注册页面
 function school_app_register_shortcode($atts = array()) {
     return school_app_render_iframe_shortcode($atts, '/auth/register');
 }

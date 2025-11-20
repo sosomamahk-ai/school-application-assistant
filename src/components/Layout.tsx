@@ -100,9 +100,9 @@ export default function Layout({ children }: LayoutProps) {
   if (isWordPress) {
     return (
       <div className="h-screen bg-gray-50 flex overflow-hidden">
-        {/* Sidebar Navigation */}
-        <aside className="w-64 bg-white shadow-sm flex-shrink-0 hidden lg:block">
-          <div className="h-screen flex flex-col overflow-hidden">
+        {/* Sidebar Navigation - 固定不动 */}
+        <aside className="w-64 bg-white shadow-sm flex-shrink-0 hidden lg:block fixed left-0 top-0 h-screen">
+          <div className="h-full flex flex-col overflow-hidden">
             {/* Logo */}
             <div className="p-6 border-b border-gray-200">
               <Link href="/dashboard" className="flex items-center space-x-2">
@@ -184,8 +184,8 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
 
-        {/* Main Content - Full Width in WordPress */}
-        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
+        {/* Main Content - Full Width in WordPress, 左侧留出sidebar空间 */}
+        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto lg:ml-64">
           {children}
         </main>
       </div>
