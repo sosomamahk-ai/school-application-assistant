@@ -15,6 +15,9 @@ export interface School {
   resultTime?: string | null;
   officialLink?: string | null;
   notes?: string | null;
+  isNew?: boolean;
 }
+
+export type RowValidationMap = Record<string, string[]>;
 
 

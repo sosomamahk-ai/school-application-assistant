@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import DataGrid, { Column, RowsChangeData } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
-import { CheckCircle2, RefreshCw } from 'lucide-react';
-import type { School, TemplateOption } from './types';
+import { AlertCircle, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
+import type { RowValidationMap, School, TemplateOption } from './types';
 
 interface SchoolGridProps {
   rows: School[];
@@ -11,7 +11,9 @@ interface SchoolGridProps {
   dirtyMap: Record<string, boolean>;
   onSaveRow: (row: School) => Promise<void>;
   onResetRow: (rowId: string) => void;
+  onDeleteRow: (row: School) => void;
   savingRowId?: string | null;
+  validationMap: RowValidationMap;
 }
 
 const TemplateEditor = (props: any) => {
@@ -41,6 +43,25 @@ const TextCellEditor = ({ row, column, onRowChange }: any) => (
   />
 );
 
+const formatDateValue = (value?: string | null) => {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+};
+
+const DateCellEditor = ({ row, column, onRowChange }: any) => (
+  <input
+    type="date"
+    className="w-full border-none bg-transparent focus:outline-none"
+    value={formatDateValue(row[column.key])}
+    onChange={(e) => onRowChange({ ...row, [column.key]: e.target.value || '' }, true)}
+  />
+);
+
 export default function SchoolGrid({
   rows,
   templates,
@@ -48,7 +69,9 @@ export default function SchoolGrid({
   dirtyMap,
   onSaveRow,
   onResetRow,
-  savingRowId
+  onDeleteRow,
+  savingRowId,
+  validationMap
 }: SchoolGridProps) {
   const templateOptions = useMemo(
     () => templates.map((tpl) => ({ id: tpl.id, label: tpl.label })),
@@ -69,11 +92,11 @@ export default function SchoolGrid({
           return tpl?.label || '未映射';
         }
       },
-      { key: 'applicationStart', name: '开始申请', editor: TextCellEditor, width: 160 },
-      { key: 'applicationEnd', name: '截止日期', editor: TextCellEditor, width: 160 },
-      { key: 'interviewTime', name: '面试时间', editor: TextCellEditor, width: 160 },
-      { key: 'examTime', name: '笔试时间', editor: TextCellEditor, width: 160 },
-      { key: 'resultTime', name: '录取结果时间', editor: TextCellEditor, width: 160 },
+      { key: 'applicationStart', name: '开始申请', editor: DateCellEditor, width: 160 },
+      { key: 'applicationEnd', name: '截止日期', editor: DateCellEditor, width: 160 },
+      { key: 'interviewTime', name: '面试时间', editor: DateCellEditor, width: 160 },
+      { key: 'examTime', name: '笔试时间', editor: DateCellEditor, width: 160 },
+      { key: 'resultTime', name: '录取结果时间', editor: DateCellEditor, width: 160 },
       { key: 'officialLink', name: '官网链接', editor: TextCellEditor, width: 240 },
       { key: 'notes', name: '备注', editor: TextCellEditor, width: 200 },
       {
@@ -83,28 +106,46 @@ export default function SchoolGrid({
         frozen: true,
         formatter: ({ row }: { row: School }) => {
           const isDirty = dirtyMap[row.id];
+          const validationErrors = validationMap[row.id] || [];
           return (
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => onSaveRow(row)}
-                disabled={!isDirty || savingRowId === row.id}
-                className="text-primary-600 disabled:text-gray-400"
-              >
-                <CheckCircle2 className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => onResetRow(row.id)}
-                disabled={!isDirty}
-                className="text-gray-400"
-              >
-                <RefreshCw className="h-5 w-5" />
-              </button>
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => onSaveRow(row)}
+                  disabled={!isDirty || !!validationErrors.length || savingRowId === row.id}
+                  className="text-primary-600 disabled:text-gray-400"
+                  title={validationErrors.length ? '请先修复校验错误' : '保存当前行'}
+                >
+                  <CheckCircle2 className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => onResetRow(row.id)}
+                  disabled={!isDirty}
+                  className="text-gray-400 disabled:text-gray-300"
+                  title="撤销修改"
+                >
+                  <RefreshCw className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => onDeleteRow(row)}
+                  className="text-red-500 hover:text-red-600"
+                  title="删除此映射"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </div>
+              {validationErrors.length > 0 && (
+                <div className="flex items-center text-xs text-red-500 gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <span>{validationErrors[0]}</span>
+                </div>
+              )}
             </div>
           );
         }
       }
     ],
-    [dirtyMap, onResetRow, onSaveRow, templateOptions, savingRowId]
+    [dirtyMap, onDeleteRow, onResetRow, onSaveRow, templateOptions, savingRowId, validationMap]
   );
 
   return (
@@ -116,6 +157,7 @@ export default function SchoolGrid({
         onRowsChange={onRowsChange}
         rowKeyGetter={(row: School) => row.id}
         defaultColumnOptions={{ resizable: true }}
+        rowClass={(row: School) => (validationMap[row.id]?.length ? 'bg-red-50/60' : undefined)}
       />
     </div>
   );
