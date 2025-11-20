@@ -192,17 +192,23 @@ export default function AdminSchoolsPage() {
       </Head>
       <Layout>
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">可申请学校管理</h1>
               <p className="text-gray-500 mt-1">Excel 风格录入，快速批量导入 + 模版映射</p>
             </div>
-            <div className="flex space-x-3">
-              <button onClick={() => fetchSchools()} className="btn-secondary flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full lg:w-auto">
+              <button
+                onClick={() => fetchSchools()}
+                className="btn-secondary flex items-center justify-center space-x-2"
+              >
                 <RefreshCw className="h-5 w-5" />
                 <span>刷新</span>
               </button>
-              <button onClick={() => setShowPasteModal(true)} className="btn-primary flex items-center space-x-2">
+              <button
+                onClick={() => setShowPasteModal(true)}
+                className="btn-primary flex items-center justify-center space-x-2"
+              >
                 <PlusCircle className="h-5 w-5" />
                 <span>批量粘贴导入</span>
               </button>
@@ -219,19 +225,21 @@ export default function AdminSchoolsPage() {
             />
           </div>
 
-          {loading ? (
-            <div className="h-64 flex items-center justify-center text-gray-500">加载中...</div>
-          ) : (
-            <SchoolGrid
-              rows={schools}
-              templates={templates}
-              onRowsChange={handleRowsChange}
-              dirtyMap={dirtyMap}
-              onSaveRow={handleSaveRow}
-              onResetRow={handleResetRow}
-              savingRowId={savingRowId}
-            />
-          )}
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="h-64 flex items-center justify-center text-gray-500">加载中...</div>
+            ) : (
+              <SchoolGrid
+                rows={schools}
+                templates={templates}
+                onRowsChange={handleRowsChange}
+                dirtyMap={dirtyMap}
+                onSaveRow={handleSaveRow}
+                onResetRow={handleResetRow}
+                savingRowId={savingRowId}
+              />
+            )}
+          </div>
         </div>
       </Layout>
 

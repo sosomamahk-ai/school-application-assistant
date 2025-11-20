@@ -1,4 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
+import clsx from 'clsx';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
@@ -30,6 +31,7 @@ export default function Layout({ children }: LayoutProps) {
   const [userRole, setUserRole] = useState<string>('user');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isWordPress, setIsWordPress] = useState(false);
+  const [wpSidebarOpen, setWpSidebarOpen] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -55,6 +57,7 @@ export default function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     setMobileMenuOpen(false);
+    setWpSidebarOpen(false);
   }, [router.pathname]);
 
   const isAdmin = userRole === 'admin';
@@ -66,9 +69,19 @@ export default function Layout({ children }: LayoutProps) {
 
   const primaryLinks = [
     {
+      href: '/schools',
+      label: getLabel('navbar.schools', '可申请学校'),
+      icon: BookOpen
+    },
+    {
       href: '/dashboard',
       label: t('dashboard.title'),
       icon: FileText
+    },
+    {
+      href: '/applications/overview',
+      label: getLabel('navbar.applicationsOverview', '申请进度'),
+      icon: ListChecks
     },
     {
       href: '/profile',
@@ -79,16 +92,6 @@ export default function Layout({ children }: LayoutProps) {
       href: '/settings',
       label: t('settings.title'),
       icon: Settings
-    },
-    {
-      href: '/schools',
-      label: getLabel('navbar.schools', '可申请学校'),
-      icon: BookOpen
-    },
-    {
-      href: '/applications/overview',
-      label: getLabel('navbar.applicationsOverview', '申请进度'),
-      icon: ListChecks
     }
   ];
 
@@ -131,43 +134,58 @@ export default function Layout({ children }: LayoutProps) {
 
   // WordPress环境：使用左侧sidebar布局
   if (isWordPress) {
+    const sidebar = (
+      <aside
+        className={clsx(
+          'bg-white shadow-sm flex-shrink-0 w-64 h-screen overflow-y-auto transition-transform duration-200',
+          'lg:static lg:translate-x-0 lg:flex',
+          {
+            'fixed inset-y-0 left-0 z-50 flex translate-x-0': wpSidebarOpen,
+            'hidden lg:flex -translate-x-full lg:translate-x-0': !wpSidebarOpen
+          }
+        )}
+      >
+        <div className="h-full flex flex-col relative">
+          <button
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 lg:hidden"
+            onClick={() => setWpSidebarOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="p-6 border-b border-gray-200">
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <GraduationCap className="h-8 w-8 text-primary-600" />
+              <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
+            </Link>
+          </div>
+          <nav className="flex-1 p-4 space-y-2">
+            {renderLinks(primaryLinks)}
+            {isAdmin && (
+              <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
+                {renderLinks(adminLinks)}
+              </div>
+            )}
+          </nav>
+          <div className="p-4 border-t border-gray-200 space-y-3">
+            <LanguageSwitch variant="minimal" />
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center space-x-2 text-gray-700 hover:text-red-600 py-2 rounded-lg hover:bg-gray-50"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+    );
+
     return (
       <div className="min-h-screen bg-gray-50 flex">
-        {/* Sidebar Navigation - Sticky固定在顶部 */}
-        <aside className="w-64 bg-white shadow-sm flex-shrink-0 hidden lg:block sticky top-0 self-start h-screen overflow-y-auto">
-          <div className="h-full flex flex-col">
-            {/* Logo */}
-            <div className="p-6 border-b border-gray-200">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <GraduationCap className="h-8 w-8 text-primary-600" />
-                <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
-              </Link>
-            </div>
-
-            {/* Navigation Links */}
-            <nav className="flex-1 p-4 space-y-2">
-              {renderLinks(primaryLinks)}
-              
-              {isAdmin && (
-                <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
-                  {renderLinks(adminLinks)}
-                </div>
-              )}
-            </nav>
-
-            {/* Footer Actions */}
-            <div className="p-4 border-t border-gray-200 space-y-3">
-              <LanguageSwitch variant="minimal" />
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center space-x-2 text-gray-700 hover:text-red-600 py-2 rounded-lg hover:bg-gray-50"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-              </button>
-            </div>
-          </div>
-        </aside>
+        {wpSidebarOpen && <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setWpSidebarOpen(false)} />}
+        {/* Sidebar Navigation */}
+        {sidebar}
 
         {/* Mobile Top Navigation */}
         <div className="lg:hidden w-full">
@@ -179,13 +197,22 @@ export default function Layout({ children }: LayoutProps) {
                   <span className="text-lg font-bold text-gray-900">{t('common.appNameShort')}</span>
                 </Link>
                 
-                <button
-                  className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
-                  onClick={() => setMobileMenuOpen((prev) => !prev)}
-                  aria-label="Toggle navigation menu"
-                >
-                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
+                    onClick={() => setWpSidebarOpen(true)}
+                    aria-label="Open sidebar menu"
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                  </button>
+                  <button
+                    className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
+                    onClick={() => setMobileMenuOpen((prev) => !prev)}
+                    aria-label="Toggle navigation menu"
+                  >
+                    {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
             </div>
           </nav>
