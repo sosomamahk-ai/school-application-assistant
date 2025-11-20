@@ -99,10 +99,10 @@ export default function Layout({ children }: LayoutProps) {
   // WordPress环境：使用左侧sidebar布局
   if (isWordPress) {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="h-screen bg-gray-50 flex overflow-hidden">
         {/* Sidebar Navigation */}
         <aside className="w-64 bg-white shadow-sm flex-shrink-0 hidden lg:block">
-          <div className="h-full flex flex-col">
+          <div className="h-screen flex flex-col overflow-hidden">
             {/* Logo */}
             <div className="p-6 border-b border-gray-200">
               <Link href="/dashboard" className="flex items-center space-x-2">
@@ -185,7 +185,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Main Content - Full Width in WordPress */}
-        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
           {children}
         </main>
       </div>

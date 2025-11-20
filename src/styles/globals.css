@@ -81,6 +81,23 @@ body.wordpress-iframe .max-w-7xl {
   width: 100% !important;
 }
 
+/* WordPress环境：设置固定高度，避免超出视口 */
+html.wordpress-embed,
+html.wordpress-iframe,
+body.wordpress-embed,
+body.wordpress-iframe {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+}
+
+body.wordpress-embed > div#__next,
+body.wordpress-iframe > div#__next {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+}
+
 /* 手机端全局字体大小调整 */
 @media (max-width: 640px) {
   body {

@@ -69,7 +69,7 @@ function school_application_assistant_shortcode($atts) {
 add_shortcode('school_app', 'school_application_assistant_shortcode');
 
 /**
- * 加载样式
+ * 加载样式和脚本
  */
 function school_app_enqueue_styles() {
     ?>
@@ -77,20 +77,84 @@ function school_app_enqueue_styles() {
         .school-app-wrapper {
             width: 100%;
             margin: 20px 0;
+            position: relative;
         }
         .school-app-iframe {
             border: none;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             display: block;
-        }
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .school-app-iframe {
-                height: 600px !important;
-            }
+            width: 100%;
         }
     </style>
+    <script>
+    (function() {
+        /**
+         * 动态计算并设置iframe高度
+         * 高度 = 视口高度 - WordPress导航栏高度 - 其他元素高度
+         */
+        function setIframeHeight() {
+            var iframes = document.querySelectorAll('.school-app-iframe');
+            if (iframes.length === 0) return;
+            
+            // 获取视口高度
+            var viewportHeight = window.innerHeight;
+            
+            // 尝试检测WordPress导航栏高度
+            var wpHeader = document.querySelector('header, .site-header, #masthead, .wp-site-blocks > header, nav.main-navigation');
+            var wpHeaderHeight = 0;
+            if (wpHeader) {
+                var headerRect = wpHeader.getBoundingClientRect();
+                wpHeaderHeight = headerRect.height;
+            }
+            
+            // 尝试检测其他可能占用空间的元素（如面包屑、标题等）
+            var contentOffset = 0;
+            var wrapper = document.querySelector('.school-app-wrapper');
+            if (wrapper) {
+                // 获取wrapper距离视口顶部的距离
+                var wrapperRect = wrapper.getBoundingClientRect();
+                contentOffset = wrapperRect.top;
+            }
+            
+            // 计算可用高度（减去导航栏、padding等）
+            // 预留一些空间给margin和padding
+            var availableHeight = viewportHeight - contentOffset - 40; // 40px为margin预留
+            
+            // 确保最小高度
+            var minHeight = 600;
+            var calculatedHeight = Math.max(availableHeight, minHeight);
+            
+            // 设置所有iframe的高度
+            iframes.forEach(function(iframe) {
+                iframe.style.height = calculatedHeight + 'px';
+            });
+        }
+        
+        // 页面加载完成后设置高度
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setIframeHeight);
+        } else {
+            setIframeHeight();
+        }
+        
+        // 监听窗口大小变化
+        var resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(setIframeHeight, 100);
+        });
+        
+        // 监听滚动（某些主题的导航栏可能是固定的）
+        window.addEventListener('scroll', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(setIframeHeight, 100);
+        });
+        
+        // 延迟执行一次，确保所有元素都已渲染
+        setTimeout(setIframeHeight, 500);
+    })();
+    </script>
     <?php
 }
 add_action('wp_head', 'school_app_enqueue_styles');

@@ -6,8 +6,9 @@ import { isWordPressEnvironment } from '@/utils/wordpress';
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
-    // 检测WordPress环境并添加类名到body
+    // 检测WordPress环境并添加类名到html和body
     if (typeof window !== 'undefined' && isWordPressEnvironment()) {
+      document.documentElement.classList.add('wordpress-embed', 'wordpress-iframe');
       document.body.classList.add('wordpress-embed', 'wordpress-iframe');
     }
   }, []);
