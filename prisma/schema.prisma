@@ -9,14 +9,16 @@ datasource db {
 }
 
 model User {
-  id        String       @id @default(cuid())
-  email     String       @unique
-  password  String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  role      String       @default("user")
-  username  String?      @unique
-  profile   UserProfile?
+  id               String              @id @default(cuid())
+  email            String              @unique
+  password         String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  role             String              @default("user")
+  username         String?             @unique
+  profile          UserProfile?
+  userApplications UserApplication[]
+  fieldMappings    FieldMapping[]
 }
 
 model UserProfile {
@@ -48,19 +50,55 @@ model SchoolFormTemplate {
   updatedAt    DateTime      @updatedAt
   category     String?       @default("国际学校")
   applications Application[]
+  school       School?
+}
+
+model School {
+  id                      String   @id @default(cuid())
+  name                    String
+  shortName               String?
+  templateId              String   @unique
+  template                SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  campusLocation          String?
+  gradeRange              String?
+  applicationStart        DateTime?
+  applicationEnd          DateTime?
+  interviewTime           DateTime?
+  examTime                DateTime?
+  resultTime              DateTime?
+  requiredDocuments       Json?
+  requirements            Json?
+  officialLink            String?
+  notes                   String?
+  metadataSource          String?
+  metadataLastFetchedAt   DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  userApplications        UserApplication[]
+
+  @@index([applicationEnd])
+  @@index([applicationStart])
 }
 
 model Application {
-  id          String             @id @default(cuid())
-  profileId   String
-  templateId  String
-  formData    Json
-  status      String             @default("draft")
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  submittedAt DateTime?
-  profile     UserProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  template    SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: NoAction)
+  id                  String             @id @default(cuid())
+  profileId           String
+  templateId          String
+  formData            Json
+  status              String             @default("draft")
+  targetSubmissionDate DateTime?
+  interviewDate       DateTime?
+  writtenTestDate     DateTime?
+  resultDate          DateTime?
+  progressNotes       String?
+  timelineOverrides   Json?
+  reminderSettings    Json?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  submittedAt         DateTime?
+  profile             UserProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  template            SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: NoAction)
+  userApplication     UserApplication?
 
   @@index([profileId])
   @@index([templateId])
@@ -89,4 +127,42 @@ model ApplicationData {
   @@unique([schoolId, userId])
   @@index([schoolId])
   @@index([userId])
+}
+
+model UserApplication {
+  id               String   @id @default(cuid())
+  userId           String
+  schoolId         String
+  applicationId    String? @unique
+  fillingProgress  Int      @default(0)
+  interviewTime    DateTime?
+  examTime         DateTime?
+  result           String   @default("pending")
+  resultTime       DateTime?
+  reminderSettings Json?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id])
+
+  @@unique([userId, schoolId])
+  @@index([schoolId])
+  @@index([userId])
+}
+
+model FieldMapping {
+  id           String   @id @default(cuid())
+  userId       String
+  domain       String
+  selector     String
+  domId        String?
+  domName      String?
+  profileField String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, domain, selector])
 }
