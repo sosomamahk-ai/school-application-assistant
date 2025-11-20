@@ -109,6 +109,33 @@ export default async function handler(
         }
       });
 
+      // Ensure a UserApplication record exists for tracking
+      const school = await prisma.school.findUnique({
+        where: { templateId },
+        select: { id: true }
+      });
+
+      if (school) {
+        await prisma.userApplication.upsert({
+          where: {
+            userId_schoolId: {
+              userId,
+              schoolId: school.id
+            }
+          },
+          update: {
+            applicationId: application.id
+          },
+          create: {
+            userId,
+            schoolId: school.id,
+            applicationId: application.id,
+            fillingProgress: 0,
+            result: 'pending'
+          }
+        });
+      }
+
       res.status(201).json({
         success: true,
         application: {

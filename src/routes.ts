@@ -3,6 +3,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   adminTemplates: '/admin/templates',
   schools: '/schools',
+  applicationsOverview: '/applications/overview',
 };
 
 
