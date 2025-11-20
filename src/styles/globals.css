@@ -101,6 +101,19 @@ body.wordpress-iframe > div#__next {
   overflow-y: auto !important;
 }
 
+/* Logged-in dashboard font scaling (desktop) */
+html.dashboard-font-scale,
+body.dashboard-font-scale {
+  font-size: 90%;
+}
+
+@media (max-width: 768px) {
+  html.dashboard-font-scale,
+  body.dashboard-font-scale {
+    font-size: 100%;
+  }
+}
+
 /* 手机端全局字体大小调整 */
 @media (max-width: 640px) {
   body {

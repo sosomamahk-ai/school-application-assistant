@@ -57,6 +57,20 @@ export default function Layout({ children }: LayoutProps) {
     setMobileMenuOpen(false);
   }, [router.pathname]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const htmlEl = document.documentElement;
+    const bodyEl = document.body;
+
+    htmlEl.classList.add('dashboard-font-scale');
+    bodyEl.classList.add('dashboard-font-scale');
+
+    return () => {
+      htmlEl.classList.remove('dashboard-font-scale');
+      bodyEl.classList.remove('dashboard-font-scale');
+    };
+  }, []);
+
   const isAdmin = userRole === 'admin';
 
   const getLabel = (key: string, fallback: string) => {
