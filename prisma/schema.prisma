@@ -1,5 +1,3 @@
-// This is your Prisma schema file
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,188 +5,84 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")  // 用于迁移的直接连接（Supabase 需要）
+  directUrl = env("DIRECT_URL")
 }
 
-// User model for authentication
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  username      String?        @unique
-  password      String
-  role          String         @default("user") // "user" or "admin"
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  profile       UserProfile?
-  fieldMappings FieldMapping[]
-  userApplications UserApplication[]
+  id        String       @id @default(cuid())
+  email     String       @unique
+  password  String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  role      String       @default("user")
+  username  String?      @unique
+  profile   UserProfile?
 }
 
-// User profile with all application information
 model UserProfile {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Basic Info
-  fullName    String?
-  phone       String?
-  birthday    DateTime?
-  nationality String?
-
-  // Structured data stored as JSON
-  educationData   Json? // Array of education records
-  experiencesData Json? // Array of experience records
-  essaysData      Json? // Object with various essay types
-  additionalData  Json? // Any additional custom fields
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  applications Application[]
+  id              String        @id @default(cuid())
+  userId          String        @unique
+  fullName        String?
+  phone           String?
+  birthday        DateTime?
+  nationality     String?
+  educationData   Json?
+  experiencesData Json?
+  essaysData      Json?
+  additionalData  Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  applications    Application[]
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// School form template
 model SchoolFormTemplate {
-  id          String  @id @default(cuid())
-  schoolId    String  @unique
-  schoolName  String
-  program     String
-  description String?
-  category    String? @default("国际学校") // 模板类别：国际学校、香港本地中学、香港本地小学、香港幼稚园、大学
-
-  // Template fields stored as JSON for flexibility
-  fieldsData Json // Array of field definitions
-
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id           String        @id @default(cuid())
+  schoolId     String        @unique
+  schoolName   String
+  program      String
+  description  String?
+  fieldsData   Json
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  category     String?       @default("国际学校")
   applications Application[]
-  school       School?
 }
 
-model School {
-  id                      String   @id @default(cuid())
-  name                    String
-  shortName               String?
-  templateId              String   @unique
-  template                SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  campusLocation          String?
-  gradeRange              String?
-  applicationStart        DateTime?
-  applicationEnd          DateTime?
-  interviewTime           DateTime?
-  examTime                DateTime?
-  resultTime              DateTime?
-  requiredDocuments       Json?
-  requirements            Json?
-  officialLink            String?
-  notes                   String?
-  metadataSource          String?
-  metadataLastFetchedAt   DateTime?
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
-  userApplications        UserApplication[]
-
-  @@index([applicationEnd])
-  @@index([applicationStart])
-}
-
-// Application submission
 model Application {
-  id String @id @default(cuid())
-
-  profileId String
-  profile   UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  templateId String
-  template   SchoolFormTemplate @relation(fields: [templateId], references: [id])
-
-  // Application form data
-  formData Json // Filled form data
-  status   String @default("draft") // draft, in_progress, submitted
-
-  // User-specific timeline and progress tracking
-  targetSubmissionDate DateTime?
-  interviewDate        DateTime?
-  writtenTestDate      DateTime?
-  resultDate           DateTime?
-  progressNotes        String?
-  timelineOverrides    Json?
-  reminderSettings     Json?
-  userApplication      UserApplication? @relation("ApplicationUserApplication")
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id          String             @id @default(cuid())
+  profileId   String
+  templateId  String
+  formData    Json
+  status      String             @default("draft")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
   submittedAt DateTime?
+  profile     UserProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  template    SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: NoAction)
 
   @@index([profileId])
   @@index([templateId])
 }
 
-model UserApplication {
-  id               String   @id @default(cuid())
-  userId           String
-  schoolId         String
-  applicationId    String?  @unique
-  fillingProgress  Int      @default(0)
-  interviewTime    DateTime?
-  examTime         DateTime?
-  result           String   @default("pending")
-  resultTime       DateTime?
-  reminderSettings Json?
-  notes            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school      School      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  application Application? @relation("ApplicationUserApplication", fields: [applicationId], references: [id])
-
-  @@unique([userId, schoolId])
-  @@index([schoolId])
-  @@index([userId])
-}
-
-// AI Conversation history for guidance
 model AIConversation {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
   userId        String
   applicationId String?
-
-  messages Json // Array of conversation messages
-  context  Json? // Additional context for AI
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  messages      Json
+  context       Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([userId])
 }
 
-// ← 在 prisma/schema.prisma 文件中追加这个 model（保留原有模型）
-model FieldMapping {
-  id           String   @id @default(cuid())
-  userId       String
-  domain       String
-  selector     String
-  domId        String?
-  domName      String?
-  profileField String
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id])
-
-  @@unique([userId, domain, selector])
-}
-
-// Application data for school-specific applications
-// This stores the actual form data filled by users for each school
 model ApplicationData {
   id        String   @id @default(cuid())
   schoolId  String
   userId    String
-  data      Json     // The actual form data (key-value pairs)
+  data      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
