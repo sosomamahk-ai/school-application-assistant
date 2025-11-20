@@ -145,8 +145,8 @@ export default function Layout({ children }: LayoutProps) {
 
   if (isWordPress) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white shadow-sm flex-col z-20">
+      <div className="min-h-screen bg-gray-50 lg:flex lg:items-stretch">
+        <aside className="hidden lg:flex w-64 bg-white shadow-sm flex-col z-20 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:flex-shrink-0">
           <div className="p-6 border-b border-gray-200">
             <Link href="/dashboard" className="flex items-center space-x-2">
               <GraduationCap className="h-8 w-8 text-primary-600" />
@@ -175,7 +175,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </aside>
 
-        <div className="lg:pl-64 flex flex-col min-h-screen">
+        <div className="flex flex-col min-h-screen flex-1 w-full">
           <div className="lg:hidden w-full">
             <nav className="bg-white shadow-sm">
               <div className="px-4 sm:px-6">
