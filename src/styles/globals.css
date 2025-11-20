@@ -42,18 +42,94 @@ select {
 @layer components {
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    /* 手机端字体和间距调整 */
+    @apply text-sm sm:text-base;
+    @apply py-1.5 sm:py-2 px-3 sm:px-4;
+    /* 防止文字换行 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .btn-secondary {
     @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    /* 手机端字体和间距调整 */
+    @apply text-sm sm:text-base;
+    @apply py-1.5 sm:py-2 px-3 sm:px-4;
+    /* 防止文字换行 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .input-field {
     @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-gray-900 bg-white;
+    /* 手机端字体调整 */
+    @apply text-sm sm:text-base;
   }
   
   .card {
     @apply bg-white rounded-xl shadow-md p-5 sm:p-6;
+  }
+}
+
+/* WordPress环境样式：移除max-w-7xl限制，实现全屏宽度 */
+/* 通过JavaScript添加的类名来应用样式 */
+body.wordpress-embed .max-w-7xl,
+body.wordpress-iframe .max-w-7xl {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* 手机端全局字体大小调整 */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+  
+  /* 按钮文字大小和样式 */
+  button, .btn-primary, .btn-secondary {
+    font-size: 12px !important;
+    padding: 0.5rem 0.75rem !important;
+    /* 确保按钮文字不换行 */
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    min-width: fit-content;
+  }
+  
+  /* 按钮内的文字和图标容器 */
+  button > span, .btn-primary > span, .btn-secondary > span,
+  button > .flex, .btn-primary > .flex, .btn-secondary > .flex {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  /* 标题字体调整 */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  h2 {
+    font-size: 1.25rem !important;
+  }
+  
+  h3 {
+    font-size: 1.125rem !important;
+  }
+  
+  /* 链接文字调整 */
+  a {
+    font-size: 14px;
+  }
+  
+  /* 输入框文字调整 */
+  input, textarea, select {
+    font-size: 14px !important;
   }
 }
 
