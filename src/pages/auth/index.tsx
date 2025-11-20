@@ -46,16 +46,24 @@ export default function Auth() {
       });
     };
 
+    const handleFocus = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (target) {
+        target.classList.add('focus');
+      }
+    };
+
+    const handleBlur = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (target && target.value === '') {
+        target.classList.remove('focus');
+      }
+    };
+
     const inputs = document.querySelectorAll('.txtb input');
     inputs.forEach((input) => {
-      input.addEventListener('focus', function() {
-        (this as HTMLElement).classList.add('focus');
-      });
-      input.addEventListener('blur', function() {
-        if ((this as HTMLInputElement).value === '') {
-          (this as HTMLElement).classList.remove('focus');
-        }
-      });
+      input.addEventListener('focus', handleFocus);
+      input.addEventListener('blur', handleBlur);
       input.addEventListener('input', updateFocus);
     });
 
@@ -64,8 +72,8 @@ export default function Auth() {
 
     return () => {
       inputs.forEach((input) => {
-        input.removeEventListener('focus', function() {});
-        input.removeEventListener('blur', function() {});
+        input.removeEventListener('focus', handleFocus);
+        input.removeEventListener('blur', handleBlur);
         input.removeEventListener('input', updateFocus);
       });
     };
