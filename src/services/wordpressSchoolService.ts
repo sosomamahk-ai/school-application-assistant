@@ -94,6 +94,17 @@ const extractLogoUrl = (post: any): string | null => {
   return null;
 };
 
+const normalizeAcf = (acfValue: any): Record<string, any> => {
+  if (!acfValue) return {};
+  if (Array.isArray(acfValue)) {
+    return {};
+  }
+  if (typeof acfValue === 'object') {
+    return acfValue;
+  }
+  return {};
+};
+
 const toWordPressSchool = (post: any, type: WordPressSchoolType): WordPressSchool => {
   const title = sanitizeHtml(post?.title?.rendered ?? post?.title ?? '');
   const categorySource =
@@ -116,7 +127,7 @@ const toWordPressSchool = (post: any, type: WordPressSchoolType): WordPressSchoo
       : typeof post?.link === 'string' && post.link
         ? post.link
         : '',
-    acf: typeof post?.acf === 'object' && post?.acf !== null ? post.acf : {}
+    acf: normalizeAcf(post?.acf)
   };
 };
 
@@ -143,6 +154,7 @@ const normalizeUnifiedPayload = (payload: any): WordPressSchoolResponse => {
   if (!payload || typeof payload !== 'object') {
     return EMPTY_RESPONSE;
   }
+  
   const normalizeArray = (items: any[], fallbackType: WordPressSchoolType): WordPressSchool[] =>
     (Array.isArray(items) ? items : []).map((item) =>
       toWordPressSchool(
@@ -171,9 +183,15 @@ const normalizeUnifiedPayload = (payload: any): WordPressSchoolResponse => {
 
 const tryFetchUnifiedEndpoint = async (baseUrl: string): Promise<WordPressSchoolResponse | null> => {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+    
     const response = await fetch(`${baseUrl}${WORDPRESS_UNIFIED_ENDPOINT}`, {
-      headers: { Accept: 'application/json' }
+      headers: { Accept: 'application/json' },
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+    
     if (response.status === 404) {
       return null;
     }
@@ -182,8 +200,12 @@ const tryFetchUnifiedEndpoint = async (baseUrl: string): Promise<WordPressSchool
     }
     const payload = await response.json();
     return normalizeUnifiedPayload(payload);
-  } catch (error) {
-    console.warn('[wordpressSchoolService] Unified endpoint fetch failed', error);
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn('[wordpressSchoolService] Unified endpoint fetch timed out');
+    } else {
+      console.warn('[wordpressSchoolService] Unified endpoint fetch failed', error);
+    }
     return null;
   }
 };
@@ -194,35 +216,48 @@ const fetchCollection = async (baseUrl: string, type: WordPressSchoolType): Prom
   let totalPages = 1;
 
   while (page <= totalPages && page <= MAX_PAGES) {
-    const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed`;
-    const response = await fetch(endpoint, {
-      headers: { Accept: 'application/json' }
-    });
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+      
+      const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed&acf_format=standard`;
+      const response = await fetch(endpoint, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
 
-    if (response.status === 404) {
-      return [];
+      if (response.status === 404) {
+        return [];
+      }
+
+      if (!response.ok) {
+        throw new Error(`WordPress ${type} CPT responded with ${response.status}`);
+      }
+
+      const items = await response.json();
+      if (!Array.isArray(items) || items.length === 0) {
+        break;
+      }
+      items.forEach((item) => {
+        results.push(toWordPressSchool(item, type));
+      });
+
+      const totalPagesHeader = response.headers.get('X-WP-TotalPages');
+      totalPages = totalPagesHeader ? Number(totalPagesHeader) : totalPages;
+      if (!Number.isFinite(totalPages) || totalPages < 1) {
+        totalPages = 1;
+      }
+
+      page += 1;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.error(`[wordpressSchoolService] ${type} fetch timed out at page ${page}`);
+        throw new Error(`WordPress ${type} fetch timed out`);
+      }
+      console.error(`[wordpressSchoolService] ${type} fetch error at page ${page}:`, error);
+      throw error;
     }
-
-    if (!response.ok) {
-      throw new Error(`WordPress ${type} CPT responded with ${response.status}`);
-    }
-
-    const items = await response.json();
-    if (!Array.isArray(items) || items.length === 0) {
-      break;
-    }
-
-    items.forEach((item) => {
-      results.push(toWordPressSchool(item, type));
-    });
-
-    const totalPagesHeader = response.headers.get('X-WP-TotalPages');
-    totalPages = totalPagesHeader ? Number(totalPagesHeader) : totalPages;
-    if (!Number.isFinite(totalPages) || totalPages < 1) {
-      totalPages = 1;
-    }
-
-    page += 1;
   }
 
   return results;
@@ -258,13 +293,51 @@ const setCache = (data: WordPressSchoolResponse) => {
 
 const fetchViaProxy = async (forceRefresh?: boolean): Promise<WordPressSchoolResponse> => {
   const url = `/api/wordpress/schools${forceRefresh ? '?refresh=true' : ''}`;
-  const response = await fetch(url, {
-    headers: { Accept: 'application/json' }
-  });
-  if (!response.ok) {
-    throw new Error(`Proxy API responded with ${response.status}`);
+  try {
+    // Add timeout for frontend requests (120 seconds for large data)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120秒超时
+    
+    console.log('[wordpressSchoolService] Fetching via proxy:', url);
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    
+    console.log('[wordpressSchoolService] Proxy response status:', response.status);
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Proxy API responded with ${response.status}: ${errorText}`);
+    }
+    const data = await response.json();
+    console.log('[wordpressSchoolService] Proxy response data:', {
+      profilesCount: data.profiles?.length || 0,
+      universitiesCount: data.universities?.length || 0,
+      allCount: data.all?.length || 0
+    });
+    return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      // Check if it was a timeout or manual abort
+      const wasTimeout = error.message?.includes('timeout') || error.message?.includes('aborted');
+      if (wasTimeout) {
+        console.error('[wordpressSchoolService] Proxy fetch timed out after 120 seconds');
+        throw new Error('请求超时。数据量较大，请稍后重试。');
+      }
+      // Otherwise, it might be HMR-related, don't throw error
+      console.warn('[wordpressSchoolService] Proxy fetch was aborted (possibly due to HMR)');
+      throw error;
+    }
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      // This could be HMR-related or a real network error
+      // Log it but don't throw a user-friendly error immediately
+      console.warn('[wordpressSchoolService] Proxy fetch failed (may be HMR-related):', error);
+      throw new Error('无法连接到服务器。请检查网络连接或服务器是否正在运行。');
+    }
+    console.error('[wordpressSchoolService] Proxy fetch error:', error);
+    throw error;
   }
-  return response.json();
 };
 
 export const getWordPressSchools = async (
@@ -302,10 +375,27 @@ export const getWordPressSchools = async (
   if (!inFlightPromise) {
     inFlightPromise = (async () => {
       const baseUrl = ensureBaseUrl(rest);
-      const unified = await tryFetchUnifiedEndpoint(baseUrl);
-      const data = unified ?? (await fetchWithFallback(baseUrl));
-      setCache(data);
-      return data;
+      console.log('[wordpressSchoolService] Server-side: fetching from', baseUrl);
+      try {
+        const unified = await tryFetchUnifiedEndpoint(baseUrl);
+        if (unified) {
+          console.log('[wordpressSchoolService] Server-side: got unified endpoint data');
+          setCache(unified);
+          return unified;
+        }
+        console.log('[wordpressSchoolService] Server-side: unified endpoint failed, using fallback');
+        const data = await fetchWithFallback(baseUrl);
+        console.log('[wordpressSchoolService] Server-side: fallback fetched', {
+          profilesCount: data.profiles?.length || 0,
+          universitiesCount: data.universities?.length || 0,
+          allCount: data.all?.length || 0
+        });
+        setCache(data);
+        return data;
+      } catch (error) {
+        console.error('[wordpressSchoolService] Server-side fetch error:', error);
+        throw error;
+      }
     })()
       .catch((error) => {
         console.error('[wordpressSchoolService] Failed to load schools', error);
