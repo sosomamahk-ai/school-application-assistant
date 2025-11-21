@@ -92,6 +92,7 @@ export default function AdminSchoolsPage() {
   const [savingAll, setSavingAll] = useState(false);
   const [activeTab, setActiveTab] = useState<'manual' | 'bulk'>('manual');
   const [activeWordPressRowId, setActiveWordPressRowId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const templates = useMemo<TemplateOption[]>(() => {
     return templateRecords.map((tpl) => {
@@ -146,6 +147,7 @@ export default function AdminSchoolsPage() {
 
   const fetchSchools = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const params = new URLSearchParams();
       if (searchTerm.trim()) params.set('search', searchTerm.trim());
@@ -158,7 +160,26 @@ export default function AdminSchoolsPage() {
         router.push('/auth/login');
         return;
       }
+      if (!response.ok) {
+        let errorMessage = `加载失败：HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status text
+          errorMessage = `加载失败：${response.statusText || `HTTP ${response.status}`}`;
+        }
+        setFetchError(errorMessage);
+        console.error('Failed to fetch schools:', errorMessage);
+        return;
+      }
       const data = await response.json();
+      if (!data.success) {
+        const errorMessage = data.error || '加载失败：未知错误';
+        setFetchError(errorMessage);
+        console.error('API returned error:', errorMessage);
+        return;
+      }
       const mapped: GridSchool[] = (data.schools || []).map((item: ApiSchool) =>
         mapApiSchool(item, templateWordPressMap)
       );
@@ -169,8 +190,11 @@ export default function AdminSchoolsPage() {
       setOriginalRows(original);
       setSchools(mapped);
       setDirtyMap({});
+      setFetchError(null);
     } catch (error) {
-      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : '加载失败：网络错误';
+      setFetchError(errorMessage);
+      console.error('Error fetching schools:', error);
     } finally {
       setLoading(false);
     }
@@ -569,6 +593,20 @@ export default function AdminSchoolsPage() {
               ) : (
                 '正在同步 WordPress 学校数据...'
               )}
+            </div>
+          )}
+
+          {fetchError && (
+            <div className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm border border-red-100 bg-red-50 text-red-600">
+              <AlertCircle className="h-4 w-4" />
+              <span>学校数据加载失败：{fetchError}</span>
+              <button
+                type="button"
+                className="text-xs underline ml-auto"
+                onClick={() => fetchSchools()}
+              >
+                重试
+              </button>
             </div>
           )}
 

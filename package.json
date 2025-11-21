@@ -18,7 +18,9 @@
     "test:pooler": "node scripts/test-session-pooler.js",
     "test:new-password": "node scripts/test-new-password.js",
     "test:all-formats": "node scripts/test-all-username-formats.js",
-    "check:env": "ts-node --project tsconfig.scripts.json scripts/check-env.ts"
+    "check:env": "ts-node --project tsconfig.scripts.json scripts/check-env.ts",
+    "diagnose:schools": "node scripts/diagnose-schools-api.js",
+    "setup:env": "node scripts/setup-env.js"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
@@ -42,6 +44,7 @@
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.16",
+    "dotenv": "^17.2.3",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4",
     "postcss": "^8.4.32",

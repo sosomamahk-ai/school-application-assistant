@@ -49,43 +49,52 @@ const normalizeTextArray = (value?: string[] | string | null): string[] | undefi
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const admin = await authenticateAdmin(req);
-  if (!admin) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  try {
+    const admin = await authenticateAdmin(req);
+    if (!admin) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
-  if (req.method === 'GET') {
-    const { search } = req.query;
-    const searchValue = typeof search === 'string' ? search.trim() : '';
-    const where: Prisma.SchoolWhereInput | undefined = searchValue
-      ? {
-          OR: [
-            { name: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
-            { shortName: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
-            { template: { schoolId: { contains: searchValue, mode: Prisma.QueryMode.insensitive } } },
-            { template: { program: { contains: searchValue, mode: Prisma.QueryMode.insensitive } } }
-          ]
-        }
-      : undefined;
+    if (req.method === 'GET') {
+      try {
+        const { search } = req.query;
+        const searchValue = typeof search === 'string' ? search.trim() : '';
+        const where: Prisma.SchoolWhereInput | undefined = searchValue
+          ? {
+              OR: [
+                { name: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                { shortName: { contains: searchValue, mode: Prisma.QueryMode.insensitive } },
+                { template: { schoolId: { contains: searchValue, mode: Prisma.QueryMode.insensitive } } },
+                { template: { program: { contains: searchValue, mode: Prisma.QueryMode.insensitive } } }
+              ]
+            }
+          : undefined;
 
-    const schools = await prisma.school.findMany({
-      where,
-      include: {
-        template: {
-          select: {
-            id: true,
-            schoolId: true,
-            schoolName: true,
-            program: true,
-            category: true
-          }
-        }
-      },
-      orderBy: { updatedAt: 'desc' }
-    });
+        const schools = await prisma.school.findMany({
+          where,
+          include: {
+            template: {
+              select: {
+                id: true,
+                schoolId: true,
+                schoolName: true,
+                program: true,
+                category: true
+              }
+            }
+          },
+          orderBy: { updatedAt: 'desc' }
+        });
 
-    return res.status(200).json({ success: true, schools });
-  }
+        return res.status(200).json({ success: true, schools });
+      } catch (error) {
+        console.error('Failed to fetch schools:', error);
+        return res.status(500).json({ 
+          error: 'Failed to fetch schools',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
 
   if (req.method === 'POST') {
     const { rows } = req.body as { rows?: AdminSchoolRow[] };
@@ -173,17 +182,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  if (req.method === 'DELETE') {
-    const { id } = req.body as { id?: string };
-    if (!id) {
-      return res.status(400).json({ error: 'Missing id' });
+    if (req.method === 'DELETE') {
+      const { id } = req.body as { id?: string };
+      if (!id) {
+        return res.status(400).json({ error: 'Missing id' });
+      }
+
+      try {
+        await prisma.school.delete({ where: { id } });
+        return res.status(200).json({ success: true });
+      } catch (error) {
+        console.error('Failed to delete school:', error);
+        return res.status(500).json({ error: 'Failed to delete school' });
+      }
     }
 
-    await prisma.school.delete({ where: { id } });
-    return res.status(200).json({ success: true });
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (error) {
+    console.error('API handler error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-
-  return res.status(405).json({ error: 'Method not allowed' });
 }
 
 
