@@ -134,10 +134,16 @@ export default function AdminAutoApplyScriptsPage() {
       }
 
       setSuccess(`脚本创建成功！文件位置：${data.filePath}`);
-      setShowCreateModal(false);
-      setSelectedTemplate('');
-      setApplyUrl('');
-      setSupportsLogin(false);
+      setError(null);
+      // 延迟关闭，让用户看到成功消息
+      setTimeout(() => {
+        setShowCreateModal(false);
+        setSelectedTemplate('');
+        setApplyUrl('');
+        setSupportsLogin(false);
+        // 3秒后清除成功消息
+        setTimeout(() => setSuccess(null), 3000);
+      }, 2000);
       fetchScripts();
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建脚本失败');
@@ -176,17 +182,33 @@ export default function AdminAutoApplyScriptsPage() {
             </button>
           </div>
 
-          {error && (
+          {/* 页面上的错误信息（当弹出菜单关闭时显示） */}
+          {error && !showCreateModal && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
               <XCircle className="h-5 w-5" />
-              {error}
+              <span className="flex-1">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="ml-2 text-red-500 hover:text-red-700"
+                aria-label="关闭"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
             </div>
           )}
 
-          {success && (
+          {/* 页面上的成功信息（当弹出菜单关闭时显示） */}
+          {success && !showCreateModal && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
               <CheckCircle className="h-5 w-5" />
-              {success}
+              <span className="flex-1">{success}</span>
+              <button
+                onClick={() => setSuccess(null)}
+                className="ml-2 text-green-500 hover:text-green-700"
+                aria-label="关闭"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
             </div>
           )}
 
@@ -275,13 +297,13 @@ export default function AdminAutoApplyScriptsPage() {
         {/* 创建脚本模态框 */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">创建自动申请脚本</h2>
                 <button
                   onClick={() => {
                     setShowCreateModal(false);
-                    setError(null);
+                    // 不在这里清除错误，让错误信息保留在页面上
                     setSelectedTemplate('');
                     setApplyUrl('');
                     setSupportsLogin(false);
@@ -292,6 +314,22 @@ export default function AdminAutoApplyScriptsPage() {
                 </button>
               </div>
 
+              {/* 在弹出菜单中显示错误信息 */}
+              {error && (
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                  <XCircle className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              )}
+
+              {/* 在弹出菜单中显示成功信息 */}
+              {success && (
+                <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm">{success}</span>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -300,7 +338,7 @@ export default function AdminAutoApplyScriptsPage() {
                   <select
                     value={selectedTemplate}
                     onChange={(e) => setSelectedTemplate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white"
                   >
                     <option value="">请选择学校...</option>
                     {templates.map((template) => (
@@ -323,7 +361,7 @@ export default function AdminAutoApplyScriptsPage() {
                     value={applyUrl}
                     onChange={(e) => setApplyUrl(e.target.value)}
                     placeholder="https://school.edu/apply"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     学校的在线申请表单页面地址
@@ -362,7 +400,7 @@ export default function AdminAutoApplyScriptsPage() {
                 <button
                   onClick={() => {
                     setShowCreateModal(false);
-                    setError(null);
+                    // 取消时不清除错误，让错误信息保留在页面上以便查看
                     setSelectedTemplate('');
                     setApplyUrl('');
                     setSupportsLogin(false);
