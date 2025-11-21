@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/router';
 import { useTranslation } from '@/contexts/TranslationContext';
-import { Bot, Plus, CheckCircle, XCircle, Loader2, FileCode, Save } from 'lucide-react';
+import { Bot, Plus, CheckCircle, XCircle, Loader2, FileCode } from 'lucide-react';
 
 interface Template {
   id: string;

@@ -9,44 +9,60 @@ const SERVICE_FILE = join(process.cwd(), 'src/modules/auto-apply/autoApplyServic
 
 // 获取所有脚本
 async function getScripts(): Promise<any[]> {
-  if (!existsSync(SCRIPTS_DIR)) {
+  try {
+    if (!existsSync(SCRIPTS_DIR)) {
+      return [];
+    }
+
+    const files = await readdir(SCRIPTS_DIR);
+    const scriptFiles = files.filter(f => f.endsWith('.ts') && f !== 'common.ts' && f !== 'example-school.ts');
+    
+    const scripts = [];
+    let serviceContent = '';
+    
+    try {
+      serviceContent = await readFile(SERVICE_FILE, 'utf-8');
+    } catch (error) {
+      console.warn('Failed to read service file:', error);
+    }
+    
+    for (const file of scriptFiles) {
+      try {
+        const filePath = join(SCRIPTS_DIR, file);
+        const content = await readFile(filePath, 'utf-8');
+        
+        // 提取脚本信息
+        const idMatch = content.match(/id:\s*["']([^"']+)["']/);
+        const nameMatch = content.match(/name:\s*["']([^"']+)["']/);
+        const urlMatch = content.match(/APPLY_URL\s*=\s*["']([^"']+)["']/);
+        const loginMatch = content.match(/supportsLogin:\s*(true|false)/);
+        
+        if (idMatch) {
+          const schoolId = idMatch[1];
+          const isRegistered = serviceContent ? serviceContent.includes(schoolId) : false;
+          
+          scripts.push({
+            id: schoolId,
+            schoolId,
+            name: nameMatch ? nameMatch[1] : schoolId,
+            applyUrl: urlMatch ? urlMatch[1] : '',
+            supportsLogin: loginMatch ? loginMatch[1] === 'true' : false,
+            description: '',
+            filePath: filePath,
+            isRegistered
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to read script file ${file}:`, error);
+        // 继续处理其他文件
+      }
+    }
+    
+    return scripts;
+  } catch (error) {
+    console.error('Failed to get scripts:', error);
     return [];
   }
-
-  const files = await readdir(SCRIPTS_DIR);
-  const scriptFiles = files.filter(f => f.endsWith('.ts') && f !== 'common.ts' && f !== 'example-school.ts');
-  
-  const scripts = [];
-  const serviceContent = await readFile(SERVICE_FILE, 'utf-8');
-  
-  for (const file of scriptFiles) {
-    const filePath = join(SCRIPTS_DIR, file);
-    const content = await readFile(filePath, 'utf-8');
-    
-    // 提取脚本信息
-    const idMatch = content.match(/id:\s*["']([^"']+)["']/);
-    const nameMatch = content.match(/name:\s*["']([^"']+)["']/);
-    const urlMatch = content.match(/APPLY_URL\s*=\s*["']([^"']+)["']/);
-    const loginMatch = content.match(/supportsLogin:\s*(true|false)/);
-    
-    if (idMatch) {
-      const schoolId = idMatch[1];
-      const isRegistered = serviceContent.includes(schoolId);
-      
-      scripts.push({
-        id: schoolId,
-        schoolId,
-        name: nameMatch ? nameMatch[1] : schoolId,
-        applyUrl: urlMatch ? urlMatch[1] : '',
-        supportsLogin: loginMatch ? loginMatch[1] === 'true' : false,
-        description: '',
-        filePath: filePath,
-        isRegistered
-      });
-    }
-  }
-  
-  return scripts;
 }
 
 // 创建新脚本

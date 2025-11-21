@@ -126,6 +126,11 @@ export default function Layout({ children }: LayoutProps) {
       href: '/admin/schools',
       label: getLabel('navbar.adminSchools', '学校映射管理'),
       icon: LayoutDashboard
+    },
+    {
+      href: '/admin/auto-apply-scripts',
+      label: '自动申请脚本',
+      icon: FileText
     }
   ];
 
