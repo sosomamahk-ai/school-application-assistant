@@ -642,11 +642,11 @@ export default function AdminSchoolsPage() {
                 </div>
               </div>
 
-              <div className="bg-white border rounded-3xl shadow-sm p-6 space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="bg-white border rounded-3xl shadow-sm p-4 space-y-3">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">逐行管理模式</h2>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <h2 className="text-lg font-semibold text-gray-900">逐行管理模式</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
                       在表格中直接编辑字段，支持 inline 保存 / 重置 / 删除。
                     </p>
                   </div>

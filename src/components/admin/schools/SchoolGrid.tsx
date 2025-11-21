@@ -239,7 +239,7 @@ export default function SchoolGrid({
   );
 
   return (
-    <div className="border rounded-xl overflow-hidden" style={{ height: '70vh' }}>
+    <div className="border rounded-xl overflow-hidden" style={{ height: '85vh', minHeight: '600px' }}>
       <DataGrid
         className="rdg-light"
         columns={columns}

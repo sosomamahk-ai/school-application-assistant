@@ -77,6 +77,7 @@ const normalizeCategory = (value: string | null | undefined, type: WordPressScho
 };
 
 const extractLogoUrl = (post: any): string | null => {
+  // 1. Try ACF logo field first
   const fromAcf = post?.acf?.logo;
   if (typeof fromAcf === 'string') {
     return fromAcf;
@@ -84,6 +85,26 @@ const extractLogoUrl = (post: any): string | null => {
   if (fromAcf?.url) {
     return fromAcf.url;
   }
+  
+  // 2. Try _thumbnail_id meta key (WordPress featured image)
+  const thumbnailId = post?.meta?._thumbnail_id || post?._thumbnail_id;
+  if (thumbnailId) {
+    // If we have embedded media, use it
+    const embedded = post?._embedded?.['wp:featuredmedia'];
+    if (Array.isArray(embedded) && embedded[0]?.source_url) {
+      return embedded[0].source_url;
+    }
+    // If we have featured_media_url directly
+    if (post?.featured_media_url) {
+      return post.featured_media_url;
+    }
+    // If we have featured_media object with source_url
+    if (post?.featured_media?.source_url) {
+      return post.featured_media.source_url;
+    }
+  }
+  
+  // 3. Fallback to embedded featured media
   const embedded = post?._embedded?.['wp:featuredmedia'];
   if (Array.isArray(embedded) && embedded[0]?.source_url) {
     return embedded[0].source_url;
@@ -91,6 +112,7 @@ const extractLogoUrl = (post: any): string | null => {
   if (post?.featured_media_url) {
     return post.featured_media_url;
   }
+  
   return null;
 };
 
@@ -105,9 +127,65 @@ const normalizeAcf = (acfValue: any): Record<string, any> => {
   return {};
 };
 
+const extractProfileType = (post: any): string | null => {
+  // Try to get profile_type from taxonomy terms
+  // WordPress REST API can return taxonomy terms in different formats:
+  
+  // 1. Direct taxonomy field (if custom endpoint includes it)
+  if (post?.profile_type) {
+    if (typeof post.profile_type === 'string') {
+      return post.profile_type;
+    }
+    if (Array.isArray(post.profile_type) && post.profile_type.length > 0) {
+      const firstTerm = post.profile_type[0];
+      return typeof firstTerm === 'string' ? firstTerm : firstTerm?.name || firstTerm?.slug || null;
+    }
+    if (typeof post.profile_type === 'object' && post.profile_type.name) {
+      return post.profile_type.name;
+    }
+  }
+  
+  // 2. From _embedded taxonomy terms
+  const embeddedTerms = post?._embedded?.['wp:term'];
+  if (Array.isArray(embeddedTerms)) {
+    // Find profile_type taxonomy in embedded terms
+    for (const termGroup of embeddedTerms) {
+      if (Array.isArray(termGroup)) {
+        for (const term of termGroup) {
+          if (term?.taxonomy === 'profile_type' && term?.name) {
+            return term.name;
+          }
+        }
+      }
+    }
+  }
+  
+  // 3. From acf field
+  if (post?.acf?.profile_type) {
+    const acfValue = post.acf.profile_type;
+    if (typeof acfValue === 'string') {
+      return acfValue;
+    }
+    if (Array.isArray(acfValue) && acfValue.length > 0) {
+      return typeof acfValue[0] === 'string' ? acfValue[0] : acfValue[0]?.name || null;
+    }
+    if (typeof acfValue === 'object' && acfValue.name) {
+      return acfValue.name;
+    }
+  }
+  
+  return null;
+};
+
 const toWordPressSchool = (post: any, type: WordPressSchoolType): WordPressSchool => {
   const title = sanitizeHtml(post?.title?.rendered ?? post?.title ?? '');
+  
+  // First try to get profile_type from taxonomy
+  const profileType = extractProfileType(post);
+  
+  // Then try other category sources
   const categorySource =
+    profileType ||
     post?.category ||
     post?.categories ||
     post?.acf?.category ||
@@ -220,6 +298,7 @@ const fetchCollection = async (baseUrl: string, type: WordPressSchoolType): Prom
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
       
+      // _embed parameter includes taxonomy terms and featured media
       const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed&acf_format=standard`;
       const response = await fetch(endpoint, {
         headers: { Accept: 'application/json' },
