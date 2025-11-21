@@ -9,7 +9,8 @@ type FetchOptions = {
   baseUrl?: string;
 };
 
-const DEFAULT_CACHE_TTL = Number(process.env.NEXT_PUBLIC_WORDPRESS_SCHOOL_CACHE_TTL ?? 5 * 60 * 1000);
+// 增加缓存时间到 30 分钟，减少服务器压力
+const DEFAULT_CACHE_TTL = Number(process.env.NEXT_PUBLIC_WORDPRESS_SCHOOL_CACHE_TTL ?? 30 * 60 * 1000);
 const MAX_PAGES = 10;
 const WORDPRESS_UNIFIED_ENDPOINT = '/wp-json/schools/v1/list';
 
@@ -44,6 +45,56 @@ type CacheEntry = {
 
 let cache: CacheEntry | null = null;
 let inFlightPromise: Promise<WordPressSchoolResponse> | null = null;
+
+// localStorage 缓存键
+const STORAGE_KEY = 'wordpress_schools_cache';
+const STORAGE_EXPIRY_KEY = 'wordpress_schools_cache_expiry';
+
+// 从 localStorage 加载缓存
+const loadFromStorage = (): WordPressSchoolResponse | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const expiry = localStorage.getItem(STORAGE_EXPIRY_KEY);
+    if (!expiry) return null;
+    const expiryTime = Number(expiry);
+    if (Date.now() > expiryTime) {
+      // 缓存已过期，清除
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_EXPIRY_KEY);
+      return null;
+    }
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      return JSON.parse(cached) as WordPressSchoolResponse;
+    }
+  } catch (error) {
+    console.warn('[wordpressSchoolService] Failed to load from localStorage:', error);
+    // 清除损坏的缓存
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_EXPIRY_KEY);
+  }
+  return null;
+};
+
+// 保存到 localStorage
+const saveToStorage = (data: WordPressSchoolResponse, ttl: number) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_EXPIRY_KEY, String(Date.now() + ttl));
+  } catch (error) {
+    console.warn('[wordpressSchoolService] Failed to save to localStorage:', error);
+    // localStorage 可能已满，尝试清除旧数据
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_EXPIRY_KEY);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_EXPIRY_KEY, String(Date.now() + ttl));
+    } catch (e) {
+      console.error('[wordpressSchoolService] Failed to save to localStorage after cleanup:', e);
+    }
+  }
+};
 
 const EMPTY_RESPONSE: WordPressSchoolResponse = {
   profiles: [],
@@ -359,8 +410,26 @@ const fetchWithFallback = async (baseUrl: string): Promise<WordPressSchoolRespon
 
 const shouldUseCache = (forceRefresh?: boolean) => {
   if (forceRefresh) return false;
-  if (!cache) return false;
-  return cache.expiresAt > Date.now();
+  
+  // 先检查内存缓存
+  if (cache && cache.expiresAt > Date.now()) {
+    return true;
+  }
+  
+  // 再检查 localStorage 缓存（仅在浏览器环境）
+  if (typeof window !== 'undefined') {
+    const stored = loadFromStorage();
+    if (stored) {
+      // 恢复内存缓存
+      cache = {
+        data: stored,
+        expiresAt: Date.now() + DEFAULT_CACHE_TTL
+      };
+      return true;
+    }
+  }
+  
+  return false;
 };
 
 const setCache = (data: WordPressSchoolResponse) => {
@@ -368,14 +437,19 @@ const setCache = (data: WordPressSchoolResponse) => {
     data,
     expiresAt: Date.now() + DEFAULT_CACHE_TTL
   };
+  
+  // 同时保存到 localStorage（仅在浏览器环境）
+  if (typeof window !== 'undefined') {
+    saveToStorage(data, DEFAULT_CACHE_TTL);
+  }
 };
 
 const fetchViaProxy = async (forceRefresh?: boolean): Promise<WordPressSchoolResponse> => {
   const url = `/api/wordpress/schools${forceRefresh ? '?refresh=true' : ''}`;
   try {
-    // Add timeout for frontend requests (120 seconds for large data)
+    // Add timeout for frontend requests (180 seconds for large data)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120秒超时
+    const timeoutId = setTimeout(() => controller.abort(), 180000); // 180秒超时（3分钟）
     
     console.log('[wordpressSchoolService] Fetching via proxy:', url);
     const response = await fetch(url, {
@@ -401,8 +475,8 @@ const fetchViaProxy = async (forceRefresh?: boolean): Promise<WordPressSchoolRes
       // Check if it was a timeout or manual abort
       const wasTimeout = error.message?.includes('timeout') || error.message?.includes('aborted');
       if (wasTimeout) {
-        console.error('[wordpressSchoolService] Proxy fetch timed out after 120 seconds');
-        throw new Error('请求超时。数据量较大，请稍后重试。');
+        console.error('[wordpressSchoolService] Proxy fetch timed out after 180 seconds');
+        throw new Error('请求超时。数据量较大，请稍后重试。如果问题持续，请联系管理员。');
       }
       // Otherwise, it might be HMR-related, don't throw error
       console.warn('[wordpressSchoolService] Proxy fetch was aborted (possibly due to HMR)');
@@ -491,6 +565,16 @@ export const getWordPressSchools = async (
 export const invalidateWordPressSchoolCache = () => {
   cache = null;
   inFlightPromise = null;
+  
+  // 清除 localStorage 缓存
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_EXPIRY_KEY);
+    } catch (error) {
+      console.warn('[wordpressSchoolService] Failed to clear localStorage cache:', error);
+    }
+  }
 };
 
 export const buildWordPressTemplateId = (school: WordPressSchool): string =>

@@ -6,8 +6,8 @@ import { getWordPressSchools } from '@/services/wordpressSchoolService';
  * This avoids CORS issues by making server-to-server requests
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Set a longer timeout for this API route (2 minutes)
-  req.setTimeout(120000);
+  // Set a longer timeout for this API route (3 minutes for large data)
+  req.setTimeout(180000);
   
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });

@@ -238,8 +238,11 @@ export default function SchoolGrid({
     ]
   );
 
+  // 计算最小高度：至少显示 10 行，每行 96px
+  const minHeight = Math.max(10 * 96, 600); // 至少 960px 或 600px，取较大值
+  
   return (
-    <div className="border rounded-xl overflow-hidden" style={{ height: '85vh', minHeight: '600px' }}>
+    <div className="border rounded-xl overflow-hidden" style={{ minHeight: `${minHeight}px` }}>
       <DataGrid
         className="rdg-light"
         columns={columns}

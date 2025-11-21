@@ -28,6 +28,13 @@ interface ApiSchool {
   resultTime: string | null;
   officialLink: string | null;
   notes: string | null;
+  template?: {
+    id: string;
+    schoolId: string;
+    schoolName: string | Record<string, string>;
+    program: string;
+    category?: string | null;
+  };
 }
 
 interface ApiTemplate {
@@ -44,9 +51,59 @@ const buildWordPressKey = (id?: number | null, type?: WordPressSchool['type'] | 
 
 const mapApiSchool = (
   school: ApiSchool,
-  templateWordPressMap: Map<string, WordPressSchool | null>
+  templateWordPressMap: Map<string, WordPressSchool | null>,
+  wordpressSchools: WordPressSchool[],
+  wpSchoolIndex: Map<string, WordPressSchool>
 ): GridSchool => {
-  const matched = templateWordPressMap.get(school.templateId) ?? null;
+  let matched: WordPressSchool | null = null;
+  let wordpressSchoolId: number | null = null;
+  let wordpressSchoolType: 'profile' | 'university' | null = null;
+  
+  // 策略 1: 优先从 templateWordPressMap 获取（如果模板已经匹配过）
+  matched = templateWordPressMap.get(school.templateId) ?? null;
+  if (matched) {
+    wordpressSchoolId = matched.id;
+    wordpressSchoolType = matched.type;
+  }
+  
+  // 策略 2: 如果 map 中没有，尝试从 template.schoolId 解析 WordPress 绑定信息
+  // 绑定信息存储在 template.schoolId 中（格式：wp-profile-123 或 profile-123）
+  // 这样可以保留已经绑定好的学校，即使 WordPress 数据还没加载完
+  if (!matched && school.template?.schoolId) {
+    const parsed = (() => {
+      const pattern = /^(?:wp-)?(profile|university)[-_]?(\d+)$/i;
+      const matched = school.template.schoolId.trim().match(pattern);
+      if (matched) {
+        return {
+          type: matched[1].toLowerCase() as 'profile' | 'university',
+          id: Number(matched[2])
+        };
+      }
+      return null;
+    })();
+    
+    if (parsed) {
+      // 先保存绑定信息（即使找不到 WordPress 学校对象，也要保留 ID）
+      wordpressSchoolId = parsed.id;
+      wordpressSchoolType = parsed.type;
+      
+      // 然后尝试从已加载的 WordPress 数据中查找对象
+      const key = `${parsed.type}-${parsed.id}`;
+      matched = wpSchoolIndex.get(key) ?? null;
+      
+      // 如果索引中没有，但 WordPress 数据已加载，尝试查找
+      if (!matched && wordpressSchools.length > 0) {
+        matched = wordpressSchools.find(
+          (wp) => wp.id === parsed.id && wp.type === parsed.type
+        ) ?? null;
+      }
+    }
+  }
+  
+  // 注意：这里不进行名称匹配，因为已经绑定好的学校应该通过 schoolId 找到
+  // 名称匹配只在 templates 的 useMemo 中进行（用于显示模板选项）
+  // 这样可以避免每次进入页面都重新搜索，减少服务器压力
+  
   return {
     id: school.id,
     name: school.name,
@@ -59,8 +116,8 @@ const mapApiSchool = (
     resultTime: school.resultTime || '',
     officialLink: school.officialLink || '',
     notes: school.notes || '',
-    wordpressSchoolId: matched?.id ?? null,
-    wordpressSchoolType: matched?.type ?? null
+    wordpressSchoolId,
+    wordpressSchoolType
   };
 };
 
@@ -95,11 +152,46 @@ export default function AdminSchoolsPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const templates = useMemo<TemplateOption[]>(() => {
+    // 创建 WordPress 学校索引，提高查找效率（O(1) 查找）
+    const wpSchoolIndex = new Map<string, WordPressSchool>();
+    wordpressSchools.forEach((school) => {
+      wpSchoolIndex.set(`${school.type}-${school.id}`, school);
+    });
+
     return templateRecords.map((tpl) => {
-      const wordpressSchool = matchWordPressSchoolFromTemplate(
-        { schoolId: tpl.schoolId, schoolName: tpl.schoolName },
-        wordpressSchools
-      );
+      // 优化：如果 schoolId 已经包含 WordPress 绑定信息，直接查找，避免名称匹配
+      let wordpressSchool: WordPressSchool | null = null;
+      
+      if (tpl.schoolId) {
+        // 尝试解析 WordPress ID（格式：wp-profile-123 或 profile-123）
+        const parsed = (() => {
+          const pattern = /^(?:wp-)?(profile|university)[-_]?(\d+)$/i;
+          const matched = tpl.schoolId.trim().match(pattern);
+          if (matched) {
+            return {
+              type: matched[1].toLowerCase() as 'profile' | 'university',
+              id: Number(matched[2])
+            };
+          }
+          return null;
+        })();
+        
+        if (parsed) {
+          // 直接从索引中查找，O(1) 时间复杂度
+          const key = `${parsed.type}-${parsed.id}`;
+          wordpressSchool = wpSchoolIndex.get(key) ?? null;
+        }
+      }
+      
+      // 如果没有找到绑定，且 WordPress 学校数据已加载，才进行名称匹配
+      // 这样可以避免每次重新进入页面时都重新搜索
+      if (!wordpressSchool && wordpressSchools.length > 0) {
+        wordpressSchool = matchWordPressSchoolFromTemplate(
+          { schoolId: tpl.schoolId, schoolName: tpl.schoolName },
+          wordpressSchools
+        );
+      }
+      
       return {
         id: tpl.id,
         label: `${tpl.schoolId} ｜ ${tpl.program}`,
@@ -180,8 +272,15 @@ export default function AdminSchoolsPage() {
         console.error('API returned error:', errorMessage);
         return;
       }
+      
+      // 创建 WordPress 学校索引（用于快速查找）
+      const wpSchoolIndex = new Map<string, WordPressSchool>();
+      wordpressSchools.forEach((school) => {
+        wpSchoolIndex.set(`${school.type}-${school.id}`, school);
+      });
+      
       const mapped: GridSchool[] = (data.schools || []).map((item: ApiSchool) =>
-        mapApiSchool(item, templateWordPressMap)
+        mapApiSchool(item, templateWordPressMap, wordpressSchools, wpSchoolIndex)
       );
       const original: Record<string, GridSchool> = {};
       mapped.forEach((row) => {
@@ -198,7 +297,7 @@ export default function AdminSchoolsPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, searchTerm, templateWordPressMap]);
+  }, [router, searchTerm, templateWordPressMap, wordpressSchools]);
 
   useEffect(() => {
     const tokenInStorage = localStorage.getItem('token');
@@ -377,7 +476,16 @@ export default function AdminSchoolsPage() {
           }
           return false;
         }
-        const updatedRow = mapApiSchool((await response.json()).school as ApiSchool, templateWordPressMap);
+        const responseData = await response.json();
+        const updatedSchool = responseData.school as ApiSchool;
+        
+        // 创建 WordPress 学校索引（用于快速查找）
+        const wpSchoolIndex = new Map<string, WordPressSchool>();
+        wordpressSchools.forEach((school) => {
+          wpSchoolIndex.set(`${school.type}-${school.id}`, school);
+        });
+        
+        const updatedRow = mapApiSchool(updatedSchool, templateWordPressMap, wordpressSchools, wpSchoolIndex);
         setSchools((prev) => prev.map((item) => (item.id === row.id ? updatedRow : item)));
         setOriginalRows((prev) => ({ ...prev, [row.id]: updatedRow }));
         setDirtyMap((prev) => ({ ...prev, [row.id]: false }));
@@ -394,7 +502,7 @@ export default function AdminSchoolsPage() {
         }
       }
     },
-    [fetchSchools, validateRow, templateWordPressMap]
+    [fetchSchools, validateRow, templateWordPressMap, wordpressSchools]
   );
 
   const handleSaveRow = async (row: GridSchool) => {

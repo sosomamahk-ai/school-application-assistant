@@ -45,7 +45,8 @@ export default function AdminAutoApplyScriptsPage() {
     }
     fetchTemplates();
     fetchScripts();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchTemplates = async () => {
     try {

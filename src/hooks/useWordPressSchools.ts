@@ -45,8 +45,11 @@ export function useWordPressSchools(options?: UseWordPressSchoolsOptions) {
 
   useEffect(() => {
     if (!autoFetch) return;
-    fetchData();
-  }, [autoFetch, fetchData]);
+    // 只在首次加载或数据为空时获取，避免重复请求
+    if (!data) {
+      fetchData();
+    }
+  }, [autoFetch, fetchData, data]);
 
   return {
     data,

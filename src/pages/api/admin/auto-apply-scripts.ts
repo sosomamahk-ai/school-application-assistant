@@ -284,47 +284,54 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const userId = await authenticate(req);
-  if (!userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // 检查用户角色（只有管理员可以操作）
-  // 这里可以添加角色检查逻辑
-
-  if (req.method === 'GET') {
-    try {
-      const scripts = await getScripts();
-      return res.status(200).json({ success: true, scripts });
-    } catch (error) {
-      console.error('Failed to get scripts:', error);
-      return res.status(500).json({ error: 'Failed to get scripts' });
+  try {
+    const userId = await authenticate(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-  }
 
-  if (req.method === 'POST') {
-    try {
-      const { schoolId, schoolName, applyUrl, supportsLogin } = req.body;
+    // 检查用户角色（只有管理员可以操作）
+    // 这里可以添加角色检查逻辑
 
-      if (!schoolId || !schoolName || !applyUrl) {
-        return res.status(400).json({ error: 'Missing required fields' });
+    if (req.method === 'GET') {
+      try {
+        const scripts = await getScripts();
+        return res.status(200).json({ success: true, scripts });
+      } catch (error) {
+        console.error('Failed to get scripts:', error);
+        return res.status(500).json({ error: 'Failed to get scripts' });
       }
-
-      const result = await createScript(schoolId, schoolName, applyUrl, supportsLogin || false);
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Script created successfully',
-        filePath: result.filePath
-      });
-    } catch (error) {
-      console.error('Failed to create script:', error);
-      return res.status(500).json({ 
-        error: error instanceof Error ? error.message : 'Failed to create script' 
-      });
     }
-  }
 
-  res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method === 'POST') {
+      try {
+        const { schoolId, schoolName, applyUrl, supportsLogin } = req.body;
+
+        if (!schoolId || !schoolName || !applyUrl) {
+          return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const result = await createScript(schoolId, schoolName, applyUrl, supportsLogin || false);
+        return res.status(200).json({ 
+          success: true, 
+          message: 'Script created successfully',
+          filePath: result.filePath
+        });
+      } catch (error) {
+        console.error('Failed to create script:', error);
+        return res.status(500).json({ 
+          error: error instanceof Error ? error.message : 'Failed to create script' 
+        });
+      }
+    }
+
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (error) {
+    console.error('API handler error:', error);
+    return res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Internal server error' 
+    });
+  }
 }
 
