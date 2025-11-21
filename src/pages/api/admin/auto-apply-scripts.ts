@@ -65,19 +65,26 @@ async function getScripts(): Promise<any[]> {
   }
 }
 
+// 检测是否是生产环境（Vercel serverless）
+// 在Vercel中，文件系统是只读的，不能创建文件
+// 注意：只检查VERCEL环境变量，因为本地开发时NODE_ENV也可能是production
+const isProduction = process.env.VERCEL === '1';
+
 // 创建新脚本
 async function createScript(
   schoolId: string,
   schoolName: string,
   applyUrl: string,
   supportsLogin: boolean
-): Promise<{ filePath: string }> {
-  // 确保目录存在
-  if (!existsSync(SCRIPTS_DIR)) {
-    await mkdir(SCRIPTS_DIR, { recursive: true });
-  }
-
-  // 生成变量名（camelCase）
+): Promise<{ 
+  filePath: string; 
+  scriptContent?: string; 
+  isProduction?: boolean;
+  varName?: string;
+  fileName?: string;
+  registrationCode?: string;
+}> {
+  // 生成变量名和文件名（生产环境和开发环境都需要）
   const varName = schoolId
     .split(/[-_]/)
     .map((word, index) => 
@@ -87,9 +94,35 @@ async function createScript(
     )
     .join('') + 'Script';
 
-  // 生成文件名
   const fileName = schoolId.replace(/_/g, '-').toLowerCase() + '.ts';
   const filePath = join(SCRIPTS_DIR, fileName);
+
+  // 在生产环境（Vercel）中，文件系统是只读的，不能创建文件
+  if (isProduction) {
+    // 生成脚本内容但不写入文件
+    const scriptContent = generateScriptContent(schoolId, schoolName, applyUrl, supportsLogin, varName, fileName);
+    return {
+      filePath: `src/modules/auto-apply/schools/${fileName}`,
+      scriptContent,
+      isProduction: true,
+      varName,
+      fileName,
+      registrationCode: `// 在 src/modules/auto-apply/autoApplyService.ts 中添加：
+import { ${varName} } from "./schools/${fileName.replace('.ts', '')}";
+
+// 在 scriptRegistry 对象中添加：
+const scriptRegistry: SchoolScriptMap = {
+  // ... 其他脚本
+  [${varName}.id]: ${varName},
+};`
+    };
+  }
+
+  // 开发环境：可以创建文件
+  // 确保目录存在
+  if (!existsSync(SCRIPTS_DIR)) {
+    await mkdir(SCRIPTS_DIR, { recursive: true });
+  }
 
   // 检查文件是否已存在
   if (existsSync(filePath)) {
@@ -97,7 +130,43 @@ async function createScript(
   }
 
   // 生成脚本内容
-  const scriptContent = `import type { Locator, Page } from "playwright";
+  const scriptContent = generateScriptContent(schoolId, schoolName, applyUrl, supportsLogin, varName, fileName);
+
+  // 写入文件
+  await writeFile(filePath, scriptContent, 'utf8');
+
+  // 自动注册脚本到 service 文件
+  await registerScriptInService(varName, fileName.replace('.ts', ''), schoolId);
+
+  return { filePath };
+}
+
+// 生成脚本内容（可在生产环境和开发环境使用）
+function generateScriptContent(
+  schoolId: string,
+  schoolName: string,
+  applyUrl: string,
+  supportsLogin: boolean,
+  varName?: string,
+  fileName?: string
+): string {
+  // 如果没有提供，生成变量名和文件名
+  if (!varName) {
+    varName = schoolId
+      .split(/[-_]/)
+      .map((word, index) => 
+        index === 0 
+          ? word.toLowerCase() 
+          : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      )
+      .join('') + 'Script';
+  }
+  
+  if (!fileName) {
+    fileName = schoolId.replace(/_/g, '-').toLowerCase() + '.ts';
+  }
+
+  return `import type { Locator, Page } from "playwright";
 
 import type { SchoolAutomationScript } from "../engine/types";
 import { remapTemplateFields } from "./common";
@@ -242,14 +311,16 @@ async function verifySubmission(page: Page): Promise<boolean> {
   return successIndicators.some(pattern => pattern.test(pageText));
 }
 `;
+}
 
-  // 写入文件
-  await writeFile(filePath, scriptContent, 'utf8');
-
-  // 自动注册脚本到 service 文件
+// 注册脚本到service文件
+async function registerScriptInService(
+  varName: string,
+  fileNameWithoutExt: string,
+  schoolId: string
+): Promise<void> {
   try {
     let serviceContent = await readFile(SERVICE_FILE, 'utf-8');
-    const fileNameWithoutExt = fileName.replace('.ts', '');
     
     // 检查是否已经导入
     const importPattern = new RegExp(`import.*${varName}.*from`, 'm');
@@ -292,8 +363,6 @@ async function verifySubmission(page: Page): Promise<boolean> {
     console.error('Failed to auto-register script:', error);
     // 不抛出错误，因为脚本文件已经创建成功
   }
-
-  return { filePath };
 }
 
 export default async function handler(
@@ -328,6 +397,22 @@ export default async function handler(
         }
 
         const result = await createScript(schoolId, schoolName, applyUrl, supportsLogin || false);
+        
+        if (result.isProduction && result.scriptContent) {
+          // 生产环境：返回脚本内容，让用户手动创建
+          return res.status(200).json({ 
+            success: true, 
+            message: '脚本内容已生成（生产环境需要手动创建文件）',
+            filePath: result.filePath,
+            scriptContent: result.scriptContent,
+            isProduction: true,
+            varName: result.varName,
+            fileName: result.fileName,
+            registrationCode: result.registrationCode
+          });
+        }
+        
+        // 开发环境：文件已创建
         return res.status(200).json({ 
           success: true, 
           message: 'Script created successfully',

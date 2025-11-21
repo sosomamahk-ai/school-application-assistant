@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/router';
 import { useTranslation } from '@/contexts/TranslationContext';
-import { Bot, Plus, CheckCircle, XCircle, Loader2, FileCode } from 'lucide-react';
+import { Bot, Plus, CheckCircle, XCircle, Loader2, FileCode, Copy, Download } from 'lucide-react';
 
 interface Template {
   id: string;
@@ -36,6 +36,12 @@ export default function AdminAutoApplyScriptsPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showScriptContent, setShowScriptContent] = useState<{
+    filePath: string;
+    content: string;
+    instructions?: any;
+    varName?: string;
+  } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -133,17 +139,30 @@ export default function AdminAutoApplyScriptsPage() {
         throw new Error(data.error || '创建脚本失败');
       }
 
-      setSuccess(`脚本创建成功！文件位置：${data.filePath}`);
-      setError(null);
-      // 延迟关闭，让用户看到成功消息
-      setTimeout(() => {
-        setShowCreateModal(false);
-        setSelectedTemplate('');
-        setApplyUrl('');
-        setSupportsLogin(false);
-        // 3秒后清除成功消息
-        setTimeout(() => setSuccess(null), 3000);
-      }, 2000);
+      // 如果是生产环境，显示脚本内容和说明
+      if (data.isProduction && data.scriptContent) {
+        setSuccess(`脚本内容已生成！请按照说明手动创建文件。`);
+        setError(null);
+        // 保存脚本内容，用于显示
+        setShowScriptContent({
+          filePath: data.filePath,
+          content: data.scriptContent,
+          varName: data.varName || ''
+        });
+        // 不关闭弹出菜单，让用户查看脚本内容
+      } else {
+        setSuccess(`脚本创建成功！文件位置：${data.filePath}`);
+        setError(null);
+        // 延迟关闭，让用户看到成功消息
+        setTimeout(() => {
+          setShowCreateModal(false);
+          setSelectedTemplate('');
+          setApplyUrl('');
+          setSupportsLogin(false);
+          // 3秒后清除成功消息
+          setTimeout(() => setSuccess(null), 3000);
+        }, 2000);
+      }
       fetchScripts();
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建脚本失败');
@@ -385,15 +404,110 @@ export default function AdminAutoApplyScriptsPage() {
                   </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-blue-900 mb-2">💡 提示</h3>
-                  <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-                    <li>系统会自动生成脚本文件并注册到系统中</li>
-                    <li>脚本会自动匹配表单字段，无需手动配置</li>
-                    <li>如果字段匹配失败，可以稍后手动编辑脚本文件</li>
-                    <li>创建后可以在"可申请学校"页面测试自动申请功能</li>
-                  </ul>
-                </div>
+                {/* 显示脚本内容（生产环境） */}
+                {showScriptContent && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-yellow-900 mb-2">⚠️ 生产环境说明</h3>
+                      <p className="text-xs text-yellow-800 mb-3">
+                        在生产环境中，文件系统是只读的，无法自动创建文件。请按照以下步骤手动创建：
+                      </p>
+                      <ol className="text-xs text-yellow-800 space-y-2 list-decimal list-inside">
+                        <li>在项目本地创建文件：<code className="bg-yellow-100 px-2 py-1 rounded">{showScriptContent.filePath}</code></li>
+                        <li>复制下面的脚本内容到文件中</li>
+                        <li>在 <code className="bg-yellow-100 px-2 py-1 rounded">src/modules/auto-apply/autoApplyService.ts</code> 中注册脚本（见下方注册代码）</li>
+                        <li>提交代码并推送到Git仓库</li>
+                        <li>Vercel会自动重新部署</li>
+                      </ol>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-semibold text-yellow-900">脚本内容：</label>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(showScriptContent.content);
+                              alert('脚本内容已复制到剪贴板');
+                            }}
+                            className="text-xs px-3 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 flex items-center gap-1"
+                          >
+                            <Copy className="h-3 w-3" />
+                            复制
+                          </button>
+                          <button
+                            onClick={() => {
+                              const blob = new Blob([showScriptContent.content], { type: 'text/plain' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = showScriptContent.filePath.split('/').pop() || 'script.ts';
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="text-xs px-3 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 flex items-center gap-1"
+                          >
+                            <Download className="h-3 w-3" />
+                            下载
+                          </button>
+                        </div>
+                      </div>
+                      <textarea
+                        readOnly
+                        value={showScriptContent.content}
+                        className="w-full h-64 p-3 text-xs font-mono bg-gray-900 text-gray-100 rounded border border-gray-700 resize-none"
+                        style={{ fontFamily: 'monospace' }}
+                      />
+                    </div>
+
+                    {showScriptContent.varName && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-semibold text-yellow-900">注册代码：</label>
+                          <button
+                            onClick={() => {
+                              const fileName = showScriptContent.filePath.split('/').pop()?.replace('.ts', '') || '';
+                              const regCode = `import { ${showScriptContent.varName} } from "./schools/${fileName}";
+
+// 在 scriptRegistry 对象中添加：
+const scriptRegistry: SchoolScriptMap = {
+  // ... 其他脚本
+  [${showScriptContent.varName}.id]: ${showScriptContent.varName},
+};`;
+                              navigator.clipboard.writeText(regCode);
+                              alert('注册代码已复制到剪贴板');
+                            }}
+                            className="text-xs px-3 py-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 flex items-center gap-1"
+                          >
+                            <Copy className="h-3 w-3" />
+                            复制注册代码
+                          </button>
+                        </div>
+                        <pre className="w-full p-3 text-xs font-mono bg-gray-900 text-gray-100 rounded border border-gray-700 overflow-x-auto">
+                          <code>{`import { ${showScriptContent.varName} } from "./schools/${showScriptContent.filePath.split('/').pop()?.replace('.ts', '')}";
+
+// 在 scriptRegistry 对象中添加：
+const scriptRegistry: SchoolScriptMap = {
+  // ... 其他脚本
+  [${showScriptContent.varName}.id]: ${showScriptContent.varName},
+};`}</code>
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!showScriptContent && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="text-sm font-semibold text-blue-900 mb-2">💡 提示</h3>
+                    <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                      <li>系统会自动生成脚本文件并注册到系统中</li>
+                      <li>脚本会自动匹配表单字段，无需手动配置</li>
+                      <li>如果字段匹配失败，可以稍后手动编辑脚本文件</li>
+                      <li>创建后可以在"可申请学校"页面测试自动申请功能</li>
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 mt-6">
@@ -404,6 +518,7 @@ export default function AdminAutoApplyScriptsPage() {
                     setSelectedTemplate('');
                     setApplyUrl('');
                     setSupportsLogin(false);
+                    setShowScriptContent(null);
                   }}
                   className="btn-secondary"
                   disabled={creating}
