@@ -173,6 +173,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           requiredDocuments: normalizeTextArray(row.requiredDocuments),
           requirements: normalizeTextArray(row.requirements),
           notes: row.notes ?? undefined
+        },
+        include: {
+          template: {
+            select: {
+              id: true,
+              schoolId: true,
+              schoolName: true,
+              program: true,
+              category: true
+            }
+          }
         }
       });
       return res.status(200).json({ success: true, school: updated });

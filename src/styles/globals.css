@@ -166,3 +166,20 @@ body.dashboard-font-scale {
   }
 }
 
+/* DataGrid 高度修复 - 确保表格可以显示多行 */
+.rdg {
+  height: 100% !important;
+  min-height: 600px !important;
+}
+
+.rdg-viewport {
+  height: 100% !important;
+  min-height: 600px !important;
+}
+
+/* 学校映射管理页面 - 确保容器高度足够 */
+.admin-schools-grid-container {
+  height: auto !important;
+  min-height: 600px !important;
+}
+

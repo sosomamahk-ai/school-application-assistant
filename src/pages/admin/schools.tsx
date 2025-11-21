@@ -485,7 +485,21 @@ export default function AdminSchoolsPage() {
           wpSchoolIndex.set(`${school.type}-${school.id}`, school);
         });
         
+        // 如果 API 返回的数据没有 template 信息，保留原有的绑定信息
+        // 这样可以避免保存后绑定信息丢失
         const updatedRow = mapApiSchool(updatedSchool, templateWordPressMap, wordpressSchools, wpSchoolIndex);
+        
+        // 如果更新后的行丢失了绑定信息，但原行有绑定信息，保留原行的绑定信息
+        const originalRow = originalRows[row.id];
+        if (originalRow && 
+            originalRow.wordpressSchoolId && 
+            originalRow.wordpressSchoolType &&
+            (!updatedRow.wordpressSchoolId || !updatedRow.wordpressSchoolType)) {
+          // 保留原有的绑定信息
+          updatedRow.wordpressSchoolId = originalRow.wordpressSchoolId;
+          updatedRow.wordpressSchoolType = originalRow.wordpressSchoolType;
+        }
+        
         setSchools((prev) => prev.map((item) => (item.id === row.id ? updatedRow : item)));
         setOriginalRows((prev) => ({ ...prev, [row.id]: updatedRow }));
         setDirtyMap((prev) => ({ ...prev, [row.id]: false }));

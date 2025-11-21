@@ -240,9 +240,19 @@ export default function SchoolGrid({
 
   // 计算最小高度：至少显示 10 行，每行 96px
   const minHeight = Math.max(10 * 96, 600); // 至少 960px 或 600px，取较大值
+  const actualHeight = Math.max(minHeight, rows.length * 96 + 50); // 根据实际行数计算，加上表头高度
   
   return (
-    <div className="border rounded-xl overflow-hidden" style={{ minHeight: `${minHeight}px` }}>
+    <div 
+      className="border rounded-xl overflow-hidden admin-schools-grid-container" 
+      style={{ 
+        height: `${actualHeight}px`,
+        minHeight: `${minHeight}px`,
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
       <DataGrid
         className="rdg-light"
         columns={columns}

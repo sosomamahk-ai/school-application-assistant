@@ -128,40 +128,79 @@ const normalizeCategory = (value: string | null | undefined, type: WordPressScho
 };
 
 const extractLogoUrl = (post: any): string | null => {
+  // Debug: log the post structure to understand what we're receiving
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[extractLogoUrl] Post structure:', {
+      hasAcf: !!post?.acf,
+      acfLogo: post?.acf?.logo,
+      hasMeta: !!post?.meta,
+      thumbnailId: post?.meta?._thumbnail_id || post?._thumbnail_id,
+      hasEmbedded: !!post?._embedded,
+      embeddedMedia: post?._embedded?.['wp:featuredmedia'],
+      featuredMedia: post?.featured_media,
+      featuredMediaUrl: post?.featured_media_url
+    });
+  }
+  
   // 1. Try ACF logo field first
   const fromAcf = post?.acf?.logo;
-  if (typeof fromAcf === 'string') {
-    return fromAcf;
+  if (typeof fromAcf === 'string' && fromAcf.trim()) {
+    return fromAcf.trim();
   }
-  if (fromAcf?.url) {
-    return fromAcf.url;
+  if (fromAcf?.url && typeof fromAcf.url === 'string') {
+    return fromAcf.url.trim();
   }
   
   // 2. Try _thumbnail_id meta key (WordPress featured image)
-  const thumbnailId = post?.meta?._thumbnail_id || post?._thumbnail_id;
+  // WordPress REST API returns meta fields differently - check multiple locations
+  const thumbnailId = 
+    post?.meta?._thumbnail_id?.[0] || // Meta can be array
+    post?.meta?._thumbnail_id ||       // Or direct value
+    post?._thumbnail_id ||              // Or at root level
+    post?.featured_media;               // Or as featured_media ID
+  
   if (thumbnailId) {
-    // If we have embedded media, use it
+    // If we have embedded media, use it (most reliable)
     const embedded = post?._embedded?.['wp:featuredmedia'];
-    if (Array.isArray(embedded) && embedded[0]?.source_url) {
-      return embedded[0].source_url;
+    if (Array.isArray(embedded) && embedded.length > 0) {
+      const media = embedded[0];
+      if (media?.source_url) {
+        return media.source_url;
+      }
+      if (media?.media_details?.sizes) {
+        // Try to get a good size
+        const sizes = media.media_details.sizes;
+        const preferredSizes = ['medium', 'thumbnail', 'full'];
+        for (const size of preferredSizes) {
+          if (sizes[size]?.source_url) {
+            return sizes[size].source_url;
+          }
+        }
+      }
     }
+    
     // If we have featured_media_url directly
-    if (post?.featured_media_url) {
-      return post.featured_media_url;
+    if (post?.featured_media_url && typeof post.featured_media_url === 'string') {
+      return post.featured_media_url.trim();
     }
+    
     // If we have featured_media object with source_url
-    if (post?.featured_media?.source_url) {
-      return post.featured_media.source_url;
+    if (post?.featured_media?.source_url && typeof post.featured_media.source_url === 'string') {
+      return post.featured_media.source_url.trim();
     }
   }
   
-  // 3. Fallback to embedded featured media
+  // 3. Fallback to embedded featured media (even without thumbnail_id)
   const embedded = post?._embedded?.['wp:featuredmedia'];
-  if (Array.isArray(embedded) && embedded[0]?.source_url) {
-    return embedded[0].source_url;
+  if (Array.isArray(embedded) && embedded.length > 0) {
+    const media = embedded[0];
+    if (media?.source_url) {
+      return media.source_url;
+    }
   }
-  if (post?.featured_media_url) {
-    return post.featured_media_url;
+  
+  if (post?.featured_media_url && typeof post.featured_media_url === 'string') {
+    return post.featured_media_url.trim();
   }
   
   return null;
@@ -179,32 +218,53 @@ const normalizeAcf = (acfValue: any): Record<string, any> => {
 };
 
 const extractProfileType = (post: any): string | null => {
+  // Debug: log the post structure to understand what we're receiving
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[extractProfileType] Post structure:', {
+      hasProfileType: !!post?.profile_type,
+      profileType: post?.profile_type,
+      hasEmbedded: !!post?._embedded,
+      embeddedTerms: post?._embedded?.['wp:term'],
+      hasAcf: !!post?.acf,
+      acfProfileType: post?.acf?.profile_type
+    });
+  }
+  
   // Try to get profile_type from taxonomy terms
   // WordPress REST API can return taxonomy terms in different formats:
   
   // 1. Direct taxonomy field (if custom endpoint includes it)
   if (post?.profile_type) {
-    if (typeof post.profile_type === 'string') {
-      return post.profile_type;
+    if (typeof post.profile_type === 'string' && post.profile_type.trim()) {
+      return post.profile_type.trim();
     }
     if (Array.isArray(post.profile_type) && post.profile_type.length > 0) {
       const firstTerm = post.profile_type[0];
-      return typeof firstTerm === 'string' ? firstTerm : firstTerm?.name || firstTerm?.slug || null;
+      const name = typeof firstTerm === 'string' ? firstTerm : firstTerm?.name || firstTerm?.slug;
+      if (name && typeof name === 'string') {
+        return name.trim();
+      }
     }
     if (typeof post.profile_type === 'object' && post.profile_type.name) {
-      return post.profile_type.name;
+      return String(post.profile_type.name).trim();
     }
   }
   
-  // 2. From _embedded taxonomy terms
+  // 2. From _embedded taxonomy terms (most common in WordPress REST API)
   const embeddedTerms = post?._embedded?.['wp:term'];
   if (Array.isArray(embeddedTerms)) {
     // Find profile_type taxonomy in embedded terms
     for (const termGroup of embeddedTerms) {
       if (Array.isArray(termGroup)) {
         for (const term of termGroup) {
-          if (term?.taxonomy === 'profile_type' && term?.name) {
-            return term.name;
+          if (term?.taxonomy === 'profile_type') {
+            // Try name first, then slug
+            if (term?.name && typeof term.name === 'string') {
+              return term.name.trim();
+            }
+            if (term?.slug && typeof term.slug === 'string') {
+              return term.slug.trim();
+            }
           }
         }
       }
@@ -214,14 +274,18 @@ const extractProfileType = (post: any): string | null => {
   // 3. From acf field
   if (post?.acf?.profile_type) {
     const acfValue = post.acf.profile_type;
-    if (typeof acfValue === 'string') {
-      return acfValue;
+    if (typeof acfValue === 'string' && acfValue.trim()) {
+      return acfValue.trim();
     }
     if (Array.isArray(acfValue) && acfValue.length > 0) {
-      return typeof acfValue[0] === 'string' ? acfValue[0] : acfValue[0]?.name || null;
+      const first = acfValue[0];
+      const name = typeof first === 'string' ? first : first?.name;
+      if (name && typeof name === 'string') {
+        return name.trim();
+      }
     }
     if (typeof acfValue === 'object' && acfValue.name) {
-      return acfValue.name;
+      return String(acfValue.name).trim();
     }
   }
   
@@ -285,16 +349,34 @@ const normalizeUnifiedPayload = (payload: any): WordPressSchoolResponse => {
   }
   
   const normalizeArray = (items: any[], fallbackType: WordPressSchoolType): WordPressSchool[] =>
-    (Array.isArray(items) ? items : []).map((item) =>
-      toWordPressSchool(
-        {
-          ...item,
-          title: { rendered: item?.title ?? item?.name ?? '' },
-          acf: item?.acf ?? item
-        },
-        (item?.type as WordPressSchoolType) || fallbackType
-      )
-    );
+    (Array.isArray(items) ? items : []).map((item) => {
+      // Ensure _embedded data is preserved
+      const normalizedItem = {
+        ...item,
+        title: { rendered: item?.title ?? item?.name ?? '' },
+        acf: item?.acf ?? item,
+        _embedded: item?._embedded || item?._links ? { 
+          ...item._embedded,
+          'wp:term': item?._embedded?.['wp:term'] || item?._links?.['wp:term'] ? [item._links['wp:term']] : undefined,
+          'wp:featuredmedia': item?._embedded?.['wp:featuredmedia'] || item?._links?.['wp:featuredmedia'] ? [item._links['wp:featuredmedia']] : undefined
+        } : undefined,
+        featured_media: item?.featured_media || item?.featured_media_id,
+        meta: item?.meta || {}
+      };
+      
+      if (process.env.NODE_ENV === 'development' && items.length > 0 && items[0] === item) {
+        console.log('[normalizeUnifiedPayload] First item structure:', {
+          id: normalizedItem.id,
+          hasEmbedded: !!normalizedItem._embedded,
+          embeddedTerms: normalizedItem._embedded?.['wp:term'],
+          embeddedMedia: normalizedItem._embedded?.['wp:featuredmedia'],
+          featuredMedia: normalizedItem.featured_media,
+          meta: normalizedItem.meta
+        });
+      }
+      
+      return toWordPressSchool(normalizedItem, (item?.type as WordPressSchoolType) || fallbackType);
+    });
 
   const profiles = normalizeArray(payload.profiles ?? [], 'profile');
   const universities = normalizeArray(payload.universities ?? [], 'university');
@@ -350,7 +432,8 @@ const fetchCollection = async (baseUrl: string, type: WordPressSchoolType): Prom
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
       
       // _embed parameter includes taxonomy terms and featured media
-      const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed&acf_format=standard`;
+      // Adding profile_type to the request to ensure taxonomy is included
+      const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed&acf_format=standard&profile_type=all`;
       const response = await fetch(endpoint, {
         headers: { Accept: 'application/json' },
         signal: controller.signal
