@@ -43,6 +43,21 @@ export default function AdminAutoApplyScriptsPage() {
       router.push('/auth/login');
       return;
     }
+    
+    // 检查用户角色
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.role !== 'admin') {
+          console.warn('当前用户不是管理员，无法访问此页面');
+          setError('需要管理员权限才能访问此页面');
+        }
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    
     fetchTemplates();
     fetchScripts();
     // eslint-disable-next-line react-hooks/exhaustive-deps

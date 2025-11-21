@@ -20,6 +20,7 @@
     "test:all-formats": "node scripts/test-all-username-formats.js",
     "check:env": "ts-node --project tsconfig.scripts.json scripts/check-env.ts",
     "diagnose:schools": "node scripts/diagnose-schools-api.js",
+    "verify:auto-apply": "node scripts/verify-auto-apply-scripts.js",
     "setup:env": "node scripts/setup-env.js"
   },
   "dependencies": {
