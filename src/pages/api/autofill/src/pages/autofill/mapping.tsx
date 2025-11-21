@@ -1,7 +1,13 @@
 import { useState } from "react";
 
+interface Field {
+  id: string;
+  label?: string;
+  name?: string;
+}
+
 export default function MappingPage() {
-  const [fields, setFields] = useState([]);
+  const [fields, setFields] = useState<Field[]>([]);
 
   async function scan() {
     const res = await fetch("/api/autofill/detect", { method: "POST", body: JSON.stringify({ domFields: [] }) });
@@ -9,7 +15,7 @@ export default function MappingPage() {
     setFields(data.domFields);
   }
 
-  async function save(domId, profileField) {
+  async function save(domId: string, profileField: string) {
     await fetch("/api/autofill/save-mapping", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
