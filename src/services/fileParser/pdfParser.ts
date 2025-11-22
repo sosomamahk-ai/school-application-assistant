@@ -24,8 +24,8 @@ export interface PDFParseResult {
  */
 export async function parsePDF(fileBuffer: Buffer): Promise<PDFParseResult> {
   try {
-    // Try to use pdf-parse if available
-    const pdfParse = require('pdf-parse');
+    // Dynamic import for pdf-parse
+    const pdfParse = (await import('pdf-parse')).default || (await import('pdf-parse'));
     const data = await pdfParse(fileBuffer);
     
     return {
@@ -34,7 +34,7 @@ export async function parsePDF(fileBuffer: Buffer): Promise<PDFParseResult> {
     };
   } catch (error) {
     // If pdf-parse is not available, throw a helpful error
-    if ((error as any).code === 'MODULE_NOT_FOUND') {
+    if ((error as any).code === 'MODULE_NOT_FOUND' || (error as any).message?.includes('Cannot find module')) {
       throw new Error(
         'PDF parsing library not installed. Please install pdf-parse: npm install pdf-parse\n' +
         'For better accuracy with complex PDFs, consider using a Python service with pdfplumber.'

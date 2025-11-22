@@ -24,8 +24,8 @@ export interface DOCXParseResult {
  */
 export async function parseDOCX(fileBuffer: Buffer): Promise<DOCXParseResult> {
   try {
-    // Try to use mammoth if available (converts DOCX to HTML/text)
-    const mammoth = require('mammoth');
+    // Dynamic import for mammoth
+    const mammoth = await import('mammoth');
     const result = await mammoth.extractRawText({ buffer: fileBuffer });
     
     return {
@@ -33,7 +33,8 @@ export async function parseDOCX(fileBuffer: Buffer): Promise<DOCXParseResult> {
       paragraphCount: (result.value.match(/\n\n/g) || []).length + 1
     };
   } catch (error) {
-    if ((error as any).code === 'MODULE_NOT_FOUND') {
+    // If mammoth is not available, throw a helpful error
+    if ((error as any).code === 'MODULE_NOT_FOUND' || (error as any).message?.includes('Cannot find module')) {
       throw new Error(
         'DOCX parsing library not installed. Please install mammoth: npm install mammoth\n' +
         'For better accuracy with complex DOCX files, consider using a Python service with python-docx.'
