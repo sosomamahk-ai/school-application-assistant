@@ -3,7 +3,7 @@ import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
-import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter, Save, Search, Loader2, X } from 'lucide-react';
+import { Plus, Upload, Download, Edit, Trash2, Eye, Copy, Filter, Save, Search, Loader2, X, Scan, Globe, FileText, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import jwt from 'jsonwebtoken';
 import type { JWTPayload } from '@/utils/auth';
 import { getTokenFromCookieHeader } from '@/utils/token';
@@ -69,6 +69,7 @@ export default function TemplatesAdmin() {
   const [savingTranslations, setSavingTranslations] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [showScanSection, setShowScanSection] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -478,6 +479,37 @@ export default function TemplatesAdmin() {
           </div>
         </div>
 
+        {/* Scan & Generate Template Section */}
+        <div className="card mb-6">
+          <button
+            onClick={() => setShowScanSection(!showScanSection)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <div className="flex items-center space-x-3">
+              <Scan className="h-5 w-5 text-primary-600" />
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">扫描识别模版（Scan & Generate Template）</h2>
+                <p className="text-sm text-gray-600 mt-1">从网址、PDF或DOCX文件自动生成申请表单模板</p>
+              </div>
+            </div>
+            {showScanSection ? (
+              <ChevronUp className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
+
+          {showScanSection && (
+            <TemplateScanSection
+              onTemplateGenerated={(template) => {
+                // After template is generated, refresh the list
+                fetchTemplates();
+                setShowScanSection(false);
+              }}
+            />
+          )}
+        </div>
+
         {/* Template Search */}
         <div className="mb-6">
           <label className="text-sm font-medium text-gray-700">
@@ -816,7 +848,432 @@ function getAllTemplateFieldLabels(templates: SchoolTemplate[]): Array<{ labelKe
   
   return Array.from(keysMap.entries())
     .map(([labelKey, originalLabel]) => ({ labelKey, originalLabel }))
-    .sort((a, b) => a.labelKey.localeCompare(b.labelKey));
+    .sort((a, b) => a.labelKey.localeCompare(b.labelKey)  );
+}
+
+// Template Scan Section Component
+function TemplateScanSection({ onTemplateGenerated }: { onTemplateGenerated: (template: any) => void }) {
+  const { t } = useTranslation();
+  const [scanType, setScanType] = useState<'url' | 'file' | 'login'>('url');
+  const [url, setUrl] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [loginData, setLoginData] = useState({
+    loginUrl: '',
+    username: '',
+    password: '',
+    twoFaCode: '',
+    targetFormUrl: ''
+  });
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleScan = async () => {
+    setError(null);
+    setScanResult(null);
+    setScanning(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      let response;
+
+      if (scanType === 'url') {
+        if (!url.trim()) {
+          setError('请输入申请表单网址');
+          setScanning(false);
+          return;
+        }
+        response = await fetch('/api/template/scan', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ applicationFormUrl: url })
+        });
+      } else if (scanType === 'file') {
+        if (!file) {
+          setError('请选择要上传的文件');
+          setScanning(false);
+          return;
+        }
+        // Convert file to base64
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64Data = (reader.result as string).split(',')[1];
+          try {
+            const fileResponse = await fetch('/api/template/scan', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fileData: base64Data,
+                fileName: file.name
+              })
+            });
+            const fileData = await fileResponse.json();
+            if (fileData.success) {
+              setScanResult(fileData);
+            } else {
+              setError(fileData.error || '扫描失败');
+            }
+          } catch (err) {
+            setError((err as Error).message);
+          } finally {
+            setScanning(false);
+          }
+        };
+        reader.readAsDataURL(file);
+        return;
+      } else if (scanType === 'login') {
+        if (!loginData.loginUrl || !loginData.username || !loginData.password || !loginData.targetFormUrl) {
+          setError('请填写所有必填字段');
+          setScanning(false);
+          return;
+        }
+        response = await fetch('/api/template/scan-authenticated', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(loginData)
+        });
+      }
+
+      if (response) {
+        const data = await response.json();
+        if (data.success) {
+          setScanResult(data);
+        } else {
+          setError(data.error || '扫描失败');
+        }
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!scanResult?.templateJson) {
+      setError('没有可保存的模板');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/templates/import', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(scanResult.templateJson)
+      });
+
+      if (response.ok) {
+        alert('模板保存成功！');
+        onTemplateGenerated(scanResult.templateJson);
+        // Reset form
+        setScanResult(null);
+        setUrl('');
+        setFile(null);
+        setLoginData({
+          loginUrl: '',
+          username: '',
+          password: '',
+          twoFaCode: '',
+          targetFormUrl: ''
+        });
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || '保存失败');
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 space-y-6">
+      {/* Scan Type Selection */}
+      <div className="flex space-x-4 border-b border-gray-200 pb-4">
+        <button
+          onClick={() => {
+            setScanType('url');
+            setShowLoginForm(false);
+            setError(null);
+            setScanResult(null);
+          }}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            scanType === 'url'
+              ? 'bg-primary-100 text-primary-700'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Globe className="h-4 w-4" />
+          <span>从网址扫描</span>
+        </button>
+        <button
+          onClick={() => {
+            setScanType('file');
+            setShowLoginForm(false);
+            setError(null);
+            setScanResult(null);
+          }}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            scanType === 'file'
+              ? 'bg-primary-100 text-primary-700'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          <span>从文件扫描</span>
+        </button>
+        <button
+          onClick={() => {
+            setScanType('login');
+            setShowLoginForm(true);
+            setError(null);
+            setScanResult(null);
+          }}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            scanType === 'login'
+              ? 'bg-primary-100 text-primary-700'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Lock className="h-4 w-4" />
+          <span>登录后抓取</span>
+        </button>
+      </div>
+
+      {/* URL Scanning */}
+      {scanType === 'url' && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              申请表单网址 (Application Form URL)
+            </label>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/apply"
+              className="input-field w-full"
+              disabled={scanning}
+            />
+          </div>
+          <button
+            onClick={handleScan}
+            disabled={scanning || !url.trim()}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+          >
+            {scanning ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>扫描中...</span>
+              </>
+            ) : (
+              <>
+                <Scan className="h-4 w-4" />
+                <span>从网址扫描 (Scan from URL)</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* File Scanning */}
+      {scanType === 'file' && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              上传文件 (Upload File)
+            </label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+              disabled={scanning}
+            />
+            <p className="text-xs text-gray-500 mt-1">支持 PDF、DOC、DOCX 格式</p>
+          </div>
+          <button
+            onClick={handleScan}
+            disabled={scanning || !file}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+          >
+            {scanning ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>扫描中...</span>
+              </>
+            ) : (
+              <>
+                <Scan className="h-4 w-4" />
+                <span>从文件扫描 (Scan from File)</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Login-required Scanning */}
+      {scanType === 'login' && showLoginForm && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              登录页面网址 (Login Page URL) *
+            </label>
+            <input
+              type="url"
+              value={loginData.loginUrl}
+              onChange={(e) => setLoginData({ ...loginData, loginUrl: e.target.value })}
+              placeholder="https://example.com/login"
+              className="input-field w-full"
+              disabled={scanning}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              用户名 (Username) *
+            </label>
+            <input
+              type="text"
+              value={loginData.username}
+              onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+              placeholder="your-username"
+              className="input-field w-full"
+              disabled={scanning}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              密码 (Password) *
+            </label>
+            <input
+              type="password"
+              value={loginData.password}
+              onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+              placeholder="your-password"
+              className="input-field w-full"
+              disabled={scanning}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              两步验证码 (2FA Code) <span className="text-gray-500 text-xs">(可选)</span>
+            </label>
+            <input
+              type="text"
+              value={loginData.twoFaCode}
+              onChange={(e) => setLoginData({ ...loginData, twoFaCode: e.target.value })}
+              placeholder="123456"
+              className="input-field w-full"
+              disabled={scanning}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              目标申请表单网址 (Target Application Form URL) *
+            </label>
+            <input
+              type="url"
+              value={loginData.targetFormUrl}
+              onChange={(e) => setLoginData({ ...loginData, targetFormUrl: e.target.value })}
+              placeholder="https://example.com/application-form"
+              className="input-field w-full"
+              disabled={scanning}
+            />
+          </div>
+          <button
+            onClick={handleScan}
+            disabled={scanning}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+          >
+            {scanning ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>登录并扫描中...</span>
+              </>
+            ) : (
+              <>
+                <Lock className="h-4 w-4" />
+                <span>登录后抓取并生成模版 (Scan with Login)</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Scan Result Preview */}
+      {scanResult && (
+        <div className="space-y-4 border-t border-gray-200 pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">扫描结果</h3>
+              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                <span>字段数量: {scanResult.fieldsCount || scanResult.fieldCount || 0}</span>
+                <span>置信度: {((scanResult.confidence || 0) * 100).toFixed(1)}%</span>
+                <span>来源: {scanResult.source || 'url'}</span>
+                {scanResult.loginStatus && (
+                  <span className={`px-2 py-1 rounded ${
+                    scanResult.loginStatus === 'success' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    登录状态: {scanResult.loginStatus === 'success' ? '成功' : '失败'}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={handleSaveTemplate}
+              disabled={saving}
+              className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>保存中...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  <span>保存为模版 (Save Template)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* JSON Preview */}
+          <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-auto">
+            <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap">
+              {JSON.stringify(scanResult.templateJson, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ req }) => {
