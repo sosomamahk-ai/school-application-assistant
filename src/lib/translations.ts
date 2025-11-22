@@ -120,9 +120,9 @@ export const translations: TranslationData = {
     'zh-TW': '設定',
   },
   'navbar.schools': {
-    en: 'Available Schools',
-    'zh-CN': '可申请学校',
-    'zh-TW': '可申請學校',
+    en: 'School List',
+    'zh-CN': '学校列表',
+    'zh-TW': '學校列表',
   },
   'navbar.applicationsOverview': {
     en: 'Applications Overview',

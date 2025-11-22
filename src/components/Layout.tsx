@@ -85,8 +85,13 @@ export default function Layout({ children }: LayoutProps) {
       icon: LayoutDashboard
     },
     {
+      href: '/profile',
+      label: t('profile.title'),
+      icon: User
+    },
+    {
       href: '/schools',
-      label: getLabel('navbar.schools', '可申请学校'),
+      label: getLabel('navbar.schools', '学校列表'),
       icon: BookOpen
     },
     {
@@ -98,11 +103,6 @@ export default function Layout({ children }: LayoutProps) {
       href: '/applications/overview',
       label: getLabel('navbar.applicationsOverview', '申请进度'),
       icon: ListChecks
-    },
-    {
-      href: '/profile',
-      label: t('profile.title'),
-      icon: User
     },
     {
       href: '/settings',

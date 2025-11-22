@@ -41,8 +41,18 @@ export default function LanguageSwitch({ variant = 'default', className = '' }: 
   useEffect(() => {
     if (showDropdown && buttonRef.current) {
       const buttonRect = buttonRef.current.getBoundingClientRect();
+      const dropdownHeight = 120; // Approximate height of dropdown menu
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      
+      // If there's not enough space below but enough space above, show above
+      const showAbove = spaceBelow < dropdownHeight && spaceAbove > dropdownHeight;
+      
       setDropdownPosition({
-        top: buttonRect.bottom + window.scrollY + 8, // 8px gap
+        top: showAbove 
+          ? buttonRect.top + window.scrollY - dropdownHeight - 8 // Show above with 8px gap
+          : buttonRect.bottom + window.scrollY + 8, // Show below with 8px gap
         left: buttonRect.left + window.scrollX,
         width: buttonRect.width,
       });
