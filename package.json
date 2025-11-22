@@ -23,7 +23,9 @@
     "verify:auto-apply": "node scripts/verify-auto-apply-scripts.js",
     "setup:env": "node scripts/setup-env.js",
     "fix:localhost": "node scripts/fix-localhost-3000.js",
-    "fix:localhost:start": "node scripts/fix-localhost-3000.js --start"
+    "fix:localhost:start": "node scripts/fix-localhost-3000.js --start",
+    "proxy:start": "node proxy-server.js",
+    "proxy:test": "node test-proxy.js"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",

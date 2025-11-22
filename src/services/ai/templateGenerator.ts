@@ -152,18 +152,35 @@ Generate the JSON template following the schema exactly. Be thorough and extract
     console.error(`[LLM Template] Template generation error: ${(error as Error).message}`);
     console.error(`[LLM Template] Stack: ${(error as Error).stack}`);
     
+    const errorStatus = (error as any).status || (error as any).response?.status;
+    const errorCode = (error as any).code;
+    const errorMessage = (error as Error).message;
+    
     // Provide more specific error messages
-    if ((error as any).code === 'insufficient_quota') {
-      throw new Error('OpenAI API quota exceeded. Please check your API key and billing.');
+    if (errorStatus === 403 || errorMessage.includes('Country, region, or territory not supported')) {
+      const detailedMessage = 'OpenAI API is not available in your country/region. ' +
+        'Solutions: 1) Use a VPN/proxy service, 2) Configure OpenAI API proxy in environment variables, ' +
+        '3) Use Azure OpenAI Service (if available in your region), ' +
+        '4) Contact your administrator for proxy configuration. ' +
+        'For proxy setup, set OPENAI_BASE_URL environment variable (e.g., https://your-proxy.com/v1).';
+      console.error(`[LLM Template] Region restriction error: ${detailedMessage}`);
+      throw new Error(detailedMessage);
     }
-    if ((error as any).code === 'invalid_api_key') {
+    if (errorCode === 'insufficient_quota' || errorMessage.includes('insufficient_quota')) {
+      throw new Error('OpenAI API quota exceeded. Please check your API key and billing at platform.openai.com/account/billing');
+    }
+    if (errorCode === 'invalid_api_key' || errorMessage.includes('Invalid API key') || errorStatus === 401) {
       throw new Error('Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.');
     }
-    if ((error as any).status === 429) {
-      throw new Error('OpenAI API rate limit exceeded. Please try again later.');
+    if (errorStatus === 429 || errorMessage.includes('rate limit')) {
+      throw new Error('OpenAI API rate limit exceeded. Please try again later or upgrade your plan.');
+    }
+    if (errorStatus === 500 || errorCode === 'internal_error') {
+      throw new Error('OpenAI API internal error. Please try again later.');
     }
     
-    throw new Error(`Failed to generate template: ${(error as Error).message}`);
+    // Generic error with more context
+    throw new Error(`Failed to generate template: ${errorMessage}`);
   }
 }
 

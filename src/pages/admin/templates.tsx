@@ -1026,13 +1026,37 @@ function TemplateScanSection({ onTemplateGenerated }: { onTemplateGenerated: (te
         
         if (!response.ok) {
           // Handle error response
-          const errorMsg = data.message || data.error || '扫描失败';
+          let errorMsg = data.message || data.error || '扫描失败';
+          
+          // Provide helpful messages for common errors
+          if (errorMsg.includes('Country, region, or territory not supported') || 
+              errorMsg.includes('not available in your country')) {
+            errorMsg = 'OpenAI API 在您的地区不可用。\n\n解决方案：\n' +
+              '1. 配置代理：在 .env 文件中设置 OPENAI_BASE_URL\n' +
+              '2. 使用 VPN：连接到支持 OpenAI 的地区\n' +
+              '3. 使用 Azure OpenAI：如果您的地区支持\n\n' +
+              '详细说明请查看：docs/OPENAI_REGION_FIX.md';
+          } else if (errorMsg.includes('insufficient_quota')) {
+            errorMsg = 'OpenAI API 配额已用完。请检查您的账户余额和账单设置。';
+          } else if (errorMsg.includes('Invalid API key')) {
+            errorMsg = 'OpenAI API Key 无效。请检查 OPENAI_API_KEY 环境变量。';
+          } else if (errorMsg.includes('rate limit')) {
+            errorMsg = 'OpenAI API 请求频率超限。请稍后再试或升级您的套餐。';
+          }
+          
           console.error('Scan error:', data);
           setError(errorMsg);
         } else if (data.success) {
           setScanResult(data);
         } else {
-          setError(data.message || data.error || '扫描失败');
+          let errorMsg = data.message || data.error || '扫描失败';
+          
+          // Apply same error message improvements
+          if (errorMsg.includes('Country, region, or territory not supported')) {
+            errorMsg = 'OpenAI API 在您的地区不可用。请查看 docs/OPENAI_REGION_FIX.md 了解解决方案。';
+          }
+          
+          setError(errorMsg);
         }
       }
     } catch (err) {
