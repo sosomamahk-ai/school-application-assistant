@@ -81,10 +81,20 @@ export const dscInternationalSchoolScript: SchoolAutomationScript = {
       // 步骤 1: 打开申请页面
       logger.info("正在打开 DSC International School 申请页面...", { url: APPLY_URL });
       await utils.safeNavigate(page, APPLY_URL);
-      await utils.waitForNetworkIdle(page);
       
-      // 等待页面完全加载（DSC 网站可能使用 Finalsite CMS，需要额外等待）
-      await page.waitForLoadState("networkidle", { timeout: 30000 });
+      // 等待页面基本加载完成（使用更宽松的策略，避免 networkidle 超时）
+      try {
+        await page.waitForLoadState("load", { timeout: 15000 });
+      } catch (e) {
+        logger.warn("等待 load 状态超时，继续执行");
+      }
+      
+      // 尝试等待网络空闲，但不强制（某些网站可能持续有网络请求）
+      try {
+        await page.waitForLoadState("networkidle", { timeout: 20000 });
+      } catch (e) {
+        logger.warn("等待 networkidle 状态超时，继续执行（这通常是正常的）");
+      }
       
       // 等待表单容器出现（尝试多种可能的选择器）
       logger.info("等待表单加载...");
@@ -186,26 +196,53 @@ export const dscInternationalSchoolScript: SchoolAutomationScript = {
       
       if (submitButton) {
         logger.info("找到提交按钮，准备提交");
-        await Promise.all([
-          page.waitForNavigation({ waitUntil: "networkidle", timeout: 30_000 }).catch(() => undefined),
-          submitButton.click(),
+        // 使用更宽松的等待策略，避免超时
+        const clickPromise = submitButton.click();
+        
+        // 尝试等待导航或页面状态变化，但不强制
+        const navigationPromise = Promise.race([
+          page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {
+            logger.warn("等待导航超时，可能表单已提交但未跳转");
+            return null;
+          }),
+          page.waitForLoadState("load", { timeout: 20_000 }).catch(() => {
+            logger.warn("等待 load 状态超时");
+            return null;
+          }),
         ]);
+        
+        await Promise.all([clickPromise, navigationPromise]);
       } else {
         logger.warn("未找到提交按钮，尝试其他方式");
         // 尝试其他可能的提交方式
         const alternativeSubmit = page.locator('button[type="submit"], input[type="submit"]').first();
         if (await alternativeSubmit.count() > 0) {
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: "networkidle", timeout: 30_000 }).catch(() => undefined),
-            alternativeSubmit.click(),
+          const clickPromise = alternativeSubmit.click();
+          const navigationPromise = Promise.race([
+            page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 20_000 }).catch(() => {
+              logger.warn("等待导航超时，可能表单已提交但未跳转");
+              return null;
+            }),
+            page.waitForLoadState("load", { timeout: 20_000 }).catch(() => {
+              logger.warn("等待 load 状态超时");
+              return null;
+            }),
           ]);
+          await Promise.all([clickPromise, navigationPromise]);
         } else {
           throw new Error("无法找到提交按钮");
         }
       }
       
-      // 步骤 6: 等待页面加载完成
-      await utils.waitForNetworkIdle(page);
+      // 步骤 6: 等待页面稳定（使用更宽松的策略）
+      try {
+        await page.waitForTimeout(2000); // 给页面一些时间稳定
+        await page.waitForLoadState("load", { timeout: 10_000 }).catch(() => {
+          logger.warn("等待页面 load 状态超时，继续执行");
+        });
+      } catch (e) {
+        logger.warn("等待页面稳定时出错，继续执行", { error: (e as Error).message });
+      }
       
       // 步骤 7: 验证提交结果（可选）
       const success = await verifySubmission(page);

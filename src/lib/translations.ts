@@ -551,9 +551,9 @@ export const translations: TranslationData = {
     'zh-TW': '系統工作流程',
   },
   'dashboard.guide.step1': {
-    en: 'Step 1: Complete Your Profile',
-    'zh-CN': '步骤 1：完善您的个人资料',
-    'zh-TW': '步驟 1：完善您的個人資料',
+    en: 'Complete Your Profile',
+    'zh-CN': '完善您的个人资料',
+    'zh-TW': '完善您的個人資料',
   },
   'dashboard.guide.step1Desc': {
     en: 'Fill in your personal information that will be used across all applications',
@@ -561,9 +561,9 @@ export const translations: TranslationData = {
     'zh-TW': '填寫您的個人信息，這些信息將用於所有申請',
   },
   'dashboard.guide.step2': {
-    en: 'Step 2: Browse Available Schools',
-    'zh-CN': '步骤 2：浏览可申请学校',
-    'zh-TW': '步驟 2：瀏覽可申請學校',
+    en: 'View School List and Create Application',
+    'zh-CN': '查看学校列表创建申请',
+    'zh-TW': '查看學校列表創建申請',
   },
   'dashboard.guide.step2Desc': {
     en: 'View all available schools and programs you can apply to',
@@ -571,9 +571,9 @@ export const translations: TranslationData = {
     'zh-TW': '查看所有可申請的學校和項目',
   },
   'dashboard.guide.step3': {
-    en: 'Step 3: Create New Application',
-    'zh-CN': '步骤 3：创建新申请',
-    'zh-TW': '步驟 3：創建新申請',
+    en: 'Complete Application Form and Submit',
+    'zh-CN': '完善申请表并提交申请',
+    'zh-TW': '完善申請表並提交申請',
   },
   'dashboard.guide.step3Desc': {
     en: 'Select a school and start filling out the application form',
@@ -581,9 +581,9 @@ export const translations: TranslationData = {
     'zh-TW': '選擇學校並開始填寫申請表',
   },
   'dashboard.guide.step4': {
-    en: 'Step 4: Track Your Applications',
-    'zh-CN': '步骤 4：跟踪您的申请',
-    'zh-TW': '步驟 4：追蹤您的申請',
+    en: 'Track Your Application Progress',
+    'zh-CN': '跟踪您的申请进度',
+    'zh-TW': '追蹤您的申請進度',
   },
   'dashboard.guide.step4Desc': {
     en: 'Monitor the status of all your applications in one place',

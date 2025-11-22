@@ -131,9 +131,9 @@ export default function Dashboard() {
                   <Link
                     key={step.step}
                     href={step.href}
-                    className="group relative p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:shadow-lg transition-all duration-200"
+                    className="group relative p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:shadow-lg transition-all duration-200 flex flex-col"
                   >
-                    <div className="flex items-start space-x-4">
+                    <div className="flex items-start space-x-4 mb-4">
                       <div className="flex-shrink-0">
                         <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center group-hover:bg-primary-500 transition-colors">
                           <span className="text-2xl font-bold text-primary-600 group-hover:text-white">
@@ -145,14 +145,14 @@ export default function Dashboard() {
                         <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-primary-600">
                           {step.title}
                         </h3>
-                        <p className="text-sm text-gray-600 mb-3">
+                        <p className="text-sm text-gray-600">
                           {step.description}
                         </p>
-                        <div className="flex items-center text-primary-600 text-sm font-medium">
-                          <span>{t('dashboard.guide.goToModule')}</span>
-                          <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                        </div>
                       </div>
+                    </div>
+                    <div className="mt-auto flex items-center text-primary-600 text-sm font-medium">
+                      <span>{t('dashboard.guide.goToModule')}</span>
+                      <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </Link>
                 );
@@ -203,34 +203,42 @@ export default function Dashboard() {
               {t('dashboard.guide.quickLinks')}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link
-                href="/my-application"
+              <a
+                href="https://sosomama.com/profiles-archive/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn-primary text-center py-3"
               >
                 <FileText className="h-5 w-5 inline-block mr-2" />
-                {t('dashboard.guide.module.myApplication')}
-              </Link>
-              <Link
-                href="/profile"
-                className="btn-secondary text-center py-3"
-              >
-                <User className="h-5 w-5 inline-block mr-2" />
-                {t('dashboard.guide.module.profile')}
-              </Link>
-              <Link
-                href="/schools"
+                学校资料
+              </a>
+              <a
+                href="https://sosomama.com/ranking-archive/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn-secondary text-center py-3"
               >
                 <BookOpen className="h-5 w-5 inline-block mr-2" />
-                {t('dashboard.guide.module.schools')}
-              </Link>
-              <Link
-                href="/settings"
+                学校排名
+              </a>
+              <a
+                href="https://sosomama.com/news/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary text-center py-3"
+              >
+                <User className="h-5 w-5 inline-block mr-2" />
+                申请资讯
+              </a>
+              <a
+                href="https://sosomama.com/reports-archive/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn-secondary text-center py-3"
               >
                 <Settings className="h-5 w-5 inline-block mr-2" />
-                {t('dashboard.guide.module.settings')}
-              </Link>
+                研究报告
+              </a>
             </div>
           </div>
         </div>
