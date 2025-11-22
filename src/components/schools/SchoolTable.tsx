@@ -5,6 +5,21 @@ import { useRouter } from 'next/router';
 import type { SchoolItem } from '@/hooks/useSchools';
 import { getLocalizedSchoolName } from '@/utils/i18n';
 
+// 类别映射
+const categoryMap: Record<string, string> = {
+  '国际学校': '国际学校',
+  '香港本地中学': '本地中学',
+  '香港本地小学': '本地小学',
+  '香港幼稚园': '幼稚园',
+  '幼稚园': '幼稚园',
+  '大学': '大学'
+};
+
+const getCategoryLabel = (category: string | null | undefined): string => {
+  if (!category) return '国际学校';
+  return categoryMap[category] || category;
+};
+
 interface SchoolTableProps {
   schools: SchoolItem[];
 }
@@ -67,6 +82,7 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
       examTime: school.examTime ? new Date(school.examTime).toLocaleDateString() : '待定',
       resultTime: school.resultTime ? new Date(school.resultTime).toLocaleDateString() : '待定',
       officialLink: school.officialLink,
+      permalink: school.permalink,
       notes: school.applicationNotes,
       templateSchoolId: school.templateSchoolId
     }));
@@ -94,11 +110,10 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
           <thead className="bg-gray-50 text-gray-600 uppercase tracking-wide text-xs">
             <tr>
               <th className="px-4 py-3 text-left">学校</th>
-              <th className="px-4 py-3 text-left">模版</th>
-              <th className="px-4 py-3 text-left">类别</th>
+              <th className="px-4 py-3 text-left">学校类别</th>
               <th className="px-4 py-3 text-left">申请窗口</th>
-              <th className="px-4 py-3 text-left">面试时间</th>
               <th className="px-4 py-3 text-left">笔试时间</th>
+              <th className="px-4 py-3 text-left">面试时间</th>
               <th className="px-4 py-3 text-left">结果公布</th>
               <th className="px-4 py-3 text-left">操作</th>
             </tr>
@@ -107,7 +122,17 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
             {tableRows.map((row) => (
               <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-4">
-                  <div className="font-semibold text-gray-900">{row.name}</div>
+                  {row.permalink ? (
+                    <Link
+                      href={row.permalink}
+                      target="_blank"
+                      className="font-semibold text-gray-900 hover:text-primary-600 transition-colors"
+                    >
+                      {row.name}
+                    </Link>
+                  ) : (
+                    <div className="font-semibold text-gray-900">{row.name}</div>
+                  )}
                   <div className="text-xs text-gray-500 mt-1">{row.program}</div>
                   {row.officialLink && (
                     <Link
@@ -120,16 +145,15 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
                     </Link>
                   )}
                 </td>
-                <td className="px-4 py-4 text-gray-600">{row.templateSchoolId}</td>
-                <td className="px-4 py-4 text-gray-600">{row.category || '国际学校'}</td>
+                <td className="px-4 py-4 text-gray-600">{getCategoryLabel(row.category)}</td>
                 <td className="px-4 py-4 text-gray-600">{row.applicationWindow}</td>
-                <td className="px-4 py-4 text-gray-600">{row.interviewTime}</td>
                 <td className="px-4 py-4 text-gray-600">{row.examTime}</td>
+                <td className="px-4 py-4 text-gray-600">{row.interviewTime}</td>
                 <td className="px-4 py-4 text-gray-600">{row.resultTime}</td>
                 <td className="px-4 py-4">
                   <button
                     onClick={() => applyForSchool(row.school)}
-                    className="btn-primary px-4 py-2 text-sm flex items-center space-x-2"
+                    className="btn-primary px-4 py-2 flex items-center space-x-2"
                     disabled={applyingId === row.id}
                   >
                     {applyingId === row.id ? (

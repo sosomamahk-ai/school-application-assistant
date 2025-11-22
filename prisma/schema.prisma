@@ -69,6 +69,8 @@ model School {
   requiredDocuments       Json?
   requirements            Json?
   officialLink            String?
+  permalink               String?
+  overviewWebsiteSchool   String?
   notes                   String?
   metadataSource          String?
   metadataLastFetchedAt   DateTime?

@@ -61,7 +61,8 @@ export default async function handler(
         resultTime: school.resultTime,
         applicationMaterials: normalizeJsonArray(school.requiredDocuments),
         applicationRequirements: normalizeJsonArray(school.requirements),
-        officialLink: school.officialLink,
+        officialLink: (school as any).overviewWebsiteSchool || school.officialLink,
+        permalink: (school as any).permalink || null,
         applicationNotes: school.notes,
         metadataSource: school.metadataSource,
         metadataLastFetchedAt: school.metadataLastFetchedAt
@@ -69,7 +70,14 @@ export default async function handler(
     });
   } catch (error) {
     console.error('Failed to fetch schools', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error)
+    });
   }
 }
 

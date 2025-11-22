@@ -18,6 +18,7 @@ export interface SchoolItem {
   applicationMaterials?: string[];
   applicationRequirements?: string[];
   officialLink?: string | null;
+  permalink?: string | null;
   applicationNotes?: string | null;
 }
 
@@ -62,11 +63,24 @@ export function useSchools() {
     fetchSchools();
   }, [fetchSchools]);
 
+  // 类别映射（用于筛选）
+  const categoryKeyMap: Record<string, string> = {
+    '国际学校': 'international',
+    '香港本地中学': 'hkSecondary',
+    '香港本地小学': 'hkPrimary',
+    '香港幼稚园': 'hkKindergarten',
+    '幼稚园': 'hkKindergarten',
+    '大学': 'university',
+  };
+
   const filteredSchools = useMemo(() => {
     const searchLower = filters.search.trim().toLowerCase();
     return schools.filter((school) => {
       if (filters.category !== 'all') {
-        if ((school.category || 'international') !== filters.category) {
+        const schoolCategory = school.category || '国际学校';
+        const schoolCategoryKey = categoryKeyMap[schoolCategory] || 'international';
+        // 支持按类别key或原始类别值筛选
+        if (schoolCategoryKey !== filters.category && schoolCategory !== filters.category) {
           return false;
         }
       }
