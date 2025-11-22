@@ -365,7 +365,7 @@ export default function MyApplication() {
 
           {/* Statistics Summary */}
           {applications.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 items-start">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
               <StatusSummary
                 applications={applications}
                 selectedStatus={selectedStatus}

@@ -84,7 +84,7 @@ export default function SchoolSummary({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    <>
       {categoryList.map((category, index) => {
         const isSelected = selectedCategory === category.key;
         const color = colorClasses[index % colorClasses.length];
@@ -107,7 +107,7 @@ export default function SchoolSummary({
           </div>
         );
       })}
-    </div>
+    </>
   );
 }
 

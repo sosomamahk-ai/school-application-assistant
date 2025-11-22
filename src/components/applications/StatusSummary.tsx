@@ -41,7 +41,7 @@ export default function StatusSummary({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <>
       {statusStats.map((stat) => {
         const isSelected = selectedStatus === stat.key;
         const selectedColor = isSelected ? 'ring-2 ring-offset-2 ring-primary-500' : '';
@@ -60,7 +60,7 @@ export default function StatusSummary({
           </div>
         );
       })}
-    </div>
+    </>
   );
 }
 
