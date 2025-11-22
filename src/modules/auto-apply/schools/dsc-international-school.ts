@@ -16,6 +16,67 @@ export const dscInternationalSchoolScript: SchoolAutomationScript = {
   async run(ctx) {
     const { utils, formFiller, payload, page, logger } = ctx;
     
+    // 辅助函数：安全地滚动到元素并填写
+    const safeFillField = async (field: typeof payload.template.fields[0]) => {
+      try {
+        // 先尝试找到字段
+        const locator = await findFieldLocator(page, field);
+        if (!locator) {
+          logger.warn(`无法找到字段: ${field.fieldId}`);
+          return false;
+        }
+        
+        // 检查元素是否可见，如果不可见则尝试滚动
+        const isVisible = await locator.isVisible().catch(() => false);
+        if (!isVisible) {
+          logger.info(`字段 ${field.fieldId} 不可见，尝试滚动...`);
+          // 使用更宽松的滚动方式
+          await locator.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {
+            // 如果滚动失败，尝试直接滚动到元素位置
+            return locator.evaluate((el) => {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+          });
+          await page.waitForTimeout(500);
+        }
+        
+        // 填写字段
+        await formFiller.fillField(page, field);
+        return true;
+      } catch (error) {
+        logger.warn(`填写字段 ${field.fieldId} 时出错: ${(error as Error).message}`);
+        return false;
+      }
+    };
+    
+    // 辅助函数：查找字段定位器
+    const findFieldLocator = async (page: Page, field: typeof payload.template.fields[0]) => {
+      // 尝试通过标签查找
+      if (field.label) {
+        const labelLocator = page.getByLabel(field.label, { exact: false });
+        if (await labelLocator.count() > 0) {
+          return labelLocator.first();
+        }
+      }
+      
+      // 尝试通过占位符查找
+      const placeholderSelectors = [
+        `input[placeholder*="${field.fieldId}" i]`,
+        `textarea[placeholder*="${field.fieldId}" i]`,
+        `input[placeholder*="${field.label}" i]`,
+        `textarea[placeholder*="${field.label}" i]`,
+      ];
+      
+      for (const selector of placeholderSelectors) {
+        const locator = page.locator(selector);
+        if (await locator.count() > 0) {
+          return locator.first();
+        }
+      }
+      
+      return null;
+    };
+    
     try {
       // 步骤 1: 打开申请页面
       logger.info("正在打开 DSC International School 申请页面...", { url: APPLY_URL });
@@ -24,6 +85,24 @@ export const dscInternationalSchoolScript: SchoolAutomationScript = {
       
       // 等待页面完全加载（DSC 网站可能使用 Finalsite CMS，需要额外等待）
       await page.waitForLoadState("networkidle", { timeout: 30000 });
+      
+      // 等待表单容器出现（尝试多种可能的选择器）
+      logger.info("等待表单加载...");
+      try {
+        // 尝试等待常见的表单容器
+        await Promise.race([
+          page.waitForSelector('form', { timeout: 10000 }).catch(() => null),
+          page.waitForSelector('[role="form"]', { timeout: 10000 }).catch(() => null),
+          page.waitForSelector('.form', { timeout: 10000 }).catch(() => null),
+          page.waitForSelector('#application-form', { timeout: 10000 }).catch(() => null),
+        ]);
+      } catch (e) {
+        logger.warn("未找到明确的表单容器，继续执行");
+      }
+      
+      // 滚动到页面顶部，确保从顶部开始
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(500);
       
       // 步骤 2: 字段映射（如果需要）
       // 根据实际页面字段标签调整映射关系
@@ -43,7 +122,51 @@ export const dscInternationalSchoolScript: SchoolAutomationScript = {
       // 步骤 3: 自动填写表单
       // 系统会自动匹配字段（通过标签、占位符等）
       logger.info("开始填写申请表单...", { fieldCount: payload.template.fields.length });
-      await formFiller.fillFields(page, payload.template.fields);
+      
+      // 逐个填写字段，并处理可能的错误
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const field of payload.template.fields) {
+        try {
+          logger.info(`正在填写字段: ${field.fieldId}`);
+          
+          // 先尝试找到字段并滚动到可见位置
+          const fieldLocator = await findFieldLocator(page, field);
+          if (fieldLocator) {
+            // 尝试滚动到元素（使用更短的超时时间）
+            try {
+              await fieldLocator.scrollIntoViewIfNeeded({ timeout: 3000 });
+            } catch (scrollError) {
+              // 如果滚动失败，尝试使用 JavaScript 直接滚动
+              await fieldLocator.evaluate((el) => {
+                el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
+              });
+            }
+            await page.waitForTimeout(300);
+          }
+          
+          // 填写字段
+          await formFiller.fillField(page, field);
+          successCount++;
+          
+          // 每个字段填写后稍作等待
+          await page.waitForTimeout(200);
+        } catch (error) {
+          failCount++;
+          const errorMsg = (error as Error).message;
+          logger.warn(`字段 ${field.fieldId} 填写失败，跳过`, { error: errorMsg });
+          
+          // 如果是可见性错误，尝试继续（可能是字段在页面下方）
+          if (errorMsg.includes('not visible') || errorMsg.includes('Timeout')) {
+            logger.info(`字段 ${field.fieldId} 可能不可见，尝试继续下一个字段`);
+          }
+          // 继续填写下一个字段，而不是中断整个流程
+          continue;
+        }
+      }
+      
+      logger.info(`表单填写完成: 成功 ${successCount} 个，失败 ${failCount} 个`);
       
       // 步骤 4: 处理文件上传（如果需要）
       // 根据网页说明，需要上传多个文件，但文件上传通常需要实际文件路径
