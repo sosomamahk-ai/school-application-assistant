@@ -14,9 +14,25 @@ export async function generateTemplateFromFormContent(
   rawContent: string,
   sourceType: 'url' | 'pdf' | 'docx' = 'url'
 ): Promise<{ template: GeneratedTemplate; confidence: number; fieldCount: number }> {
-  if (!openai) {
-    throw new Error('OpenAI API key not configured');
+  console.log(`[LLM Template] Starting template generation from ${sourceType}. Content length: ${rawContent.length} chars`);
+  
+  if (!rawContent || rawContent.trim().length === 0) {
+    throw new Error('Raw content is empty. Cannot generate template from empty content.');
   }
+
+  // Check if OpenAI is configured
+  if (!openai) {
+    console.error(`[LLM Template] OpenAI API key not configured`);
+    throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.');
+  }
+
+  // Truncate content if too long (LLM has token limits)
+  const maxContentLength = 15000;
+  const truncatedContent = rawContent.length > maxContentLength 
+    ? rawContent.substring(0, maxContentLength) + '\n\n[... content truncated for brevity ...]'
+    : rawContent;
+  
+  console.log(`[LLM Template] Using ${truncatedContent.length} chars for LLM prompt`);
 
   const systemPrompt = `You are an expert at analyzing school application forms and extracting structured field information.
 
@@ -57,37 +73,57 @@ Important:
 4. Use descriptive, unique IDs in snake_case format
 5. Preserve original labels exactly as they appear
 6. Infer field types from context and labels
-7. Extract any placeholder text or help text`;
+7. Extract any placeholder text or help text
+
+Return ONLY valid JSON, no additional text or explanation.`;
 
   const userPrompt = `Analyze the following ${sourceType === 'url' ? 'HTML form' : sourceType === 'pdf' ? 'PDF document' : 'Word document'} content and extract all form fields:
 
-${rawContent.substring(0, 15000)}${rawContent.length > 15000 ? '\n\n[... content truncated for brevity ...]' : ''}
+${truncatedContent}
 
 Generate the JSON template following the schema exactly. Be thorough and extract all fields you can identify.`;
 
   try {
+    console.log(`[LLM Template] Sending request to OpenAI (model: gpt-4o-mini)...`);
+    const requestStartTime = Date.now();
+    
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.3,
+      temperature: 0,
       response_format: { type: 'json_object' }
     });
 
+    const requestTime = Date.now() - requestStartTime;
+    console.log(`[LLM Template] OpenAI request completed in ${requestTime}ms`);
+
     const responseContent = completion.choices[0]?.message?.content;
     if (!responseContent) {
-      throw new Error('No response from OpenAI');
+      console.error(`[LLM Template] No response content from OpenAI`);
+      throw new Error('No response from OpenAI. The API did not return any content.');
     }
 
-    const parsed = JSON.parse(responseContent);
+    console.log(`[LLM Template] Received response. Length: ${responseContent.length} chars`);
+    console.log(`[LLM Template] Response preview: ${responseContent.substring(0, 200)}...`);
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(responseContent);
+      console.log(`[LLM Template] Successfully parsed JSON response`);
+    } catch (parseError) {
+      console.error(`[LLM Template] Failed to parse JSON response: ${(parseError as Error).message}`);
+      console.error(`[LLM Template] Response content: ${responseContent}`);
+      throw new Error(`Failed to parse LLM response as JSON: ${(parseError as Error).message}`);
+    }
     
     // Validate and normalize the response
     const template: GeneratedTemplate = {
       schoolName: parsed.schoolName || 'Unknown School',
-      fields: Array.isArray(parsed.fields) ? parsed.fields.map((field: any) => ({
-        id: field.id || `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      fields: Array.isArray(parsed.fields) ? parsed.fields.map((field: any, index: number) => ({
+        id: field.id || `field_${Date.now()}_${index}`,
         label: field.label || 'Unnamed Field',
         type: field.type || 'text',
         required: Boolean(field.required),
@@ -98,10 +134,14 @@ Generate the JSON template following the schema exactly. Be thorough and extract
       })) : []
     };
 
+    console.log(`[LLM Template] Generated template with ${template.fields.length} fields for school: ${template.schoolName}`);
+
     // Calculate confidence based on field count and completeness
     const fieldCount = template.fields.length;
     const hasRequiredInfo = template.schoolName !== 'Unknown School';
     const confidence = Math.min(0.95, 0.5 + (fieldCount * 0.05) + (hasRequiredInfo ? 0.2 : 0));
+
+    console.log(`[LLM Template] Template generation completed. Confidence: ${confidence.toFixed(2)}, Fields: ${fieldCount}`);
 
     return {
       template,
@@ -109,7 +149,20 @@ Generate the JSON template following the schema exactly. Be thorough and extract
       fieldCount
     };
   } catch (error) {
-    console.error('Template generation error:', error);
+    console.error(`[LLM Template] Template generation error: ${(error as Error).message}`);
+    console.error(`[LLM Template] Stack: ${(error as Error).stack}`);
+    
+    // Provide more specific error messages
+    if ((error as any).code === 'insufficient_quota') {
+      throw new Error('OpenAI API quota exceeded. Please check your API key and billing.');
+    }
+    if ((error as any).code === 'invalid_api_key') {
+      throw new Error('Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.');
+    }
+    if ((error as any).status === 429) {
+      throw new Error('OpenAI API rate limit exceeded. Please try again later.');
+    }
+    
     throw new Error(`Failed to generate template: ${(error as Error).message}`);
   }
 }

@@ -220,41 +220,126 @@ export async function scrapeAuthenticatedForm(
 
 /**
  * Extract form HTML from a public URL (no authentication required)
+ * First tries a simple fetch, then falls back to Playwright for dynamic content
  */
 export async function scrapePublicForm(url: string): Promise<string> {
+  console.log(`[URL Scan] Starting fetch for: ${url}`);
+
+  // Step 1: Try simple fetch first (faster for static HTML)
+  try {
+    console.log(`[URL Scan] Attempting simple fetch...`);
+    const fetchModule = await import('node-fetch');
+    const fetch = fetchModule.default || fetchModule;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      timeout: 10000
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    console.log(`[URL Scan] Simple fetch succeeded. HTML length: ${html.length} chars`);
+
+    // Check if we have form elements
+    const hasForms = /<form[^>]*>/i.test(html) || 
+                     /<input[^>]*>/i.test(html) || 
+                     /<textarea[^>]*>/i.test(html) || 
+                     /<select[^>]*>/i.test(html);
+
+    if (hasForms) {
+      console.log(`[URL Scan] Forms detected in fetched HTML. Returning HTML.`);
+      return html;
+    } else {
+      console.log(`[URL Scan] No forms detected in static HTML. Falling back to Playwright for dynamic content.`);
+      // Fall through to Playwright
+    }
+  } catch (fetchError) {
+    console.log(`[URL Scan] Simple fetch failed: ${(fetchError as Error).message}. Falling back to Playwright.`);
+    // Fall through to Playwright
+  }
+
+  // Step 2: Use Playwright for dynamic content or if fetch failed
   let browser: Browser | null = null;
 
   try {
+    console.log(`[URL Scan] Launching Playwright browser...`);
     browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
     const context = await browser.newContext({
       viewport: { width: 1920, height: 1080 },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      acceptDownloads: false
     });
 
     const page = await context.newPage();
 
+    // Set longer timeout for slow pages
+    page.setDefaultTimeout(60000);
+    page.setDefaultNavigationTimeout(60000);
+
+    console.log(`[URL Scan] Navigating to: ${url}`);
     await page.goto(url, {
-      waitUntil: 'networkidle',
-      timeout: 30000
+      waitUntil: 'domcontentloaded',
+      timeout: 60000
     });
 
-    // Wait for form elements
-    await page.waitForSelector('form, [role="form"], input, textarea, select', {
-      timeout: 10000
-    }).catch(() => {
-      // Continue even if form elements not found
-    });
+    // Wait a bit for JavaScript to render
+    await page.waitForTimeout(2000);
 
-    const html = await page.content();
+    // Try multiple selectors for form elements
+    const formSelectors = ['form', '[role="form"]', 'input', 'textarea', 'select', '[class*="form"]', '[id*="form"]'];
+    let formFound = false;
+
+    for (const selector of formSelectors) {
+      try {
+        const count = await page.locator(selector).count();
+        if (count > 0) {
+          console.log(`[URL Scan] Found ${count} elements matching selector: ${selector}`);
+          formFound = true;
+          break;
+        }
+      } catch (e) {
+        // Continue to next selector
+      }
+    }
+
+    if (!formFound) {
+      console.warn(`[URL Scan] Warning: No form elements found with standard selectors. Proceeding anyway.`);
+    }
+
+    // Wait for network to be idle (optional, with timeout)
+    try {
+      await page.waitForLoadState('networkidle', { timeout: 10000 });
+    } catch (e) {
+      console.log(`[URL Scan] Network idle timeout, continuing...`);
+    }
+
+    // Get the full rendered HTML
+    const html = await page.evaluate(() => document.documentElement.outerHTML);
+    console.log(`[URL Scan] Playwright fetch succeeded. HTML length: ${html.length} chars`);
+
+    // Verify we have some content
+    if (!html || html.length < 100) {
+      throw new Error('Extracted HTML is too short or empty');
+    }
 
     await browser.close();
+    browser = null;
 
     return html;
   } catch (error) {
+    console.error(`[URL Scan] Playwright error: ${(error as Error).message}`);
+    console.error(`[URL Scan] Stack: ${(error as Error).stack}`);
+    
     if (browser) {
       await browser.close().catch(() => {});
     }

@@ -885,13 +885,23 @@ function TemplateScanSection({ onTemplateGenerated }: { onTemplateGenerated: (te
           setScanning(false);
           return;
         }
+
+        // Basic URL validation
+        try {
+          new URL(url.trim());
+        } catch (urlError) {
+          setError('无效的网址格式。请输入有效的 URL（例如：https://example.com/form）');
+          setScanning(false);
+          return;
+        }
+
         response = await fetch('/api/template/scan', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ applicationFormUrl: url })
+          body: JSON.stringify({ applicationFormUrl: url.trim() })
         });
       } else if (scanType === 'file') {
         if (!file) {
@@ -899,11 +909,52 @@ function TemplateScanSection({ onTemplateGenerated }: { onTemplateGenerated: (te
           setScanning(false);
           return;
         }
+
+        // Validate file type
+        const validExtensions = ['.pdf', '.doc', '.docx'];
+        const fileName = file.name.toLowerCase();
+        const isValidFile = validExtensions.some(ext => fileName.endsWith(ext));
+        
+        if (!isValidFile) {
+          setError('不支持的文件类型。请上传 PDF 或 DOC/DOCX 文件。');
+          setScanning(false);
+          return;
+        }
+
+        // Validate file size (50MB limit)
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+          setError('文件太大。请上传小于 50MB 的文件。');
+          setScanning(false);
+          return;
+        }
+
         // Convert file to base64
         const reader = new FileReader();
+        
+        reader.onerror = () => {
+          setError('文件读取失败。请重试。');
+          setScanning(false);
+        };
+        
         reader.onloadend = async () => {
-          const base64Data = (reader.result as string).split(',')[1];
           try {
+            const result = reader.result as string;
+            if (!result) {
+              setError('文件读取失败。请重试。');
+              setScanning(false);
+              return;
+            }
+            
+            // Extract base64 data (remove data:type;base64, prefix)
+            const base64Data = result.includes(',') ? result.split(',')[1] : result;
+            
+            if (!base64Data) {
+              setError('文件编码失败。请重试。');
+              setScanning(false);
+              return;
+            }
+
             const fileResponse = await fetch('/api/template/scan', {
               method: 'POST',
               headers: {
@@ -915,18 +966,28 @@ function TemplateScanSection({ onTemplateGenerated }: { onTemplateGenerated: (te
                 fileName: file.name
               })
             });
+
             const fileData = await fileResponse.json();
-            if (fileData.success) {
+            
+            if (!fileResponse.ok) {
+              // Handle error response
+              const errorMsg = fileData.message || fileData.error || '文件扫描失败';
+              console.error('File scan error:', fileData);
+              setError(errorMsg);
+            } else if (fileData.success) {
               setScanResult(fileData);
             } else {
-              setError(fileData.error || '扫描失败');
+              const errorMsg = fileData.message || fileData.error || '文件扫描失败';
+              setError(errorMsg);
             }
           } catch (err) {
-            setError((err as Error).message);
+            console.error('File upload error:', err);
+            setError((err as Error).message || '上传文件时发生错误');
           } finally {
             setScanning(false);
           }
         };
+        
         reader.readAsDataURL(file);
         return;
       } else if (scanType === 'login') {
@@ -935,26 +996,48 @@ function TemplateScanSection({ onTemplateGenerated }: { onTemplateGenerated: (te
           setScanning(false);
           return;
         }
+
+        // Validate URLs
+        try {
+          new URL(loginData.loginUrl.trim());
+          new URL(loginData.targetFormUrl.trim());
+        } catch (urlError) {
+          setError('无效的网址格式。请输入有效的 URL');
+          setScanning(false);
+          return;
+        }
+
         response = await fetch('/api/template/scan-authenticated', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(loginData)
+          body: JSON.stringify({
+            ...loginData,
+            loginUrl: loginData.loginUrl.trim(),
+            targetFormUrl: loginData.targetFormUrl.trim()
+          })
         });
       }
 
       if (response) {
         const data = await response.json();
-        if (data.success) {
+        
+        if (!response.ok) {
+          // Handle error response
+          const errorMsg = data.message || data.error || '扫描失败';
+          console.error('Scan error:', data);
+          setError(errorMsg);
+        } else if (data.success) {
           setScanResult(data);
         } else {
-          setError(data.error || '扫描失败');
+          setError(data.message || data.error || '扫描失败');
         }
       }
     } catch (err) {
-      setError((err as Error).message);
+      console.error('Scan request error:', err);
+      setError((err as Error).message || '扫描请求失败。请检查网络连接并重试。');
     } finally {
       setScanning(false);
     }

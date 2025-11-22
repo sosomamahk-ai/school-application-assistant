@@ -23,23 +23,60 @@ export interface DOCXParseResult {
  * For better accuracy with complex DOCX files, consider using a Python service.
  */
 export async function parseDOCX(fileBuffer: Buffer): Promise<DOCXParseResult> {
+  console.log(`[DOCX Parse] Starting DOCX parsing. Buffer size: ${fileBuffer.length} bytes`);
+  
+  if (!fileBuffer || fileBuffer.length === 0) {
+    throw new Error('DOCX buffer is empty or invalid');
+  }
+
   try {
     // Dynamic import for mammoth
-    const mammoth = await import('mammoth');
-    const result = await mammoth.extractRawText({ buffer: fileBuffer });
-    
-    return {
-      text: result.value || '',
-      paragraphCount: (result.value.match(/\n\n/g) || []).length + 1
-    };
-  } catch (error) {
-    // If mammoth is not available, throw a helpful error
-    if ((error as any).code === 'MODULE_NOT_FOUND' || (error as any).message?.includes('Cannot find module')) {
+    console.log(`[DOCX Parse] Importing mammoth library...`);
+    let mammoth: any;
+    try {
+      const mammothModule = await import('mammoth');
+      mammoth = mammothModule.default || mammothModule;
+    } catch (importError) {
+      console.error(`[DOCX Parse] Failed to import mammoth: ${(importError as Error).message}`);
       throw new Error(
         'DOCX parsing library not installed. Please install mammoth: npm install mammoth\n' +
         'For better accuracy with complex DOCX files, consider using a Python service with python-docx.'
       );
     }
+
+    console.log(`[DOCX Parse] Parsing DOCX buffer...`);
+    const result = await mammoth.extractRawText({ buffer: fileBuffer });
+    
+    const text = result.value || '';
+    const paragraphCount = text ? ((text.match(/\n\n/g) || []).length + 1) : 0;
+    
+    console.log(`[DOCX Parse] Parsing completed. Extracted ${text.length} chars in ${paragraphCount} paragraphs`);
+    
+    // Check if text extraction was successful
+    if (!text || text.trim().length === 0) {
+      console.warn(`[DOCX Parse] Warning: No text extracted from DOCX. File might be empty or corrupted.`);
+      throw new Error('No text content extracted from DOCX file. The file might be empty or corrupted.');
+    }
+
+    return {
+      text,
+      paragraphCount
+    };
+  } catch (error) {
+    console.error(`[DOCX Parse] Error parsing DOCX: ${(error as Error).message}`);
+    console.error(`[DOCX Parse] Stack: ${(error as Error).stack}`);
+    
+    // If mammoth is not available, throw a helpful error
+    if ((error as any).code === 'MODULE_NOT_FOUND' || 
+        (error as any).message?.includes('Cannot find module') ||
+        (error as any).message?.includes('not installed')) {
+      throw new Error(
+        'DOCX parsing library not installed. Please install mammoth: npm install mammoth\n' +
+        'For better accuracy with complex DOCX files, consider using a Python service with python-docx.'
+      );
+    }
+    
+    // Re-throw with more context
     throw new Error(`Failed to parse DOCX: ${(error as Error).message}`);
   }
 }
