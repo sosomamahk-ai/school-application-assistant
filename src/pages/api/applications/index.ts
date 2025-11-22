@@ -48,6 +48,7 @@ export default async function handler(
               schoolId: true,
               schoolName: true,
               program: true,
+              category: true,
               fieldsData: true
             }
           }
@@ -63,6 +64,7 @@ export default async function handler(
           templateSchoolId: app.template.schoolId,
           schoolName: deserializeSchoolName(app.template.schoolName),
           program: app.template.program,
+          category: app.template.category,
           status: app.status,
           formData: ensureFormDataStructure(
             normalizeStructuredFormData(app.formData),

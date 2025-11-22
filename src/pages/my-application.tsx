@@ -6,11 +6,14 @@ import Layout from '@/components/Layout';
 import { Plus, FileText, Clock, CheckCircle, Trash2, Settings, Search, X, Bot, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
+import SchoolSummary from '@/components/applications/SchoolSummary';
+import StatusSummary from '@/components/applications/StatusSummary';
 
 interface Application {
   id: string;
   schoolName: string | LocalizedText;
   program: string;
+  category?: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -40,6 +43,8 @@ export default function MyApplication() {
   const [autoApplyingId, setAutoApplyingId] = useState<string | null>(null);
   const [autoApplyError, setAutoApplyError] = useState<string | null>(null);
   const [autoApplyMessage, setAutoApplyMessage] = useState<string | null>(null);
+  const [selectedApplicationCategory, setSelectedApplicationCategory] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
   const fetchApplications = useCallback(async () => {
     try {
@@ -229,6 +234,37 @@ export default function MyApplication() {
     return t(`admin.templates.category.${categoryKey}`) || category;
   };
 
+  // Filter applications by selected category and status
+  const filteredApplications = useMemo(() => {
+    let filtered = applications;
+
+    // Filter by category
+    if (selectedApplicationCategory) {
+      filtered = filtered.filter((app) => {
+        const category = app.category || '国际学校';
+        const categoryKey = categoryMap[category] || 'international';
+        return categoryKey === selectedApplicationCategory;
+      });
+    }
+
+    // Filter by status
+    if (selectedStatus) {
+      filtered = filtered.filter((app) => {
+        if (selectedStatus === 'draft') {
+          return !app.status || app.status === 'draft';
+        }
+        if (selectedStatus === 'submitted') {
+          return app.status === 'submitted';
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+    // categoryMap is a constant, no need to include in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applications, selectedApplicationCategory, selectedStatus]);
+
   // Filter templates by category and search term
   const filteredTemplates = templates.filter((template) => {
     // Filter by category
@@ -327,6 +363,24 @@ export default function MyApplication() {
             </div>
           )}
 
+          {/* Statistics Summary */}
+          {applications.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 items-start">
+              <StatusSummary
+                applications={applications}
+                selectedStatus={selectedStatus}
+                onStatusSelect={setSelectedStatus}
+              />
+              <SchoolSummary
+                applications={applications}
+                language={language}
+                selectedCategory={selectedApplicationCategory}
+                onCategorySelect={setSelectedApplicationCategory}
+                getCategoryLabel={getCategoryLabel}
+              />
+            </div>
+          )}
+
           {/* Applications List */}
           {applications.length === 0 ? (
             <div className="card text-center py-12">
@@ -341,8 +395,52 @@ export default function MyApplication() {
               </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {applications.map((app) => {
+            <div>
+              {(selectedApplicationCategory || selectedStatus) && (
+                <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center space-x-2 flex-wrap">
+                    <span className="text-sm text-gray-600">筛选：</span>
+                    {selectedStatus && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary-100 text-primary-700 text-sm">
+                        {selectedStatus === 'draft' ? '草稿' : selectedStatus === 'submitted' ? '已提交' : selectedStatus}
+                        <button
+                          onClick={() => setSelectedStatus(null)}
+                          className="ml-2 text-primary-600 hover:text-primary-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {selectedApplicationCategory && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary-100 text-primary-700 text-sm">
+                        {getCategoryLabel(
+                          Object.keys(categoryMap).find(key => categoryMap[key] === selectedApplicationCategory) || null
+                        )}
+                        <button
+                          onClick={() => setSelectedApplicationCategory(null)}
+                          className="ml-2 text-primary-600 hover:text-primary-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    <button
+                      onClick={() => {
+                        setSelectedApplicationCategory(null);
+                        setSelectedStatus(null);
+                      }}
+                      className="ml-2 text-xs text-primary-600 hover:text-primary-700 underline"
+                    >
+                      清除所有筛选
+                    </button>
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    共 {filteredApplications.length} 个申请
+                  </span>
+                </div>
+              )}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredApplications.map((app) => {
                 const hasFilled = getHasFilledFields(app);
                 const canAutoApply = hasFilled && app.status !== 'submitted';
                 return (
@@ -402,6 +500,7 @@ export default function MyApplication() {
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
         </div>

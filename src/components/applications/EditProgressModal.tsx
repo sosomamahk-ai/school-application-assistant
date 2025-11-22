@@ -8,6 +8,20 @@ interface Props {
   saving: boolean;
 }
 
+const STATUS_OPTIONS = [
+  { value: 'draft', label: '草稿' },
+  { value: 'submitted', label: '已提交' },
+  { value: 'notified', label: '已通知' },
+  { value: 'exam_completed', label: '已笔试' },
+  { value: 'interview_completed', label: '已面试' },
+  { value: 'round_1', label: '第一轮' },
+  { value: 'round_2', label: '第二轮' },
+  { value: 'round_3', label: '第三轮' },
+  { value: 'pending_result', label: '等待结果' },
+  { value: 'rejected', label: '已拒绝' },
+  { value: 'admitted', label: '已录取' }
+];
+
 const RESULT_OPTIONS = [
   { value: 'pending', label: '等待结果' },
   { value: 'admitted', label: '已录取' },
@@ -17,6 +31,7 @@ const RESULT_OPTIONS = [
 
 export default function EditProgressModal({ record, onClose, onSave, saving }: Props) {
   const [progress, setProgress] = useState(record?.fillingProgress ?? 0);
+  const [applicationStatus, setApplicationStatus] = useState(record?.applicationStatus ?? 'draft');
   const [interviewTime, setInterviewTime] = useState(record?.interviewTime ?? '');
   const [examTime, setExamTime] = useState(record?.examTime ?? '');
   const [result, setResult] = useState<UserApplicationRecord['result']>(record?.result ?? 'pending');
@@ -28,6 +43,7 @@ export default function EditProgressModal({ record, onClose, onSave, saving }: P
   const handleSubmit = async () => {
     await onSave({
       fillingProgress: progress,
+      applicationStatus: applicationStatus || 'draft',
       interviewTime: interviewTime || null,
       examTime: examTime || null,
       result: result as UserApplicationRecord['result'],
@@ -45,6 +61,20 @@ export default function EditProgressModal({ record, onClose, onSave, saving }: P
           <p className="text-sm text-gray-500 mt-1">{record.program}</p>
         </div>
         <div className="px-6 py-4 space-y-4">
+          <div>
+            <label className="text-sm text-gray-600">申请状态</label>
+            <select
+              value={applicationStatus}
+              onChange={(e) => setApplicationStatus(e.target.value)}
+              className="w-full border rounded-lg p-2 mt-1"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="text-sm text-gray-600">填写进度（0-100）</label>
             <input

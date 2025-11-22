@@ -57,10 +57,32 @@ export function useUserApplications() {
 
   const stats = useMemo(() => {
     const total = records.length;
+    const drafts = records.filter((r) => !r.applicationStatus || r.applicationStatus === 'draft').length;
     const submitted = records.filter((r) => r.applicationStatus === 'submitted').length;
-    const inProgress = records.filter((r) => r.applicationStatus === 'in_progress').length;
-    const drafts = total - submitted - inProgress;
-    return { total, submitted, inProgress, drafts };
+    const notified = records.filter((r) => r.applicationStatus === 'notified').length;
+    const examCompleted = records.filter((r) => r.applicationStatus === 'exam_completed').length;
+    const interviewCompleted = records.filter((r) => r.applicationStatus === 'interview_completed').length;
+    const round1 = records.filter((r) => r.applicationStatus === 'round_1').length;
+    const round2 = records.filter((r) => r.applicationStatus === 'round_2').length;
+    const round3 = records.filter((r) => r.applicationStatus === 'round_3').length;
+    const pendingResult = records.filter((r) => r.applicationStatus === 'pending_result').length;
+    const rejected = records.filter((r) => r.applicationStatus === 'rejected').length;
+    const admitted = records.filter((r) => r.applicationStatus === 'admitted').length;
+    
+    return { 
+      total, 
+      drafts, 
+      submitted, 
+      notified,
+      examCompleted, 
+      interviewCompleted, 
+      round1, 
+      round2, 
+      round3, 
+      pendingResult, 
+      rejected, 
+      admitted 
+    };
   }, [records]);
 
   const updateRecord = async (id: string, payload: Partial<UserApplicationRecord>) => {

@@ -12,8 +12,16 @@ interface Props {
 
 const statusLabel: Record<string, string> = {
   draft: '草稿',
-  in_progress: '进行中',
-  submitted: '已提交'
+  submitted: '已提交',
+  notified: '已通知',
+  exam_completed: '已笔试',
+  interview_completed: '已面试',
+  round_1: '第一轮',
+  round_2: '第二轮',
+  round_3: '第三轮',
+  pending_result: '等待结果',
+  rejected: '已拒绝',
+  admitted: '已录取'
 };
 
 const resultLabel: Record<string, string> = {
@@ -41,12 +49,13 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
             <tr>
-              <th className="px-4 py-3 text-left">学校</th>
-              <th className="px-4 py-3 text-left">进度</th>
-              <th className="px-4 py-3 text-left">面试</th>
-              <th className="px-4 py-3 text-left">笔试</th>
-              <th className="px-4 py-3 text-left">结果</th>
-              <th className="px-4 py-3 text-left">操作</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">学校</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">状态</th>
+              <th className="px-4 py-3 text-center">进度</th>
+              <th className="px-4 py-3 text-center">笔试</th>
+              <th className="px-4 py-3 text-center">面试</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">结果</th>
+              <th className="px-1 py-3 text-center whitespace-nowrap">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -61,12 +70,17 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
                 : '待定';
               return (
                 <tr key={record.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <div className="font-semibold text-gray-900">{schoolName}</div>
                     <div className="text-xs text-gray-500 mt-1">{record.program}</div>
                   </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center space-x-2">
+                  <td className="px-4 py-4 text-center whitespace-nowrap">
+                    <span className="text-sm text-gray-700">
+                      {statusLabel[record.applicationStatus || 'draft'] || '草稿'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <div className="flex items-center justify-center space-x-2">
                       <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary-500"
@@ -75,32 +89,29 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
                       </div>
                       <span className="text-xs text-gray-600">{record.fillingProgress}%</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {statusLabel[record.applicationStatus || 'draft'] || '草稿'}
-                    </div>
                   </td>
-                  <td className="px-4 py-4 text-gray-600">{interview}</td>
-                  <td className="px-4 py-4 text-gray-600">{exam}</td>
-                  <td className="px-4 py-4 text-gray-600">
+                  <td className="px-4 py-4 text-gray-600 text-center">{exam}</td>
+                  <td className="px-4 py-4 text-gray-600 text-center">{interview}</td>
+                  <td className="px-6 py-4 text-gray-600 text-center whitespace-nowrap">
                     <div>{resultLabel[record.result] || '等待结果'}</div>
-                    <div className="text-xs text-gray-500">{resultTime}</div>
+                    {resultTime !== '待定' && (
+                      <div className="text-xs text-gray-500">{resultTime}</div>
+                    )}
                   </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 flex gap-2">
-                        {record.applicationId ? (
+                  <td className="px-1 py-4 whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-2">
+                      <div className="flex gap-2">
+                        {record.applicationId && (
                           <Link
                             href={`/application/${record.applicationId}`}
-                            className="btn-secondary flex-1 text-center"
+                            className="btn-secondary text-center text-xs py-1.5 px-2 whitespace-nowrap"
                           >
                             继续填写
                           </Link>
-                        ) : (
-                          <div className="flex-1"></div>
                         )}
                         <button
                           onClick={() => onEdit(record)}
-                          className="btn-primary flex-1 flex items-center justify-center"
+                          className="btn-primary flex items-center justify-center text-xs py-1.5 px-2 whitespace-nowrap"
                         >
                           更新进度
                         </button>
@@ -112,7 +123,7 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
                               onDelete(record);
                             }
                           }}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
                           title="删除申请"
                         >
                           <Trash2 className="h-4 w-4" />

@@ -15,8 +15,42 @@ export default function ApplicationOverviewPage() {
   const { records, loading, error, stats, updateRecord, refresh } = useUserApplications();
   const [editing, setEditing] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
   const currentRecord = records.find((r) => r.id === editing) || null;
+
+  // 根据选中的筛选条件过滤记录
+  const filteredRecords = selectedFilter
+    ? records.filter((record) => {
+        switch (selectedFilter) {
+          case 'drafts':
+            return !record.applicationStatus || record.applicationStatus === 'draft';
+          case 'submitted':
+            return record.applicationStatus === 'submitted';
+          case 'notified':
+            return record.applicationStatus === 'notified';
+          case 'examCompleted':
+            return record.applicationStatus === 'exam_completed';
+          case 'interviewCompleted':
+            return record.applicationStatus === 'interview_completed';
+          case 'round1':
+            return record.applicationStatus === 'round_1';
+          case 'round2':
+            return record.applicationStatus === 'round_2';
+          case 'round3':
+            return record.applicationStatus === 'round_3';
+          case 'pendingResult':
+            return record.applicationStatus === 'pending_result';
+          case 'rejected':
+            return record.applicationStatus === 'rejected';
+          case 'admitted':
+            return record.applicationStatus === 'admitted';
+          case 'total':
+          default:
+            return true;
+        }
+      })
+    : records;
 
   const handleSave = async (payload: any) => {
     if (!currentRecord) return;
@@ -77,7 +111,11 @@ export default function ApplicationOverviewPage() {
             <p className="text-gray-600 mt-2">统一查看所有学校的申请状态，及时更新面试、笔试和结果信息。</p>
           </div>
 
-          <ApplicationSummary {...stats} />
+          <ApplicationSummary
+            {...stats}
+            selectedFilter={selectedFilter}
+            onFilterChange={setSelectedFilter}
+          />
 
           {loading ? (
             <div className="h-64 flex items-center justify-center text-gray-500">加载中...</div>
@@ -85,7 +123,7 @@ export default function ApplicationOverviewPage() {
             <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg">{error}</div>
           ) : (
             <ApplicationProgressTable
-              records={records}
+              records={filteredRecords}
               onEdit={(record) => setEditing(record.id)}
               onDelete={handleDelete}
             />
