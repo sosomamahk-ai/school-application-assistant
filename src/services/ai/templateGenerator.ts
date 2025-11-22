@@ -21,9 +21,26 @@ export async function generateTemplateFromFormContent(
   }
 
   // Check if OpenAI is configured
+  // Provide detailed error message for both development and production environments
   if (!openai) {
+    const configStatus = {
+      hasApiKey: !!process.env.OPENAI_API_KEY,
+      apiKeyLength: process.env.OPENAI_API_KEY?.length || 0,
+      apiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) || 'N/A',
+      baseURL: process.env.OPENAI_BASE_URL || process.env.OPENAI_PROXY_URL || 'not set',
+      nodeEnv: process.env.NODE_ENV || 'development',
+    };
+    
     console.error(`[LLM Template] OpenAI API key not configured`);
-    throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.');
+    console.error(`[LLM Template] Config status:`, configStatus);
+    
+    // Provide different error messages for production vs development
+    const isProduction = process.env.NODE_ENV === 'production';
+    const errorMessage = isProduction
+      ? `OpenAI API key not configured in production environment. Please set OPENAI_API_KEY environment variable in your deployment platform (Vercel, etc.). Current status: API Key ${configStatus.hasApiKey ? 'SET (' + configStatus.apiKeyLength + ' chars)' : 'NOT SET'}, Base URL: ${configStatus.baseURL}`
+      : `OpenAI API key not configured. Please set OPENAI_API_KEY environment variable in .env file. Current status: API Key ${configStatus.hasApiKey ? 'SET (' + configStatus.apiKeyLength + ' chars)' : 'NOT SET'}, Base URL: ${configStatus.baseURL}`;
+    
+    throw new Error(errorMessage);
   }
 
   // Truncate content if too long (LLM has token limits)

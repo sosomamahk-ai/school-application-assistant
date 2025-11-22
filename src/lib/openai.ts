@@ -43,6 +43,8 @@ const httpsAgent = new https.Agent({
 });
 
 // Create OpenAI client with proxy support
+// For production environments, always create the client if API key is available
+// In production, environment variables should be set via deployment platform (Vercel, etc.)
 
 export const openai = hasValidApiKey
   ? new OpenAI({
@@ -55,6 +57,23 @@ export const openai = hasValidApiKey
       maxRetries: 2, // Retry failed requests
     })
   : null as any; // Mock client when API key is not available
+
+// Export a function to check if OpenAI is configured
+export function isOpenAIConfigured(): boolean {
+  return hasValidApiKey && openai !== null;
+}
+
+// Export environment check for debugging
+export function getOpenAIConfigStatus() {
+  return {
+    hasApiKey: !!process.env.OPENAI_API_KEY,
+    hasValidApiKey: hasValidApiKey,
+    apiKeyLength: process.env.OPENAI_API_KEY?.length || 0,
+    baseURL: baseURL || 'default (https://api.openai.com)',
+    isServer: isServer,
+    isConfigured: isOpenAIConfigured(),
+  };
+}
 
 // Log client status (always log in server-side contexts)
 if (isServer) {
