@@ -13,10 +13,18 @@ const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_PROXY_URL;
 // Check if we're in a server context (Node.js environment)
 const isServer = typeof window === 'undefined';
 
+// Check if API key is set and not a mock value (must be defined before logging)
+const hasValidApiKey = process.env.OPENAI_API_KEY && 
+                       process.env.OPENAI_API_KEY !== 'mock-api-key' &&
+                       typeof process.env.OPENAI_API_KEY === 'string' &&
+                       process.env.OPENAI_API_KEY.trim().length > 0;
+
 if (isServer) {
   console.log('[OpenAI Config] Initializing OpenAI client...');
-  console.log(`[OpenAI Config] API Key: ${apiKey ? apiKey.substring(0, 10) + '...' : 'NOT SET'}`);
+  console.log(`[OpenAI Config] API Key: ${apiKey && apiKey !== 'mock-api-key' ? apiKey.substring(0, 10) + '...' : 'NOT SET'}`);
   console.log(`[OpenAI Config] Base URL: ${baseURL || 'NOT SET (using default: https://api.openai.com)'}`);
+  console.log(`[OpenAI Config] Raw OPENAI_API_KEY from env: ${process.env.OPENAI_API_KEY ? 'SET (' + process.env.OPENAI_API_KEY.length + ' chars)' : 'NOT SET'}`);
+  console.log(`[OpenAI Config] Has valid API key: ${hasValidApiKey}`);
   
   if (baseURL) {
     console.log(`[OpenAI Config] Using proxy: ${baseURL}`);
@@ -35,9 +43,10 @@ const httpsAgent = new https.Agent({
 });
 
 // Create OpenAI client with proxy support
-export const openai = process.env.OPENAI_API_KEY 
+
+export const openai = hasValidApiKey
   ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.OPENAI_API_KEY!,
       ...(baseURL && { 
         baseURL: baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL, // Remove trailing slash if present
       }), // Use proxy if configured
