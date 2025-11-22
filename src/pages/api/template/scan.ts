@@ -5,6 +5,10 @@ import { parsePDF } from '@/services/fileParser/pdfParser';
 import { parseDOCX } from '@/services/fileParser/docxParser';
 import { scrapePublicForm } from '@/services/scraper/authenticatedScraper';
 
+// Pre-import OpenAI configuration to trigger initialization logging
+// This ensures the configuration is loaded and logged when this API route is first compiled
+import '@/lib/openai';
+
 export const config = {
   api: {
     bodyParser: {

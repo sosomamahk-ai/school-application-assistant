@@ -9,8 +9,11 @@ const apiKey = process.env.OPENAI_API_KEY || 'mock-api-key';
 // Note: Don't include /v1 in the baseURL, OpenAI SDK will add it automatically
 const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_PROXY_URL;
 
-// Log configuration (only in development)
-if (process.env.NODE_ENV === 'development') {
+// Log configuration (always log in server-side contexts)
+// Check if we're in a server context (Node.js environment)
+const isServer = typeof window === 'undefined';
+
+if (isServer) {
   console.log('[OpenAI Config] Initializing OpenAI client...');
   console.log(`[OpenAI Config] API Key: ${apiKey ? apiKey.substring(0, 10) + '...' : 'NOT SET'}`);
   console.log(`[OpenAI Config] Base URL: ${baseURL || 'NOT SET (using default: https://api.openai.com)'}`);
@@ -44,8 +47,8 @@ export const openai = process.env.OPENAI_API_KEY
     })
   : null as any; // Mock client when API key is not available
 
-// Log client status
-if (process.env.NODE_ENV === 'development') {
+// Log client status (always log in server-side contexts)
+if (isServer) {
   if (openai) {
     console.log('[OpenAI Config] OpenAI client initialized successfully');
     if (baseURL) {
