@@ -55,10 +55,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(data);
   } catch (error: any) {
     console.error('[API /wordpress/schools] Error:', error);
+    console.error('[API /wordpress/schools] Error stack:', error?.stack);
+    
     const errorMessage = error?.message || 'Failed to fetch WordPress schools';
+    
+    // Extract more details from the error message
+    let details: any = {
+      message: errorMessage,
+      timestamp: new Date().toISOString()
+    };
+    
+    if (process.env.NODE_ENV === 'development') {
+      details.stack = error?.stack;
+      details.rawError = String(error);
+      details.baseUrl = process.env.WORDPRESS_BASE_URL || process.env.NEXT_PUBLIC_WORDPRESS_BASE_URL;
+    }
+    
+    // Check if it's a WordPress API error (contains "CPT responded")
+    if (errorMessage.includes('CPT responded with 400')) {
+      details.suggestion = 'WordPress API returned 400. This might be due to invalid parameters or endpoint configuration. Check if the CPT (profile/university) is properly registered in WordPress.';
+    } else if (errorMessage.includes('CPT responded with 401')) {
+      details.suggestion = 'WordPress API authentication failed. Check if the WordPress site allows public REST API access or if authentication is required.';
+    } else if (errorMessage.includes('CPT responded with 403')) {
+      details.suggestion = 'WordPress API access forbidden. The CPT might not be publicly accessible or requires authentication.';
+    } else if (errorMessage.includes('CPT responded with 404')) {
+      details.suggestion = 'WordPress CPT endpoint not found. Verify that the CPT (profile/university) is registered and accessible via REST API.';
+    }
+    
     return res.status(500).json({
       error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? String(error) : undefined
+      details: details
     });
   }
 }

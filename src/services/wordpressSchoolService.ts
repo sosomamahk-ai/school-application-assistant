@@ -432,8 +432,10 @@ const fetchCollection = async (baseUrl: string, type: WordPressSchoolType): Prom
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
       
       // _embed parameter includes taxonomy terms and featured media
-      // Adding profile_type to the request to ensure taxonomy is included
-      const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed&acf_format=standard&profile_type=all`;
+      // Note: Removed profile_type=all as it's not a valid WordPress REST API parameter
+      const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed&acf_format=standard`;
+      console.log(`[wordpressSchoolService] Fetching ${type} CPT from: ${endpoint}`);
+      
       const response = await fetch(endpoint, {
         headers: { Accept: 'application/json' },
         signal: controller.signal
@@ -441,11 +443,28 @@ const fetchCollection = async (baseUrl: string, type: WordPressSchoolType): Prom
       clearTimeout(timeoutId);
 
       if (response.status === 404) {
+        console.warn(`[wordpressSchoolService] ${type} CPT endpoint returned 404, returning empty array`);
         return [];
       }
 
       if (!response.ok) {
-        throw new Error(`WordPress ${type} CPT responded with ${response.status}`);
+        // Try to get error details from response
+        let errorDetails = '';
+        try {
+          const errorBody = await response.text();
+          errorDetails = errorBody ? `: ${errorBody.substring(0, 200)}` : '';
+        } catch {
+          // Ignore errors when reading error body
+        }
+        
+        console.error(`[wordpressSchoolService] ${type} CPT API error:`, {
+          status: response.status,
+          statusText: response.statusText,
+          endpoint,
+          errorDetails
+        });
+        
+        throw new Error(`WordPress ${type} CPT responded with ${response.status}${errorDetails}`);
       }
 
       const items = await response.json();
