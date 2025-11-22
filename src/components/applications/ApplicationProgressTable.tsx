@@ -85,30 +85,40 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
                     <div>{resultLabel[record.result] || '等待结果'}</div>
                     <div className="text-xs text-gray-500">{resultTime}</div>
                   </td>
-                  <td className="px-4 py-4 space-y-2">
-                    {record.applicationId && (
-                      <Link
-                        href={`/application/${record.applicationId}`}
-                        className="btn-secondary w-full text-center"
-                      >
-                        继续填写
-                      </Link>
-                    )}
-                    <button
-                      onClick={() => onEdit(record)}
-                      className="btn-primary w-full flex items-center justify-center space-x-2"
-                    >
-                      更新进度
-                    </button>
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(record)}
-                        className="btn-outline w-full flex items-center justify-center space-x-2 text-red-600 hover:bg-red-50 hover:border-red-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span>删除申请</span>
-                      </button>
-                    )}
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 flex gap-2">
+                        {record.applicationId ? (
+                          <Link
+                            href={`/application/${record.applicationId}`}
+                            className="btn-secondary flex-1 text-center"
+                          >
+                            继续填写
+                          </Link>
+                        ) : (
+                          <div className="flex-1"></div>
+                        )}
+                        <button
+                          onClick={() => onEdit(record)}
+                          className="btn-primary flex-1 flex items-center justify-center"
+                        >
+                          更新进度
+                        </button>
+                      </div>
+                      {onDelete && (
+                        <button
+                          onClick={() => {
+                            if (confirm('确定要删除这个申请吗？此操作不可恢复。')) {
+                              onDelete(record);
+                            }
+                          }}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="删除申请"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

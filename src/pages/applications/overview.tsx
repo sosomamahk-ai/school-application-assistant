@@ -37,10 +37,6 @@ export default function ApplicationOverviewPage() {
       return;
     }
 
-    if (!confirm('确定要删除这个申请吗？此操作不可恢复。')) {
-      return;
-    }
-
     try {
       const token = localStorage.getItem('token');
       if (!token) {
