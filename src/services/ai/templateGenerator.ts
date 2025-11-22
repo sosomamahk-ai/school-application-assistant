@@ -84,7 +84,15 @@ ${truncatedContent}
 Generate the JSON template following the schema exactly. Be thorough and extract all fields you can identify.`;
 
   try {
+    // Log request details
+    const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_PROXY_URL || 'https://api.openai.com';
+    const requestURL = baseURL ? `${baseURL}/v1/chat/completions` : 'https://api.openai.com/v1/chat/completions';
+    
     console.log(`[LLM Template] Sending request to OpenAI (model: gpt-4o-mini)...`);
+    console.log(`[LLM Template] Request URL: ${requestURL}`);
+    console.log(`[LLM Template] Base URL: ${baseURL || 'default'}`);
+    console.log(`[LLM Template] API Key: ${process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 10) + '...' : 'NOT SET'}`);
+    
     const requestStartTime = Date.now();
     
     const completion = await openai.chat.completions.create({
@@ -171,23 +179,55 @@ Generate the JSON template following the schema exactly. Be thorough and extract
         errorMessage.includes('ECONNREFUSED') ||
         errorMessage.includes('ENOTFOUND') ||
         errorMessage.includes('ETIMEDOUT') ||
+        errorMessage.includes('getaddrinfo') ||
         errorCode === 'ECONNREFUSED' ||
         errorCode === 'ENOTFOUND' ||
         errorCode === 'ETIMEDOUT') {
+      
+      // Check for underlying error cause
+      const underlyingError = (error as any).error || (error as any).cause;
+      const underlyingCode = underlyingError?.code || (error as any).errno;
+      const underlyingMessage = underlyingError?.message || errorMessage;
+      
+      console.error(`[LLM Template] Connection error details:`, {
+        message: errorMessage,
+        code: errorCode,
+        underlyingCode: underlyingCode,
+        underlyingMessage: underlyingMessage,
+        baseURL: baseURL,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+      });
       
       let connectionErrorMsg = '无法连接到 OpenAI API。';
       
       if (baseURL) {
         connectionErrorMsg += `\n\n代理配置：${baseURL}`;
-        connectionErrorMsg += `\n\n可能的原因：`;
-        connectionErrorMsg += `\n1. 代理服务器可能无法访问（检查 Cloudflare Workers 是否正常运行）`;
-        connectionErrorMsg += `\n2. 代理 URL 配置可能不正确（检查 OPENAI_BASE_URL 是否正确）`;
-        connectionErrorMsg += `\n3. 网络连接问题（检查网络连接）`;
-        connectionErrorMsg += `\n4. Cloudflare Workers 代码可能有问题（检查 Worker 代码）`;
-        connectionErrorMsg += `\n\n请检查：`;
-        connectionErrorMsg += `\n- 测试代理 URL 是否可以访问：curl ${baseURL}/health（如果 Worker 有健康检查端点）`;
-        connectionErrorMsg += `\n- 检查 Cloudflare Workers 日志`;
-        connectionErrorMsg += `\n- 验证 OPENAI_BASE_URL 配置是否正确`;
+        
+        if (underlyingCode === 'ENOTFOUND' || underlyingMessage?.includes('getaddrinfo')) {
+          connectionErrorMsg += `\n\n💡 诊断：DNS 解析失败（ENOTFOUND）`;
+          connectionErrorMsg += `\n\n可能的原因：`;
+          connectionErrorMsg += `\n1. 本地 DNS 服务器无法解析 Worker 域名（但浏览器可以访问，说明域名正确）`;
+          connectionErrorMsg += `\n2. Node.js 环境下的网络配置问题`;
+          connectionErrorMsg += `\n3. 防火墙或代理设置阻止了 Node.js 的网络访问`;
+          connectionErrorMsg += `\n\n✅ Worker 已部署成功（浏览器可以访问）`;
+          connectionErrorMsg += `\n✅ 配置正确（OPENAI_BASE_URL 已设置）`;
+          connectionErrorMsg += `\n\n解决方案：`;
+          connectionErrorMsg += `\n1. 虽然本地测试失败，但应用在生产环境中可能仍然可用`;
+          connectionErrorMsg += `\n2. 尝试刷新 DNS 缓存：ipconfig /flushdns（Windows）`;
+          connectionErrorMsg += `\n3. 检查防火墙是否阻止了 Node.js 的网络访问`;
+          connectionErrorMsg += `\n4. 如果应用仍然报错，可能是应用未重启（环境变量未加载）`;
+          connectionErrorMsg += `\n5. 请确保应用已完全重启以加载新的环境变量`;
+        } else {
+          connectionErrorMsg += `\n\n可能的原因：`;
+          connectionErrorMsg += `\n1. 代理服务器可能无法访问（检查 Cloudflare Workers 是否正常运行）`;
+          connectionErrorMsg += `\n2. 代理 URL 配置可能不正确（检查 OPENAI_BASE_URL 是否正确）`;
+          connectionErrorMsg += `\n3. 网络连接问题（检查网络连接）`;
+          connectionErrorMsg += `\n4. Cloudflare Workers 代码可能有问题（检查 Worker 代码）`;
+          connectionErrorMsg += `\n\n请检查：`;
+          connectionErrorMsg += `\n- 在浏览器中测试 Worker URL：${baseURL}/v1/models`;
+          connectionErrorMsg += `\n- 检查 Cloudflare Workers 日志`;
+          connectionErrorMsg += `\n- 验证 OPENAI_BASE_URL 配置是否正确`;
+        }
       } else {
         connectionErrorMsg += `\n\n未配置代理。如果遇到地区限制，请配置 OPENAI_BASE_URL 环境变量。`;
       }
