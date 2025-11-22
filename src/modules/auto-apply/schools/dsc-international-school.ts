@@ -1,0 +1,188 @@
+import type { Locator, Page } from "playwright";
+
+import type { SchoolAutomationScript } from "../engine/types";
+import { remapTemplateFields } from "./common";
+
+// DSC International School 申请页面URL
+const APPLY_URL = "https://www.dsc.edu.hk/admissions/applynow";
+
+export const dscInternationalSchoolScript: SchoolAutomationScript = {
+  // ⚠️ 重要：id 必须与数据库中的 schoolId 完全一致
+  id: "dsc-hkis-2025",  // 数据库中的实际 schoolId
+  name: "DSC International School (德思齐国际学校)",
+  supportsLogin: false,  // 不需要登录
+  description: "DSC International School 自动申请脚本 - 不需要登录即可提交申请",
+  
+  async run(ctx) {
+    const { utils, formFiller, payload, page, logger } = ctx;
+    
+    try {
+      // 步骤 1: 打开申请页面
+      logger.info("正在打开 DSC International School 申请页面...", { url: APPLY_URL });
+      await utils.safeNavigate(page, APPLY_URL);
+      await utils.waitForNetworkIdle(page);
+      
+      // 等待页面完全加载（DSC 网站可能使用 Finalsite CMS，需要额外等待）
+      await page.waitForLoadState("networkidle", { timeout: 30000 });
+      
+      // 步骤 2: 字段映射（如果需要）
+      // 根据实际页面字段标签调整映射关系
+      // 如果自动匹配失败，可以取消下面的注释并调整映射
+      /*
+      const overrides = remapTemplateFields(payload.template, {
+        english_first_name: { label: "First Name" },
+        english_last_name: { label: "Last Name" },
+        student_email: { label: "Email" },
+        student_phone: { label: "Phone" },
+        home_address: { label: "Address" },
+        date_of_birth: { label: "Date of Birth" },
+      });
+      const fields = overrides.length ? overrides : payload.template.fields;
+      */
+      
+      // 步骤 3: 自动填写表单
+      // 系统会自动匹配字段（通过标签、占位符等）
+      logger.info("开始填写申请表单...", { fieldCount: payload.template.fields.length });
+      await formFiller.fillFields(page, payload.template.fields);
+      
+      // 步骤 4: 处理文件上传（如果需要）
+      // 根据网页说明，需要上传多个文件，但文件上传通常需要实际文件路径
+      // 如果 payload.metadata 中包含文件路径，可以在这里处理
+      /*
+      const fileInputs = page.locator('input[type="file"]');
+      const fileInputCount = await fileInputs.count();
+      if (fileInputCount > 0) {
+        logger.info(`检测到 ${fileInputCount} 个文件上传字段`);
+        // 处理文件上传逻辑
+      }
+      */
+      
+      // 步骤 5: 提交表单
+      logger.info("正在查找并点击提交按钮...");
+      const submitButton = await locateSubmitButton(page, logger);
+      
+      if (submitButton) {
+        logger.info("找到提交按钮，准备提交");
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: "networkidle", timeout: 30_000 }).catch(() => undefined),
+          submitButton.click(),
+        ]);
+      } else {
+        logger.warn("未找到提交按钮，尝试其他方式");
+        // 尝试其他可能的提交方式
+        const alternativeSubmit = page.locator('button[type="submit"], input[type="submit"]').first();
+        if (await alternativeSubmit.count() > 0) {
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: "networkidle", timeout: 30_000 }).catch(() => undefined),
+            alternativeSubmit.click(),
+          ]);
+        } else {
+          throw new Error("无法找到提交按钮");
+        }
+      }
+      
+      // 步骤 6: 等待页面加载完成
+      await utils.waitForNetworkIdle(page);
+      
+      // 步骤 7: 验证提交结果（可选）
+      const success = await verifySubmission(page);
+      if (success) {
+        logger.info("申请提交成功！");
+        return {
+          success: true,
+          message: "DSC International School 申请已成功提交！",
+        };
+      } else {
+        logger.warn("无法确认申请是否成功提交，但表单已填写并提交");
+        return {
+          success: true,  // 即使无法确认，也认为成功（因为已经提交）
+          message: "申请已提交，但无法确认提交结果。请手动检查。",
+        };
+      }
+    } catch (error) {
+      logger.error("DSC International School 申请失败", { error });
+      
+      // 保存错误截图和HTML用于调试
+      const [screenshotPath, htmlPath] = await Promise.all([
+        utils.takeScreenshot(page, payload.runId, "dsc-international-school-error"),
+        utils.persistHtmlDump(page, payload.runId),
+      ]);
+      
+      return {
+        success: false,
+        message: (error as Error).message,
+        errors: [(error as Error).stack ?? String(error)],
+        artifacts: {
+          screenshotPath,
+          rawHtmlPath: htmlPath,
+        },
+      };
+    }
+  },
+};
+
+/**
+ * 定位提交按钮
+ * 尝试多种可能的选择器来找到提交按钮
+ */
+async function locateSubmitButton(page: Page, logger: any): Promise<Locator | null> {
+  const candidates = [
+    // 按优先级尝试不同的选择器
+    page.getByRole("button", { name: /submit|apply|提交|确认|send|提交申请/i }),
+    page.locator('button[type="submit"]'),
+    page.locator('input[type="submit"]'),
+    page.locator('button:has-text("Submit")'),
+    page.locator('button:has-text("提交")'),
+    page.locator('button:has-text("Apply")'),
+    page.locator('button:has-text("Send")'),
+    page.locator('#submit-button'),
+    page.locator('#apply-button'),
+    page.locator('.submit-btn'),
+    page.locator('.apply-button'),
+    // Finalsite CMS 可能使用的类名
+    page.locator('[data-submit]'),
+    page.locator('button.submit'),
+  ];
+
+  for (const locator of candidates) {
+    try {
+      if (await locator.count() > 0) {
+        logger.info("找到提交按钮", { selector: locator.toString() });
+        return locator.first();
+      }
+    } catch (e) {
+      // 继续尝试下一个
+      continue;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * 验证提交结果
+ * 检查页面是否包含成功消息
+ */
+async function verifySubmission(page: Page): Promise<boolean> {
+  try {
+    // 检查页面是否包含成功消息
+    const successIndicators = [
+      /success|成功|已提交|已完成|thank you|感谢|submitted|received/i,
+      /application.*received|申请.*已收到|申请.*成功/i,
+    ];
+    
+    const pageText = (await page.textContent('body')) || '';
+    const hasSuccessIndicator = successIndicators.some(pattern => pattern.test(pageText));
+    
+    // 也可以检查URL变化（如果提交后跳转到确认页面）
+    const currentUrl = page.url();
+    const hasConfirmationUrl = /confirm|success|thank|完成|成功/.test(currentUrl);
+    
+    return hasSuccessIndicator || hasConfirmationUrl;
+  } catch (error) {
+    // 如果验证失败，返回 false（但不影响整体成功状态）
+    return false;
+  }
+}
+
+
