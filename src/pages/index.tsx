@@ -85,6 +85,7 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
 
         {/* Features Section */}
         <div id="features" className="w-full">
@@ -141,6 +142,7 @@ export default function Home() {
                 {t('home.features.multipleSchools.description')}
               </p>
             </div>
+          </div>
           </div>
         </div>
 
