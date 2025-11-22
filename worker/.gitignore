@@ -1,0 +1,5 @@
+# Cloudflare Workers 忽略文件
+.wrangler/
+.dev.vars
+node_modules/
+

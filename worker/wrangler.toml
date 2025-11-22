@@ -1,0 +1,22 @@
+# Cloudflare Workers 配置文件
+# 这个文件用于配置 Worker 的部署设置
+
+name = "openai-proxy"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Worker 路由和域名配置
+# 部署后，Worker 将在 https://openai-proxy.<your-subdomain>.workers.dev 可用
+# 如果需要自定义域名，可以在这里配置
+# routes = [
+#   { pattern = "api.example.com/*", zone_name = "example.com" }
+# ]
+
+# 环境变量（如果需要）
+# [vars]
+# ENVIRONMENT = "production"
+
+# 其他配置
+# [build]
+# command = "npm install"
+
