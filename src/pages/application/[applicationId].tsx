@@ -428,19 +428,47 @@ export default function ApplicationPage() {
     };
   }, [applicationId, router]);
 
-  const handleApplicationChange = (nextApplication: ApplicationFormState) => {
+  const isUpdatingRef = useRef(false);
+  
+  const handleApplicationChange = useCallback((nextApplication: ApplicationFormState) => {
+    // Prevent infinite loops by checking if we're already updating
+    if (isUpdatingRef.current) {
+      return;
+    }
+    
+    isUpdatingRef.current = true;
+    
     setFormData((previous) => {
       const base: StructuredFormDataState =
         previous && typeof previous === 'object' ? { ...previous } : {};
+      let hasChanges = false;
+      
       nextApplication.tabs.forEach((tab) => {
         tab.fields.forEach((field) => {
-          base[field.id] = field.value ?? '';
+          const newValue = field.value ?? '';
+          if (base[field.id] !== newValue) {
+            hasChanges = true;
+            base[field.id] = newValue;
+          }
         });
       });
+      
       base.__structure = previous?.__structure;
+      
+      // Only return new object if there are actual changes
+      if (!hasChanges) {
+        isUpdatingRef.current = false;
+        return previous;
+      }
+      
+      // Reset flag after state update
+      setTimeout(() => {
+        isUpdatingRef.current = false;
+      }, 0);
+      
       return base;
     });
-  };
+  }, []);
 
   const formTabs = useMemo<ApplicationTab[]>(() => {
     if (!application) {

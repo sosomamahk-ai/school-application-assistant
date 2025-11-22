@@ -36,6 +36,7 @@ export default function ApplicationForm({ application, onApplicationChange, onFi
   const [currentApp, setCurrentApp] = useState<ApplicationFormState>(application);
   const [activeTabId, setActiveTabId] = useState<string>(() => application.tabs[0]?.id ?? '');
   const activeTabIdRef = useRef(activeTabId);
+  const isInternalUpdateRef = useRef(false);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -43,12 +44,54 @@ export default function ApplicationForm({ application, onApplicationChange, onFi
   }, [activeTabId]);
 
   useEffect(() => {
-    setCurrentApp(application);
-    // Reset activeTabId if current tab no longer exists
-    if (application.tabs.length > 0 && !application.tabs.some((tab) => tab.id === activeTabIdRef.current)) {
-      setActiveTabId(application.tabs[0]?.id ?? '');
+    // Skip update if it's from our own internal change
+    if (isInternalUpdateRef.current) {
+      return;
     }
-  }, [application]);
+    
+    // Deep comparison to avoid unnecessary updates
+    const hasStructuralChanges = 
+      currentApp.tabs.length !== application.tabs.length ||
+      currentApp.tabs.some((tab, index) => {
+        const otherTab = application.tabs[index];
+        return !otherTab || tab.id !== otherTab.id || tab.fields.length !== otherTab.fields.length;
+      });
+    
+    if (hasStructuralChanges) {
+      setCurrentApp(application);
+      // Reset activeTabId if current tab no longer exists
+      if (application.tabs.length > 0 && !application.tabs.some((tab) => tab.id === activeTabIdRef.current)) {
+        setActiveTabId(application.tabs[0]?.id ?? '');
+      }
+    } else {
+      // Only update field values if they changed
+      setCurrentApp((prev) => {
+        let hasValueChanges = false;
+        const updatedTabs = prev.tabs.map((tab, tabIndex) => {
+          const newTab = application.tabs[tabIndex];
+          if (!newTab || tab.id !== newTab.id) {
+            return tab;
+          }
+          const updatedFields = tab.fields.map((field, fieldIndex) => {
+            const newField = newTab.fields[fieldIndex];
+            if (!newField || field.id !== newField.id) {
+              return field;
+            }
+            if (field.value !== newField.value) {
+              hasValueChanges = true;
+              return { ...field, value: newField.value };
+            }
+            return field;
+          });
+          if (hasValueChanges) {
+            return { ...tab, fields: updatedFields };
+          }
+          return tab;
+        });
+        return hasValueChanges ? { ...prev, tabs: updatedTabs } : prev;
+      });
+    }
+  }, [application, currentApp.tabs]);
 
   const activeTab = useMemo<ApplicationTab | undefined>(
     () => currentApp.tabs.find((tab) => tab.id === activeTabId && tab.fields.length > 0),
@@ -56,6 +99,7 @@ export default function ApplicationForm({ application, onApplicationChange, onFi
   );
 
   const handleFieldChange = (tabId: string, fieldId: string, nextValue: string | number | boolean) => {
+    isInternalUpdateRef.current = true;
     setCurrentApp((previous) => {
       const updatedTabs = previous.tabs.map((tab) => {
         if (tab.id !== tabId) {
@@ -71,6 +115,9 @@ export default function ApplicationForm({ application, onApplicationChange, onFi
 
       const nextApplication: ApplicationFormState = { ...previous, tabs: updatedTabs };
       onApplicationChange?.(nextApplication);
+      setTimeout(() => {
+        isInternalUpdateRef.current = false;
+      }, 0);
       return nextApplication;
     });
   };
