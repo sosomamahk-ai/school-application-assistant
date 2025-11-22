@@ -14,10 +14,12 @@ const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_PROXY_URL;
 const isServer = typeof window === 'undefined';
 
 // Check if API key is set and not a mock value (must be defined before logging)
-const hasValidApiKey = process.env.OPENAI_API_KEY && 
-                       process.env.OPENAI_API_KEY !== 'mock-api-key' &&
-                       typeof process.env.OPENAI_API_KEY === 'string' &&
-                       process.env.OPENAI_API_KEY.trim().length > 0;
+const hasValidApiKey: boolean = Boolean(
+  process.env.OPENAI_API_KEY && 
+  process.env.OPENAI_API_KEY !== 'mock-api-key' &&
+  typeof process.env.OPENAI_API_KEY === 'string' &&
+  process.env.OPENAI_API_KEY.trim().length > 0
+);
 
 if (isServer) {
   console.log('[OpenAI Config] Initializing OpenAI client...');
