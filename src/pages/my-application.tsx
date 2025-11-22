@@ -126,18 +126,28 @@ export default function MyApplication() {
   };
 
   // Check if application has any filled fields
-  const hasFilledFields = useCallback((application: Application): boolean => {
-    if (!application.formData || typeof application.formData !== 'object') {
-      return false;
-    }
-    const formData = application.formData as Record<string, any>;
-    // Check if any field has a value (excluding __structure)
-    return Object.keys(formData).some(key => {
-      if (key === '__structure') return false;
-      const value = formData[key];
-      return value !== undefined && value !== null && value !== '';
+  const hasFilledFields = useMemo(() => {
+    const result = new Map<string, boolean>();
+    applications.forEach((app) => {
+      if (!app.formData || typeof app.formData !== 'object') {
+        result.set(app.id, false);
+        return;
+      }
+      const formData = app.formData as Record<string, any>;
+      // Check if any field has a value (excluding __structure)
+      const hasFilled = Object.keys(formData).some(key => {
+        if (key === '__structure') return false;
+        const value = formData[key];
+        return value !== undefined && value !== null && value !== '';
+      });
+      result.set(app.id, hasFilled);
     });
-  }, []);
+    return result;
+  }, [applications]);
+
+  const getHasFilledFields = useCallback((application: Application): boolean => {
+    return hasFilledFields.get(application.id) ?? false;
+  }, [hasFilledFields]);
 
   const runAutoApply = async (application: Application) => {
     setAutoApplyError(null);
@@ -171,8 +181,10 @@ export default function MyApplication() {
         throw new Error(data.error || data.message || '自动申请失败');
       }
       setAutoApplyMessage(data.message || '自动申请流程已完成，请查看最新状态。');
-      // Refresh applications list
-      await fetchApplications();
+      // Refresh applications list after a short delay to avoid infinite loops
+      setTimeout(() => {
+        fetchApplications();
+      }, 100);
     } catch (err) {
       console.error(err);
       setAutoApplyError(err instanceof Error ? err.message : '自动申请失败，请稍后再试');
@@ -331,7 +343,7 @@ export default function MyApplication() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {applications.map((app) => {
-                const hasFilled = hasFilledFields(app);
+                const hasFilled = getHasFilledFields(app);
                 const canAutoApply = hasFilled && app.status !== 'submitted';
                 return (
                   <div key={app.id} className="card hover:shadow-lg transition-shadow duration-200">

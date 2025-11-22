@@ -464,7 +464,11 @@ export default function ApplicationPage() {
     }
 
     const firstField = formTabs[0]?.fields[0];
-    setActiveFieldId(firstField ? firstField.id : null);
+    const newActiveFieldId = firstField ? firstField.id : null;
+    // Only update if the value actually changed to avoid infinite loops
+    if (newActiveFieldId !== activeFieldId) {
+      setActiveFieldId(newActiveFieldId);
+    }
   }, [formTabs, activeFieldId]);
 
   const activeField = useMemo<ApplicationField | null>(() => {
@@ -631,6 +635,9 @@ export default function ApplicationPage() {
         clearTimeout(notificationTimerRef.current);
       }
       notificationTimerRef.current = setTimeout(() => setSaveNotification(null), 3000);
+      
+      // Don't update formData after save to avoid infinite loops
+      // The formData is already up-to-date from handleApplicationChange
     } catch (error) {
       console.error('Error saving application:', error);
       setSaveNotification({ type: 'error', message: '保存失败，请稍后重试。' });
