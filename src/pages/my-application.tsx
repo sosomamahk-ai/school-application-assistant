@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { Plus, FileText, Clock, CheckCircle, Trash2, Settings, Search, X } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, Trash2, Settings, Search, X, Bot, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 
@@ -15,6 +15,9 @@ interface Application {
   createdAt: string;
   updatedAt: string;
   submittedAt?: string;
+  templateId?: string;
+  templateSchoolId?: string;
+  formData?: any;
 }
 
 interface Template {
@@ -34,6 +37,9 @@ export default function MyApplication() {
   const [showNewAppModal, setShowNewAppModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [autoApplyingId, setAutoApplyingId] = useState<string | null>(null);
+  const [autoApplyError, setAutoApplyError] = useState<string | null>(null);
+  const [autoApplyMessage, setAutoApplyMessage] = useState<string | null>(null);
 
   const fetchApplications = useCallback(async () => {
     try {
@@ -116,6 +122,62 @@ export default function MyApplication() {
       }
     } catch (error) {
       console.error('Error deleting application:', error);
+    }
+  };
+
+  // Check if application has any filled fields
+  const hasFilledFields = useCallback((application: Application): boolean => {
+    if (!application.formData || typeof application.formData !== 'object') {
+      return false;
+    }
+    const formData = application.formData as Record<string, any>;
+    // Check if any field has a value (excluding __structure)
+    return Object.keys(formData).some(key => {
+      if (key === '__structure') return false;
+      const value = formData[key];
+      return value !== undefined && value !== null && value !== '';
+    });
+  }, []);
+
+  const runAutoApply = async (application: Application) => {
+    setAutoApplyError(null);
+    setAutoApplyMessage(null);
+    setAutoApplyingId(application.id);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      // Get template info from application
+      const templateId = application.templateId || '';
+      const templateSchoolId = application.templateSchoolId || '';
+
+      const res = await fetch('/api/auto-apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          schoolId: templateSchoolId,
+          templateId: templateId,
+          applicationId: application.id
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || '自动申请失败');
+      }
+      setAutoApplyMessage(data.message || '自动申请流程已完成，请查看最新状态。');
+      // Refresh applications list
+      await fetchApplications();
+    } catch (err) {
+      console.error(err);
+      setAutoApplyError(err instanceof Error ? err.message : '自动申请失败，请稍后再试');
+    } finally {
+      setAutoApplyingId(null);
     }
   };
 
@@ -241,6 +303,18 @@ export default function MyApplication() {
             </div>
           </div>
 
+          {/* Auto Apply Messages */}
+          {autoApplyError && (
+            <div className="bg-red-50 text-red-600 px-4 py-2 text-sm rounded-lg border border-red-100">
+              {autoApplyError}
+            </div>
+          )}
+          {autoApplyMessage && !autoApplyError && (
+            <div className="bg-green-50 text-green-700 px-4 py-2 text-sm rounded-lg border border-green-100">
+              {autoApplyMessage}
+            </div>
+          )}
+
           {/* Applications List */}
           {applications.length === 0 ? (
             <div className="card text-center py-12">
@@ -256,40 +330,66 @@ export default function MyApplication() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {applications.map((app) => (
-                <div key={app.id} className="card hover:shadow-lg transition-shadow duration-200">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(app.status)}
-                      <span className="text-sm font-medium text-gray-600">
-                        {getStatusText(app.status)}
-                      </span>
+              {applications.map((app) => {
+                const hasFilled = hasFilledFields(app);
+                const canAutoApply = hasFilled && app.status !== 'submitted';
+                return (
+                  <div key={app.id} className="card hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(app.status)}
+                        <span className="text-sm font-medium text-gray-600">
+                          {getStatusText(app.status)}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {canAutoApply && (
+                          <button
+                            onClick={() => runAutoApply(app)}
+                            disabled={autoApplyingId === app.id}
+                            className="px-3 py-1.5 text-sm flex items-center space-x-1 rounded-lg border border-primary-200 text-primary-700 hover:bg-primary-50 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                            title="自动申请"
+                          >
+                            {autoApplyingId === app.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>申请中...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Bot className="h-4 w-4" />
+                                <span>自动申请</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deleteApplication(app.id)}
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => deleteApplication(app.id)}
-                      className="text-gray-400 hover:text-red-600"
+                    
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                      {getLocalizedSchoolName(app.schoolName, language)}
+                    </h3>
+                    <p className="text-gray-600 mb-4">{app.program}</p>
+                    
+                    <div className="text-sm text-gray-500 mb-4">
+                      {t('dashboard.updated')}: {new Date(app.updatedAt).toLocaleDateString()}
+                    </div>
+                    
+                    <Link
+                      href={`/application/${app.id}`}
+                      className="btn-primary w-full text-center"
                     >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                      {app.status === 'submitted' ? t('dashboard.viewApplication') : t('dashboard.continueApplication')}
+                    </Link>
                   </div>
-                  
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {getLocalizedSchoolName(app.schoolName, language)}
-                  </h3>
-                  <p className="text-gray-600 mb-4">{app.program}</p>
-                  
-                  <div className="text-sm text-gray-500 mb-4">
-                    {t('dashboard.updated')}: {new Date(app.updatedAt).toLocaleDateString()}
-                  </div>
-                  
-                  <Link
-                    href={`/application/${app.id}`}
-                    className="btn-primary w-full text-center"
-                  >
-                    {app.status === 'submitted' ? t('dashboard.viewApplication') : t('dashboard.continueApplication')}
-                  </Link>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

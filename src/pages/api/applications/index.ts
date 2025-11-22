@@ -8,6 +8,8 @@ import {
   StructuredFormData,
   normalizeTemplateStructureInput
 } from '@/utils/templates';
+import { autoFillFormFromProfile } from '@/utils/formMatcher';
+import { UserProfileData } from '@/types';
 
 function normalizeStructuredFormData(value: unknown): StructuredFormData | undefined {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -91,11 +93,72 @@ export default async function handler(
       const templateStructure = normalizeTemplateStructureInput(template.fieldsData);
       const { formData: initialFormData } = buildInitialApplicationFormData(templateStructure);
 
+      // Auto-fill form data from user profile
+      const userProfile: Partial<UserProfileData> = {
+        basicInfo: {
+          fullName: profile.fullName || '',
+          email: '',
+          phone: profile.phone || '',
+          birthday: profile.birthday?.toISOString() || '',
+          nationality: profile.nationality || ''
+        },
+        education: profile.educationData as any || [],
+        experiences: profile.experiencesData as any || [],
+        essays: profile.essaysData as any || {},
+        additional: profile.additionalData as any || {}
+      };
+
+      // Extract fields from template structure for auto-fill
+      const extractFields = (structure: any): any[] => {
+        const fields: any[] = [];
+        if (Array.isArray(structure)) {
+          structure.forEach(item => {
+            if (item.fields && Array.isArray(item.fields)) {
+              fields.push(...item.fields);
+            }
+            if (item.tabs && Array.isArray(item.tabs)) {
+              item.tabs.forEach((tab: any) => {
+                if (tab.fields && Array.isArray(tab.fields)) {
+                  fields.push(...tab.fields);
+                }
+              });
+            }
+            if (item.id && item.type) {
+              fields.push(item);
+            }
+          });
+        } else if (structure && typeof structure === 'object') {
+          if (structure.fields && Array.isArray(structure.fields)) {
+            fields.push(...structure.fields);
+          }
+          if (structure.tabs && Array.isArray(structure.tabs)) {
+            structure.tabs.forEach((tab: any) => {
+              if (tab.fields && Array.isArray(tab.fields)) {
+                fields.push(...tab.fields);
+              }
+            });
+          }
+          if (structure.id && structure.type) {
+            fields.push(structure);
+          }
+        }
+        return fields;
+      };
+
+      const templateFields = extractFields(templateStructure);
+      const autoFilledData = autoFillFormFromProfile(templateFields, userProfile);
+      
+      // Merge auto-filled data with initial form data
+      const mergedFormData = {
+        ...initialFormData,
+        ...autoFilledData
+      };
+
       const application = await prisma.application.create({
         data: {
           profileId: profile.id,
           templateId,
-          formData: initialFormData,
+          formData: mergedFormData,
           status: 'draft'
         },
         include: {

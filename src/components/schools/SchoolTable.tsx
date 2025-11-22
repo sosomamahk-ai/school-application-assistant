@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Bot, ExternalLink, Link2, Loader2, Pencil } from 'lucide-react';
+import { ExternalLink, Link2, Loader2, Pencil } from 'lucide-react';
 import { useRouter } from 'next/router';
 import type { SchoolItem } from '@/hooks/useSchools';
 import { getLocalizedSchoolName } from '@/utils/i18n';
@@ -14,7 +14,6 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [autoApplyingId, setAutoApplyingId] = useState<string | null>(null);
 
   const applyForSchool = async (school: SchoolItem) => {
     setError(null);
@@ -48,39 +47,6 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
     }
   };
 
-  const runAutoApply = async (school: SchoolItem) => {
-    setError(null);
-    setStatusMessage(null);
-    setAutoApplyingId(school.id);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/auth/login');
-        return;
-      }
-      const res = await fetch('/api/auto-apply', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          schoolId: school.templateSchoolId,
-          templateId: school.templateId
-        })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || '自动申请失败');
-      }
-      setStatusMessage(data.message || '自动申请流程已完成，请查看最新状态。');
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : '自动申请失败，请稍后再试');
-    } finally {
-      setAutoApplyingId(null);
-    }
-  };
 
   const tableRows = useMemo(() => {
     return schools.map((school) => ({
@@ -123,11 +89,6 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
           {error}
         </div>
       )}
-      {statusMessage && !error && (
-        <div className="bg-green-50 text-green-700 px-4 py-2 text-sm border-b border-green-100">
-          {statusMessage}
-        </div>
-      )}
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase tracking-wide text-xs">
@@ -166,42 +127,23 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
                 <td className="px-4 py-4 text-gray-600">{row.examTime}</td>
                 <td className="px-4 py-4 text-gray-600">{row.resultTime}</td>
                 <td className="px-4 py-4">
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() => applyForSchool(row.school)}
-                      className="btn-primary px-4 py-2 text-sm flex items-center space-x-2"
-                      disabled={applyingId === row.id}
-                    >
-                      {applyingId === row.id ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>创建中...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="h-4 w-4" />
-                          <span>申请</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => runAutoApply(row.school)}
-                      className="px-4 py-2 text-sm flex items-center space-x-2 rounded-lg border border-primary-200 text-primary-700 hover:bg-primary-50 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                      disabled={autoApplyingId === row.id}
-                    >
-                      {autoApplyingId === row.id ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>自动申请中...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Bot className="h-4 w-4" />
-                          <span>自动申请</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => applyForSchool(row.school)}
+                    className="btn-primary px-4 py-2 text-sm flex items-center space-x-2"
+                    disabled={applyingId === row.id}
+                  >
+                    {applyingId === row.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>创建中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="h-4 w-4" />
+                        <span>申请</span>
+                      </>
+                    )}
+                  </button>
                 </td>
               </tr>
             ))}

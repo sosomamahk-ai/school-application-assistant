@@ -17,6 +17,7 @@ import prisma from "@/lib/prisma";
 const requestSchema = z.object({
   schoolId: z.string().min(1),
   templateId: z.string().min(1),
+  applicationId: z.string().optional(),
   userLogin: z
     .object({
       email: z.string().email().optional(),
@@ -75,7 +76,18 @@ export async function autoApplyController(
 
     let structuredFormData: Record<string, unknown> = {};
 
-    if (applicationData?.data && typeof applicationData.data === "object") {
+    // If applicationId is provided, use that application's formData
+    if (body.applicationId) {
+      const application = await prisma.application.findUnique({
+        where: { id: body.applicationId },
+        select: { formData: true, profileId: true },
+      });
+      if (application && application.profileId === profile?.id) {
+        if (application.formData && typeof application.formData === "object") {
+          structuredFormData = application.formData as Record<string, unknown>;
+        }
+      }
+    } else if (applicationData?.data && typeof applicationData.data === "object") {
       structuredFormData = applicationData.data as Record<string, unknown>;
     } else if (profile) {
       const application = await prisma.application.findFirst({

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { Save, Download, Loader2 } from 'lucide-react';
+import { Save, Download, Loader2, Bot } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 import ApplicationForm, {
@@ -356,6 +356,9 @@ export default function ApplicationPage() {
   const [saveNotification, setSaveNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [exportScope, setExportScope] = useState<'all' | 'filled'>('all');
   const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [autoApplying, setAutoApplying] = useState(false);
+  const [autoApplyError, setAutoApplyError] = useState<string | null>(null);
+  const [autoApplyMessage, setAutoApplyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -672,6 +675,70 @@ export default function ApplicationPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Check if form has any filled fields
+  const hasFilledFields = useMemo(() => {
+    if (formTabs.length === 0) {
+      return false;
+    }
+    const allFields = formTabs.flatMap((tab) => tab.fields);
+    return allFields.some((field) => fieldHasValue(field));
+  }, [formTabs]);
+
+  const canAutoApply = hasFilledFields && application?.status !== 'submitted';
+
+  const handleAutoApply = async () => {
+    if (!application || !canAutoApply) {
+      return;
+    }
+
+    setAutoApplyError(null);
+    setAutoApplyMessage(null);
+    setAutoApplying(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const res = await fetch('/api/auto-apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          schoolId: application.template.schoolId,
+          templateId: application.template.id,
+          applicationId: application.id
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || '自动申请失败');
+      }
+
+      setAutoApplyMessage(data.message || '自动申请流程已完成，请查看最新状态。');
+      
+      // Refresh application data
+      const response = await fetch(`/api/applications/${application.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const appData = await response.json();
+        setApplication(appData.application);
+        setFormData(appData.application.formData || {});
+      }
+    } catch (err) {
+      console.error(err);
+      setAutoApplyError(err instanceof Error ? err.message : '自动申请失败，请稍后再试');
+    } finally {
+      setAutoApplying(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -711,6 +778,16 @@ export default function ApplicationPage() {
               {saveNotification.message}
             </div>
           )}
+          {autoApplyError && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+              {autoApplyError}
+            </div>
+          )}
+          {autoApplyMessage && !autoApplyError && (
+            <div className="rounded-2xl border border-green-200 bg-green-50 text-green-700 px-4 py-3 text-sm">
+              {autoApplyMessage}
+            </div>
+          )}
           <div className="flex flex-col justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-center">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">{formState.name}</h1>
@@ -743,10 +820,30 @@ export default function ApplicationPage() {
                   <option value="filled">仅导出有内容的页面</option>
                 </select>
               </div>
+              {canAutoApply && (
+                <button
+                  type="button"
+                  onClick={handleAutoApply}
+                  disabled={autoApplying}
+                  className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  {autoApplying ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>自动申请中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="h-5 w-5" />
+                      <span>自动申请</span>
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleExport}
-                className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
+                className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
               >
                 <Download className="h-5 w-5" />
                 <span>导出申请</span>
