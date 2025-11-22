@@ -121,6 +121,11 @@ function school_app_dashboard_shortcode($atts = array()) {
 }
 add_shortcode('school_app_dashboard', 'school_app_dashboard_shortcode');
 
+function school_app_my_application_shortcode($atts = array()) {
+    return school_app_render_iframe_shortcode($atts, '/my-application');
+}
+add_shortcode('school_app_my_application', 'school_app_my_application_shortcode');
+
 function school_app_profile_shortcode($atts = array()) {
     return school_app_render_iframe_shortcode($atts, '/profile');
 }

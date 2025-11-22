@@ -530,6 +530,131 @@ export const translations: TranslationData = {
     'zh-CN': '已提交',
     'zh-TW': '已提交',
   },
+  'dashboard.guide.title': {
+    en: 'System Usage Guide',
+    'zh-CN': '系统使用指南',
+    'zh-TW': '系統使用指南',
+  },
+  'dashboard.guide.subtitle': {
+    en: 'Welcome! Learn how to use the School Application Assistant system',
+    'zh-CN': '欢迎！了解如何使用学校申请助手系统',
+    'zh-TW': '歡迎！了解如何使用學校申請助手系統',
+  },
+  'dashboard.guide.intro': {
+    en: 'This dashboard provides an overview of all available features and modules. Follow the steps below to get started with your school applications.',
+    'zh-CN': '此控制台提供所有可用功能和模块的概览。按照以下步骤开始您的学校申请。',
+    'zh-TW': '此控制台提供所有可用功能和模組的概覽。按照以下步驟開始您的學校申請。',
+  },
+  'dashboard.guide.workflow.title': {
+    en: 'System Workflow',
+    'zh-CN': '系统工作流程',
+    'zh-TW': '系統工作流程',
+  },
+  'dashboard.guide.step1': {
+    en: 'Step 1: Complete Your Profile',
+    'zh-CN': '步骤 1：完善您的个人资料',
+    'zh-TW': '步驟 1：完善您的個人資料',
+  },
+  'dashboard.guide.step1Desc': {
+    en: 'Fill in your personal information that will be used across all applications',
+    'zh-CN': '填写您的个人信息，这些信息将用于所有申请',
+    'zh-TW': '填寫您的個人信息，這些信息將用於所有申請',
+  },
+  'dashboard.guide.step2': {
+    en: 'Step 2: Browse Available Schools',
+    'zh-CN': '步骤 2：浏览可申请学校',
+    'zh-TW': '步驟 2：瀏覽可申請學校',
+  },
+  'dashboard.guide.step2Desc': {
+    en: 'View all available schools and programs you can apply to',
+    'zh-CN': '查看所有可申请的学校和项目',
+    'zh-TW': '查看所有可申請的學校和項目',
+  },
+  'dashboard.guide.step3': {
+    en: 'Step 3: Create New Application',
+    'zh-CN': '步骤 3：创建新申请',
+    'zh-TW': '步驟 3：創建新申請',
+  },
+  'dashboard.guide.step3Desc': {
+    en: 'Select a school and start filling out the application form',
+    'zh-CN': '选择学校并开始填写申请表',
+    'zh-TW': '選擇學校並開始填寫申請表',
+  },
+  'dashboard.guide.step4': {
+    en: 'Step 4: Track Your Applications',
+    'zh-CN': '步骤 4：跟踪您的申请',
+    'zh-TW': '步驟 4：追蹤您的申請',
+  },
+  'dashboard.guide.step4Desc': {
+    en: 'Monitor the status of all your applications in one place',
+    'zh-CN': '在一个地方监控所有申请的状态',
+    'zh-TW': '在一個地方監控所有申請的狀態',
+  },
+  'dashboard.guide.modules.title': {
+    en: 'Available Modules',
+    'zh-CN': '可用模块',
+    'zh-TW': '可用模組',
+  },
+  'dashboard.guide.module.myApplication': {
+    en: 'My Applications',
+    'zh-CN': '我的申请',
+    'zh-TW': '我的申請',
+  },
+  'dashboard.guide.module.myApplicationDesc': {
+    en: 'View and manage all your school applications. Create new applications, track status, and continue editing existing ones.',
+    'zh-CN': '查看和管理您的所有学校申请。创建新申请、跟踪状态并继续编辑现有申请。',
+    'zh-TW': '查看和管理您的所有學校申請。創建新申請、追蹤狀態並繼續編輯現有申請。',
+  },
+  'dashboard.guide.module.profile': {
+    en: 'Profile Settings',
+    'zh-CN': '个人资料设置',
+    'zh-TW': '個人資料設定',
+  },
+  'dashboard.guide.module.profileDesc': {
+    en: 'Manage your personal information, contact details, and other profile data used in applications.',
+    'zh-CN': '管理您的个人信息、联系方式和用于申请的其他资料数据。',
+    'zh-TW': '管理您的個人信息、聯繫方式和用於申請的其他資料數據。',
+  },
+  'dashboard.guide.module.schools': {
+    en: 'Available Schools',
+    'zh-CN': '可申请学校',
+    'zh-TW': '可申請學校',
+  },
+  'dashboard.guide.module.schoolsDesc': {
+    en: 'Browse all available schools and programs you can apply to.',
+    'zh-CN': '浏览所有可申请的学校和项目。',
+    'zh-TW': '瀏覽所有可申請的學校和項目。',
+  },
+  'dashboard.guide.module.overview': {
+    en: 'Applications Overview',
+    'zh-CN': '申请进度',
+    'zh-TW': '申請進度',
+  },
+  'dashboard.guide.module.overviewDesc': {
+    en: 'View a comprehensive overview of all your applications and their current status.',
+    'zh-CN': '查看所有申请及其当前状态的综合概览。',
+    'zh-TW': '查看所有申請及其當前狀態的綜合概覽。',
+  },
+  'dashboard.guide.module.settings': {
+    en: 'Account Settings',
+    'zh-CN': '账户设置',
+    'zh-TW': '帳戶設定',
+  },
+  'dashboard.guide.module.settingsDesc': {
+    en: 'Configure your account preferences, notification settings, and system preferences.',
+    'zh-CN': '配置您的账户偏好、通知设置和系统偏好。',
+    'zh-TW': '配置您的帳戶偏好、通知設定和系統偏好。',
+  },
+  'dashboard.guide.quickLinks': {
+    en: 'Quick Links',
+    'zh-CN': '快速链接',
+    'zh-TW': '快速連結',
+  },
+  'dashboard.guide.goToModule': {
+    en: 'Go to Module',
+    'zh-CN': '前往模块',
+    'zh-TW': '前往模組',
+  },
 
   // Profile
   'profile.title': {

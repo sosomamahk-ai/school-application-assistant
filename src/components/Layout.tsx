@@ -80,12 +80,17 @@ export default function Layout({ children }: LayoutProps) {
 
   const primaryLinks = [
     {
+      href: '/dashboard',
+      label: getLabel('navbar.dashboard', '控制台'),
+      icon: LayoutDashboard
+    },
+    {
       href: '/schools',
       label: getLabel('navbar.schools', '可申请学校'),
       icon: BookOpen
     },
     {
-      href: '/dashboard',
+      href: '/my-application',
       label: t('dashboard.title'),
       icon: FileText
     },
