@@ -148,160 +148,84 @@ export default function Layout({ children }: LayoutProps) {
       </Link>
     ));
 
-  if (isWordPress) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white shadow-sm flex-col z-20">
-          <div className="p-6 border-b border-gray-200">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-primary-600" />
-              <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
-            </Link>
-          </div>
-          <nav className="flex-1 p-4 space-y-2 min-w-0 overflow-y-auto">
-            {renderLinks(primaryLinks)}
-            {isAdmin && (
-              <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
-                {renderLinks(adminLinks)}
-              </div>
-            )}
-          </nav>
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center justify-between gap-4">
-              <LanguageSwitch variant="minimal" />
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 text-gray-700 hover:text-red-600 py-2 px-3 rounded-lg hover:bg-gray-50"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        <div className="lg:pl-64 flex flex-col min-h-screen">
-          <div className="lg:hidden w-full">
-            <nav className="bg-white shadow-sm">
-              <div className="px-4 sm:px-6">
-                <div className="flex justify-between items-center h-16">
-                  <Link href="/dashboard" className="flex items-center space-x-2">
-                    <GraduationCap className="h-6 w-6 text-primary-600" />
-                    <span className="text-lg font-bold text-gray-900">{t('common.appNameShort')}</span>
-                  </Link>
-                  <button
-                    className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
-                    onClick={() => setMobileMenuOpen((prev) => !prev)}
-                    aria-label="Toggle navigation menu"
-                  >
-                    {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-            </nav>
-
-            <div
-              className={`bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${
-                mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'
-              }`}
-            >
-              <div className="px-4 sm:px-6 py-4 space-y-4">
-                <div className="space-y-2">{renderLinks(primaryLinks, true)}</div>
-                {isAdmin && (
-                  <div className="pt-3 border-t border-gray-100 space-y-2">{renderLinks(adminLinks, true)}</div>
-                )}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <LanguageSwitch variant="minimal" />
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-2 text-gray-700 hover:text-red-600"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8">{children}</main>
-        </div>
-      </div>
-    );
-  }
-
-  // 正常环境：使用顶部导航栏布局
+  // 统一使用左侧边栏布局（与 WordPress 保持一致）
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <GraduationCap className="h-8 w-8 text-primary-600" />
-              <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
-            </Link>
-            
-            <div className="flex items-center space-x-3">
-              <div className={`hidden md:flex items-center ${language === 'en' ? 'space-x-4' : 'space-x-6'}`}>
-                {renderLinks(primaryLinks)}
-                {isAdmin && (
-                  <div className={`flex items-center ${language === 'en' ? 'space-x-3' : 'space-x-4'}`}>
-                    {renderLinks(adminLinks)}
-                  </div>
-                )}
-                <LanguageSwitch variant="minimal" />
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
-                </button>
-              </div>
-
-              <button
-                className="md:hidden p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
-                onClick={() => setMobileMenuOpen((prev) => !prev)}
-                aria-label="Toggle navigation menu"
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
-            </div>
-          </div>
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white shadow-sm flex-col z-20">
+        <div className="p-6 border-b border-gray-200">
+          <Link href="/dashboard" className="flex items-center space-x-2">
+            <GraduationCap className="h-8 w-8 text-primary-600" />
+            <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
+          </Link>
         </div>
-      </nav>
-
-      {/* Mobile Navigation */}
-      <div className={`md:hidden bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'}`}>
-        <div className="px-4 sm:px-6 py-4 space-y-4">
-          <div className="space-y-2">
-            {renderLinks(primaryLinks, true)}
-          </div>
-
+        <nav className="flex-1 p-4 space-y-2 min-w-0 overflow-y-auto">
+          {renderLinks(primaryLinks)}
           {isAdmin && (
-            <div className="pt-3 border-t border-gray-100 space-y-2">
-              {renderLinks(adminLinks, true)}
+            <div className="pt-4 mt-4 border-t border-gray-200 space-y-2">
+              {renderLinks(adminLinks)}
             </div>
           )}
-
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+        </nav>
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center justify-between gap-4">
             <LanguageSwitch variant="minimal" />
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-gray-700 hover:text-red-600"
+              className="flex items-center space-x-2 text-gray-700 hover:text-red-600 py-2 px-3 rounded-lg hover:bg-gray-50"
             >
               <LogOut className="h-5 w-5" />
               <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
             </button>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+      <div className="lg:pl-64 flex flex-col min-h-screen">
+        <div className="lg:hidden w-full">
+          <nav className="bg-white shadow-sm">
+            <div className="px-4 sm:px-6">
+              <div className="flex justify-between items-center h-16">
+                <Link href="/dashboard" className="flex items-center space-x-2">
+                  <GraduationCap className="h-6 w-6 text-primary-600" />
+                  <span className="text-lg font-bold text-gray-900">{t('common.appNameShort')}</span>
+                </Link>
+                <button
+                  className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300"
+                  onClick={() => setMobileMenuOpen((prev) => !prev)}
+                  aria-label="Toggle navigation menu"
+                >
+                  {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+          </nav>
+
+          <div
+            className={`bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${
+              mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'
+            }`}
+          >
+            <div className="px-4 sm:px-6 py-4 space-y-4">
+              <div className="space-y-2">{renderLinks(primaryLinks, true)}</div>
+              {isAdmin && (
+                <div className="pt-3 border-t border-gray-100 space-y-2">{renderLinks(adminLinks, true)}</div>
+              )}
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <LanguageSwitch variant="minimal" />
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 text-gray-700 hover:text-red-600"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{t('navbar.logout')}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+      </div>
     </div>
   );
 }

@@ -15,50 +15,80 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-        {/* Navigation */}
-        <nav className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-2">
-                <GraduationCap className="h-8 w-8 text-primary-600" />
-                <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
-              </div>
-              <div className="flex items-center space-x-4">
-                <LanguageSwitch variant="minimal" />
-                <Link href="/auth/login" className="text-gray-700 hover:text-primary-600 font-medium">
-                  {t('common.login')}
-                </Link>
-                <Link href="/auth/register" className="btn-primary">
-                  {t('home.getStarted')}
-                </Link>
-              </div>
+      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
+        {/* 左侧边栏导航 */}
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white shadow-sm flex-col z-20">
+          <div className="p-6 border-b border-gray-200">
+            <Link href="/" className="flex items-center space-x-2">
+              <GraduationCap className="h-8 w-8 text-primary-600" />
+              <span className="text-xl font-bold text-gray-900">{t('common.appNameShort')}</span>
+            </Link>
+          </div>
+          <nav className="flex-1 p-4 space-y-2 min-w-0 overflow-y-auto">
+            <Link href="/" className="flex items-center space-x-2 py-2 text-primary-600">
+              <GraduationCap className="h-5 w-5" />
+              <span className="font-medium">{t('common.appNameShort')}</span>
+            </Link>
+          </nav>
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex flex-col space-y-3">
+              <LanguageSwitch variant="minimal" />
+              <Link href="/auth" className="text-gray-700 hover:text-primary-600 font-medium text-center py-2 px-3 rounded-lg hover:bg-gray-50">
+                {t('common.login')}
+              </Link>
+              <Link href="/auth" className="btn-primary text-center">
+                {t('home.getStarted')}
+              </Link>
             </div>
           </div>
-        </nav>
+        </aside>
 
-        {/* Hero Section */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              {t('home.title')}
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              {t('home.subtitle')}
-            </p>
-            <div className="flex justify-center space-x-4">
-              <Link href="/auth/register" className="btn-primary text-lg px-8 py-3">
-                {t('home.startApplication')}
-              </Link>
-              <Link href="#features" className="btn-secondary text-lg px-8 py-3">
-                {t('home.learnMore')}
-              </Link>
+        {/* 移动端顶部导航 */}
+        <div className="lg:hidden w-full">
+          <nav className="bg-white shadow-sm">
+            <div className="px-4 sm:px-6">
+              <div className="flex justify-between items-center h-16">
+                <Link href="/" className="flex items-center space-x-2">
+                  <GraduationCap className="h-6 w-6 text-primary-600" />
+                  <span className="text-lg font-bold text-gray-900">{t('common.appNameShort')}</span>
+                </Link>
+                <div className="flex items-center space-x-3">
+                  <LanguageSwitch variant="minimal" />
+                  <Link href="/auth" className="text-gray-700 hover:text-primary-600 font-medium">
+                    {t('common.login')}
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
+          </nav>
         </div>
 
+        <main className="lg:pl-64">
+
+        {/* Hero Section */}
+        <div className="w-full">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="text-center">
+              <h1 className="text-5xl font-bold text-gray-900 mb-6">
+                {t('home.title')}
+              </h1>
+              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                {t('home.subtitle')}
+              </p>
+              <div className="flex justify-center space-x-4">
+                <Link href="/auth" className="btn-primary text-lg px-8 py-3">
+                  {t('home.startApplication')}
+                </Link>
+                <Link href="#features" className="btn-secondary text-lg px-8 py-3">
+                  {t('home.learnMore')}
+                </Link>
+              </div>
+            </div>
+          </div>
+
         {/* Features Section */}
-        <div id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div id="features" className="w-full">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             {t('home.whyChoose')}
           </h2>
@@ -115,7 +145,7 @@ export default function Home() {
         </div>
 
         {/* How It Works */}
-        <div className="bg-gray-50 py-20">
+        <div className="w-full bg-gray-50 py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
               {t('home.howItWorks.title')}
@@ -156,20 +186,22 @@ export default function Home() {
         </div>
 
         {/* CTA Section */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="bg-primary-600 rounded-2xl p-12 text-center text-white">
-            <h2 className="text-4xl font-bold mb-4">{t('home.cta.title')}</h2>
-            <p className="text-xl mb-8 text-primary-100">
-              {t('home.cta.subtitle')}
-            </p>
-            <Link href="/auth/register" className="bg-white text-primary-600 hover:bg-primary-50 font-semibold py-3 px-8 rounded-lg text-lg inline-block transition-colors duration-200">
-              {t('home.cta.button')}
-            </Link>
+        <div className="w-full">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="bg-primary-600 rounded-2xl p-12 text-center text-white">
+              <h2 className="text-4xl font-bold mb-4">{t('home.cta.title')}</h2>
+              <p className="text-xl mb-8 text-primary-100">
+                {t('home.cta.subtitle')}
+              </p>
+              <Link href="/auth" className="bg-white text-primary-600 hover:bg-primary-50 font-semibold py-3 px-8 rounded-lg text-lg inline-block transition-colors duration-200">
+                {t('home.cta.button')}
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="bg-gray-900 text-white py-12">
+        <footer className="w-full bg-gray-900 text-white py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <div className="flex items-center justify-center space-x-2 mb-4">
@@ -182,7 +214,8 @@ export default function Home() {
             </div>
           </div>
         </footer>
-      </main>
+        </main>
+      </div>
     </>
   );
 }
