@@ -3,6 +3,7 @@
 根据诊断工具的输出，您需要设置以下环境变量：
 - ❌ `DATABASE_URL` - 数据库连接字符串
 - ❌ `JWT_SECRET` - JWT 密钥
+- ❌ `WORDPRESS_BASE_URL` 或 `NEXT_PUBLIC_WORDPRESS_BASE_URL` - WordPress 基础 URL（用于加载学校数据）
 
 ## 🚀 快速开始（推荐）
 
@@ -42,11 +43,16 @@ DATABASE_URL=""
 # JWT 密钥（已生成）
 JWT_SECRET="粘贴上面生成的密钥"
 
-# OpenAI API Key（可选，AI 功能需要）
-OPENAI_API_KEY=""
-
 # 应用 URL（本地开发使用）
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# WordPress Base URL（从 WordPress 加载学校数据，需要填写）
+WORDPRESS_BASE_URL="https://sosomama.com"
+# 或者使用 NEXT_PUBLIC_ 前缀（客户端也可以访问）
+NEXT_PUBLIC_WORDPRESS_BASE_URL="https://sosomama.com"
+
+# OpenAI API Key（可选，AI 功能需要）
+OPENAI_API_KEY=""
 ```
 
 ## 📋 详细步骤
@@ -107,7 +113,54 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
    - 选择 "Variables" 标签
    - 复制 `DATABASE_URL` 的值
 
-### 步骤 2: 生成 JWT_SECRET
+### 步骤 2: 配置 WordPress Base URL
+
+如果您需要使用 WordPress 学校数据加载功能，需要配置 WordPress Base URL。
+
+1. **确定您的 WordPress 网站 URL**
+
+   例如：
+   - `https://sosomama.com`
+   - `https://example.com`
+   - `https://your-wordpress-site.com`
+
+   **注意**：
+   - ✅ 以 `https://` 开头（或 `http://` 如果是本地开发）
+   - ✅ 不包含尾部斜杠（例如：使用 `https://sosomama.com` 而不是 `https://sosomama.com/`）
+
+2. **添加到 .env 文件**
+
+   ```env
+   # WordPress Base URL（从 WordPress 网站加载学校数据）
+   WORDPRESS_BASE_URL="https://sosomama.com"
+   
+   # 或者使用 NEXT_PUBLIC_ 前缀（客户端也可以访问）
+   NEXT_PUBLIC_WORDPRESS_BASE_URL="https://sosomama.com"
+   ```
+
+   **选择其中一个**：
+   - **`WORDPRESS_BASE_URL`**：仅在服务器端可用（API 路由）
+   - **`NEXT_PUBLIC_WORDPRESS_BASE_URL`**：服务器端和客户端都可用（推荐）
+
+3. **验证 WordPress API 是否可访问**
+
+   在浏览器中访问：
+   ```
+   https://your-wordpress-url.com/wp-json/schools/v1/list
+   ```
+   
+   或者：
+   ```
+   https://your-wordpress-url.com/wp-json/wp/v2/profile?per_page=10
+   ```
+   
+   应该返回 JSON 数据。如果返回 404 或错误，说明 WordPress API 端点需要配置。
+
+**详细说明**：查看 [WordPress Base URL 配置修复指南](./WORDPRESS_BASE_URL_FIX.md)
+
+---
+
+### 步骤 3: 生成 JWT_SECRET
 
 **在 PowerShell 中运行**:
 
@@ -129,7 +182,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 JWT_SECRET="粘贴生成的密钥"
 ```
 
-### 步骤 3: 验证配置
+### 步骤 4: 验证配置
 
 运行诊断工具验证配置：
 
@@ -144,7 +197,7 @@ npm run diagnose:schools
 
 说明配置正确！
 
-### 步骤 4: 运行数据库迁移
+### 步骤 5: 运行数据库迁移
 
 配置完成后，需要创建数据库表结构：
 
@@ -156,7 +209,7 @@ npx prisma migrate deploy
 npx prisma migrate dev
 ```
 
-### 步骤 5: 重新测试
+### 步骤 6: 重新测试
 
 再次运行诊断工具：
 
@@ -244,6 +297,7 @@ ALTER USER postgres WITH PASSWORD 'new_password';
 - [ ] 创建了 `.env` 文件
 - [ ] 填写了 `DATABASE_URL`（从 Supabase/Railway/本地获取）
 - [ ] 生成了 `JWT_SECRET` 并填写
+- [ ] 配置了 `WORDPRESS_BASE_URL` 或 `NEXT_PUBLIC_WORDPRESS_BASE_URL`（如果需要 WordPress 学校数据）
 - [ ] 运行 `npm run diagnose:schools` 验证配置
 - [ ] 运行 `npx prisma migrate deploy` 创建数据库表
 - [ ] 再次运行诊断工具，所有检查通过 ✅
@@ -253,6 +307,7 @@ ALTER USER postgres WITH PASSWORD 'new_password';
 - [完整部署指南](./DEPLOYMENT.md)
 - [Supabase 配置指南](./SUPABASE_CORRECT_CONFIG.md)
 - [环境变量检查工具](./CHECK_ENV_USAGE.md)
+- [WordPress Base URL 配置修复指南](./WORDPRESS_BASE_URL_FIX.md)
 
 ---
 

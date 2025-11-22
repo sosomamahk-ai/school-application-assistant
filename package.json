@@ -32,7 +32,9 @@
     "update:openai-config": "node scripts/update-openai-config.js",
     "deploy:worker": "node scripts/deploy-worker.js",
     "test:worker": "node scripts/test-worker-with-auth.js",
-    "test:openai": "node scripts/test-openai-direct.js"
+    "test:openai": "node scripts/test-openai-direct.js",
+    "fix:wordpress-url": "node scripts/fix-wordpress-url.js",
+    "fix:wordpress-url:auto": "node scripts/fix-wordpress-url-auto.js"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
