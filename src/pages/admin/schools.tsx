@@ -516,7 +516,7 @@ export default function AdminSchoolsPage() {
         }
       }
     },
-    [fetchSchools, validateRow, templateWordPressMap, wordpressSchools]
+    [fetchSchools, validateRow, templateWordPressMap, wordpressSchools, originalRows]
   );
 
   const handleSaveRow = async (row: GridSchool) => {

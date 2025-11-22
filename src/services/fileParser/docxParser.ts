@@ -33,20 +33,13 @@ export async function parseDOCX(fileBuffer: Buffer): Promise<DOCXParseResult> {
       paragraphCount: (result.value.match(/\n\n/g) || []).length + 1
     };
   } catch (error) {
-    // If mammoth is not available, try docx library
-    try {
-      const { Document } = require('docx');
-      // Note: This is a simplified approach - docx library is mainly for creating, not parsing
-      throw new Error('DOCX parsing requires mammoth library. Please install: npm install mammoth');
-    } catch (innerError) {
-      if ((error as any).code === 'MODULE_NOT_FOUND') {
-        throw new Error(
-          'DOCX parsing library not installed. Please install mammoth: npm install mammoth\n' +
-          'For better accuracy with complex DOCX files, consider using a Python service with python-docx.'
-        );
-      }
-      throw new Error(`Failed to parse DOCX: ${(error as Error).message}`);
+    if ((error as any).code === 'MODULE_NOT_FOUND') {
+      throw new Error(
+        'DOCX parsing library not installed. Please install mammoth: npm install mammoth\n' +
+        'For better accuracy with complex DOCX files, consider using a Python service with python-docx.'
+      );
     }
+    throw new Error(`Failed to parse DOCX: ${(error as Error).message}`);
   }
 }
 
