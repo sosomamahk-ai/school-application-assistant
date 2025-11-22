@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { useUserApplications } from '@/hooks/useUserApplications';
 import ApplicationSummary from '@/components/applications/ApplicationSummary';
 import ApplicationProgressTable from '@/components/applications/ApplicationProgressTable';
 import EditProgressModal from '@/components/applications/EditProgressModal';
+import type { UserApplicationRecord } from '@/hooks/useUserApplications';
 
 export default function ApplicationOverviewPage() {
   const { t } = useTranslation();
-  const { records, loading, error, stats, updateRecord } = useUserApplications();
+  const router = useRouter();
+  const { records, loading, error, stats, updateRecord, refresh } = useUserApplications();
   const [editing, setEditing] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -25,6 +28,44 @@ export default function ApplicationOverviewPage() {
       alert(err instanceof Error ? err.message : '更新失败');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (record: UserApplicationRecord) => {
+    if (!record.applicationId) {
+      alert('该申请记录没有关联的申请，无法删除');
+      return;
+    }
+
+    if (!confirm('确定要删除这个申请吗？此操作不可恢复。')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('请先登录');
+        router.push('/auth/login');
+        return;
+      }
+
+      const response = await fetch(`/api/applications/${record.applicationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // 刷新列表
+        await refresh();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || '删除失败');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : '删除失败');
     }
   };
 
@@ -50,6 +91,7 @@ export default function ApplicationOverviewPage() {
             <ApplicationProgressTable
               records={records}
               onEdit={(record) => setEditing(record.id)}
+              onDelete={handleDelete}
             />
           )}
         </div>

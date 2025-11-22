@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { Loader2, Mail, CalendarPlus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { getLocalizedSchoolName } from '@/utils/i18n';
 import type { UserApplicationRecord } from '@/hooks/useUserApplications';
 
 interface Props {
   records: UserApplicationRecord[];
   onEdit: (record: UserApplicationRecord) => void;
+  onDelete?: (record: UserApplicationRecord) => void;
   applyingId?: string | null;
 }
 
@@ -22,7 +23,7 @@ const resultLabel: Record<string, string> = {
   waitlisted: '候补'
 };
 
-export default function ApplicationProgressTable({ records, onEdit, applyingId }: Props) {
+export default function ApplicationProgressTable({ records, onEdit, onDelete, applyingId }: Props) {
   if (records.length === 0) {
     return (
       <div className="text-center py-16 bg-white rounded-2xl border border-dashed">
@@ -97,18 +98,17 @@ export default function ApplicationProgressTable({ records, onEdit, applyingId }
                       onClick={() => onEdit(record)}
                       className="btn-primary w-full flex items-center justify-center space-x-2"
                     >
-                      编辑
+                      更新进度
                     </button>
-                    <div className="flex space-x-2">
-                      <button className="flex-1 btn-outline text-xs flex items-center justify-center space-x-1">
-                        <CalendarPlus className="h-4 w-4" />
-                        <span>加日历</span>
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(record)}
+                        className="btn-outline w-full flex items-center justify-center space-x-2 text-red-600 hover:bg-red-50 hover:border-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>删除申请</span>
                       </button>
-                      <button className="flex-1 btn-outline text-xs flex items-center justify-center space-x-1">
-                        <Mail className="h-4 w-4" />
-                        <span>邮件提醒</span>
-                      </button>
-                    </div>
+                    )}
                   </td>
                 </tr>
               );
