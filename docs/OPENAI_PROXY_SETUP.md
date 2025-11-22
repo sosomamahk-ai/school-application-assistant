@@ -19,15 +19,59 @@
 #### 步骤 1：创建 Cloudflare Workers
 
 1. **注册/登录 Cloudflare**
-   - 访问：https://workers.cloudflare.com/
+   - 访问：https://dash.cloudflare.com/ 或 https://workers.cloudflare.com/
    - 注册或登录账户（免费）
 
-2. **创建新的 Worker**
-   - 点击 "Create a Service"
-   - 命名（例如：`openai-proxy`）
-   - 点击 "Create"
+2. **找到 Workers 选项（两种方式）**
 
-3. **复制以下代码到 Worker**
+   **方式 A：从主控制台导航**
+   - 在左侧导航菜单中，找到 **"构建 (Build)"** 部分
+   - 展开 **"计算和 AI (Compute and AI)"** 选项
+   - 点击 **"Workers & Pages"** 或 **"Workers"**
+   - 如果看不到此选项，请尝试方式 B
+
+   **方式 B：直接访问 Workers 控制台（推荐）**
+   - 直接访问：https://workers.cloudflare.com/
+   - 这会直接进入 Workers 管理界面
+
+3. **创建新的 Worker**
+
+   **如果看到"创建应用程序"按钮：**
+   - 点击 **"创建应用程序 (Create Application)"** 按钮
+   - 在应用类型中选择 **"Worker"** 或 **"Workers"**（如果看到多个选项）
+   - 如果直接进入创建流程，输入应用名称（例如：`openai-proxy`）
+   - 选择 **"HTTP Handler"** 模板或 **"Hello World"** 模板（我们可以稍后替换代码）
+   - 点击 **"创建 (Create)"** 或 **"部署 (Deploy)"**
+   - 创建后，您会看到一个代码编辑器，可以粘贴下面的代码
+   
+   **注意**：如果"创建应用程序"打开的是 Pages 或其他类型的应用创建向导，建议直接使用下面的命令行方式，更简单直接。
+
+   **如果仍然找不到创建选项，使用命令行方式（推荐）：**
+   
+   使用 Cloudflare Wrangler CLI 工具创建 Worker：
+   
+   ```bash
+   # 安装 Wrangler（如果还没有安装）
+   npm install -g wrangler
+   
+   # 登录 Cloudflare（会打开浏览器进行授权）
+   wrangler login
+   
+   # 创建新的 Worker 项目
+   wrangler init openai-proxy
+   
+   # 当提示选择模板类型时，选择 "worker only"（仅 Worker）
+   # 这是最简单的 HTTP Worker 模板，适合代理场景
+   # 然后进入目录
+   cd openai-proxy
+   ```
+   
+   然后编辑代码文件：
+   - 如果项目使用 TypeScript，编辑 `src/index.ts`
+   - 如果项目使用 JavaScript，编辑 `src/index.js` 或创建新文件
+   - 将文件内容替换为下面的代码（注意：代码是 JavaScript 格式，可以直接使用）
+
+4. **复制以下代码到 Worker**
 
    ```javascript
    export default {
@@ -73,9 +117,30 @@
    };
    ```
 
-4. **保存并部署**
-   - 点击 "Save and Deploy"
+5. **保存并部署**
+
+   **如果使用 Web 界面：**
+   - 将代码粘贴到编辑器中
+   - 点击 **"保存并部署 (Save and Deploy)"** 或 **"部署 (Deploy)"** 按钮
    - 记住您的 Worker URL（例如：`https://openai-proxy.your-subdomain.workers.dev`）
+
+   **如果使用命令行：**
+   - 编辑 `src/index.ts` 或 `src/index.js` 文件，将内容替换为上面的代码
+   - 如果使用 TypeScript，代码可以直接使用（Cloudflare Workers 支持 TypeScript）
+   - 确保 `wrangler.toml` 文件中的 `name` 字段是 `openai-proxy`（或您选择的其他名称）
+   - 部署 Worker：
+     ```bash
+     wrangler deploy
+     ```
+   - 部署成功后，会显示 Worker URL（例如：`https://openai-proxy.your-subdomain.workers.dev`）
+   - **重要**：记住这个 URL，稍后需要在 `.env` 文件中使用
+   
+   **注意**：如果部署时出现 `ConnectTimeoutError` 错误，这通常不是致命问题：
+   - Worker 已经成功上传和部署（可以看到 URL）
+   - 错误发生在等待部署可用性检查时
+   - 等待 2-5 分钟后，Worker 应该就可以使用了
+   - 可以在浏览器中访问 Worker URL 测试是否可用
+   - 如果仍然无法访问，可以尝试重新部署：`wrangler deploy`
 
 #### 步骤 2：配置环境变量
 

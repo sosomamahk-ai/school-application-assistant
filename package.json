@@ -25,7 +25,8 @@
     "fix:localhost": "node scripts/fix-localhost-3000.js",
     "fix:localhost:start": "node scripts/fix-localhost-3000.js --start",
     "proxy:start": "node proxy-server.js",
-    "proxy:test": "node test-proxy.js"
+    "proxy:test": "node test-proxy.js",
+    "worker:test": "node test-worker.js"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",

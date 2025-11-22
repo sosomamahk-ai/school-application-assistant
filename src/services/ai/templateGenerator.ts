@@ -155,6 +155,46 @@ Generate the JSON template following the schema exactly. Be thorough and extract
     const errorStatus = (error as any).status || (error as any).response?.status;
     const errorCode = (error as any).code;
     const errorMessage = (error as Error).message;
+    const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_PROXY_URL;
+    
+    // Log additional debug information
+    console.error(`[LLM Template] Error details:`, {
+      message: errorMessage,
+      status: errorStatus,
+      code: errorCode,
+      baseURL: baseURL || 'not set (using default)',
+      type: error?.constructor?.name || 'Unknown'
+    });
+    
+    // Handle connection errors specifically
+    if (errorMessage.includes('Connection error') || 
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('ENOTFOUND') ||
+        errorMessage.includes('ETIMEDOUT') ||
+        errorCode === 'ECONNREFUSED' ||
+        errorCode === 'ENOTFOUND' ||
+        errorCode === 'ETIMEDOUT') {
+      
+      let connectionErrorMsg = '无法连接到 OpenAI API。';
+      
+      if (baseURL) {
+        connectionErrorMsg += `\n\n代理配置：${baseURL}`;
+        connectionErrorMsg += `\n\n可能的原因：`;
+        connectionErrorMsg += `\n1. 代理服务器可能无法访问（检查 Cloudflare Workers 是否正常运行）`;
+        connectionErrorMsg += `\n2. 代理 URL 配置可能不正确（检查 OPENAI_BASE_URL 是否正确）`;
+        connectionErrorMsg += `\n3. 网络连接问题（检查网络连接）`;
+        connectionErrorMsg += `\n4. Cloudflare Workers 代码可能有问题（检查 Worker 代码）`;
+        connectionErrorMsg += `\n\n请检查：`;
+        connectionErrorMsg += `\n- 测试代理 URL 是否可以访问：curl ${baseURL}/health（如果 Worker 有健康检查端点）`;
+        connectionErrorMsg += `\n- 检查 Cloudflare Workers 日志`;
+        connectionErrorMsg += `\n- 验证 OPENAI_BASE_URL 配置是否正确`;
+      } else {
+        connectionErrorMsg += `\n\n未配置代理。如果遇到地区限制，请配置 OPENAI_BASE_URL 环境变量。`;
+      }
+      
+      console.error(`[LLM Template] Connection error: ${connectionErrorMsg}`);
+      throw new Error(connectionErrorMsg);
+    }
     
     // Provide more specific error messages
     if (errorStatus === 403 || errorMessage.includes('Country, region, or territory not supported')) {
