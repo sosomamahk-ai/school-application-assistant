@@ -3,6 +3,21 @@ import { Trash2 } from 'lucide-react';
 import { getLocalizedSchoolName } from '@/utils/i18n';
 import type { UserApplicationRecord } from '@/hooks/useUserApplications';
 
+// 类别映射
+const categoryMap: Record<string, string> = {
+  '国际学校': '国际学校',
+  '香港本地中学': '本地中学',
+  '香港本地小学': '本地小学',
+  '香港幼稚园': '幼稚园',
+  '幼稚园': '幼稚园',
+  '大学': '大学'
+};
+
+const getCategoryLabel = (category: string | null | undefined): string => {
+  if (!category) return '国际学校';
+  return categoryMap[category] || category;
+};
+
 interface Props {
   records: UserApplicationRecord[];
   onEdit: (record: UserApplicationRecord) => void;
@@ -50,6 +65,7 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
           <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
             <tr>
               <th className="px-4 py-3 text-center whitespace-nowrap">学校</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">学校类别</th>
               <th className="px-4 py-3 text-center whitespace-nowrap">状态</th>
               <th className="px-4 py-3 text-center">进度</th>
               <th className="px-4 py-3 text-center">笔试</th>
@@ -73,6 +89,11 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="font-semibold text-gray-900">{schoolName}</div>
                     <div className="text-xs text-gray-500 mt-1">{record.program}</div>
+                  </td>
+                  <td className="px-4 py-4 text-center whitespace-nowrap">
+                    <span className="text-sm text-gray-600">
+                      {getCategoryLabel(record.category)}
+                    </span>
                   </td>
                   <td className="px-4 py-4 text-center whitespace-nowrap">
                     <span className="text-sm text-gray-700">

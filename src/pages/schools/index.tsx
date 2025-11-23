@@ -12,6 +12,7 @@ export default function SchoolsPage() {
     loading,
     error,
     schools,
+    rawSchools,
     filters,
     setSearch,
     setCategory,
@@ -34,10 +35,10 @@ export default function SchoolsPage() {
           </div>
 
           {/* School Category Summary */}
-          {!loading && schools.length > 0 && (
+          {!loading && rawSchools.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
               <SchoolCategorySummary
-                schools={schools}
+                schools={rawSchools}
                 selectedCategory={filters.category}
                 onCategorySelect={(category) => setCategory(category || 'all')}
               />

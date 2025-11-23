@@ -100,6 +100,8 @@ export function useSchools() {
         .toLowerCase();
       return combined.includes(searchLower);
     });
+    // categoryKeyMap is a constant, no need to include in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, schools]);
 
   const categories = useMemo(() => {
