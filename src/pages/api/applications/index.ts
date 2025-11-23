@@ -92,6 +92,40 @@ export default async function handler(
         return res.status(404).json({ error: 'Template not found' });
       }
 
+      // Check if user already has an application for this template
+      const existingApplication = await prisma.application.findFirst({
+        where: {
+          profileId: profile.id,
+          templateId: templateId
+        },
+        include: {
+          template: {
+            select: {
+              schoolId: true,
+              schoolName: true,
+              program: true
+            }
+          }
+        }
+      });
+
+      // If application already exists, return it instead of creating a new one
+      if (existingApplication) {
+        return res.status(200).json({
+          success: true,
+          application: {
+            id: existingApplication.id,
+            templateId: existingApplication.templateId,
+            templateSchoolId: existingApplication.template.schoolId,
+            schoolName: deserializeSchoolName(existingApplication.template.schoolName),
+            program: existingApplication.template.program,
+            status: existingApplication.status,
+            formData: existingApplication.formData
+          },
+          existing: true
+        });
+      }
+
       const templateStructure = normalizeTemplateStructureInput(template.fieldsData);
       const { formData: initialFormData } = buildInitialApplicationFormData(templateStructure);
 

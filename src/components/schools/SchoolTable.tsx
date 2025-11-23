@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Loader2, Pencil } from 'lucide-react';
+import { ExternalLink, Loader2, Pencil, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/router';
 import type { SchoolItem } from '@/hooks/useSchools';
 import { getLocalizedSchoolName } from '@/utils/i18n';
@@ -24,13 +24,65 @@ interface SchoolTableProps {
   schools: SchoolItem[];
 }
 
+interface Application {
+  id: string;
+  templateId: string;
+  templateSchoolId?: string;
+}
+
 export default function SchoolTable({ schools }: SchoolTableProps) {
   const router = useRouter();
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [userApplications, setUserApplications] = useState<Application[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(true);
+
+  // Fetch user's applications to check if school already has an application
+  const fetchUserApplications = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoadingApplications(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/applications', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserApplications(data.applications || []);
+      }
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+    } finally {
+      setLoadingApplications(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserApplications();
+  }, [fetchUserApplications]);
+
+  // Check if a school already has an application
+  const getExistingApplication = (school: SchoolItem): Application | null => {
+    return userApplications.find(
+      (app) => app.templateId === school.templateId || app.templateSchoolId === school.templateSchoolId
+    ) || null;
+  };
 
   const applyForSchool = async (school: SchoolItem) => {
+    // Check if application already exists
+    const existingApp = getExistingApplication(school);
+    if (existingApp) {
+      router.push(`/application/${existingApp.id}`);
+      return;
+    }
+
     setError(null);
     setStatusMessage(null);
     setApplyingId(school.id);
@@ -53,6 +105,8 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
         throw new Error(data.error || '创建申请失败');
       }
       const data = await res.json();
+      // Refresh applications list
+      await fetchUserApplications();
       router.push(`/application/${data.application.id}`);
     } catch (err) {
       console.error(err);
@@ -152,23 +206,39 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
                 <td className="px-4 py-4 text-gray-600">{row.interviewTime}</td>
                 <td className="px-4 py-4 text-gray-600">{row.resultTime}</td>
                 <td className="px-4 py-4">
-                  <button
-                    onClick={() => applyForSchool(row.school)}
-                    className="btn-primary px-4 py-2 flex items-center space-x-2"
-                    disabled={applyingId === row.id}
-                  >
-                    {applyingId === row.id ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>创建中...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ExternalLink className="h-4 w-4" />
-                        <span>申请</span>
-                      </>
-                    )}
-                  </button>
+                  {(() => {
+                    const existingApp = getExistingApplication(row.school);
+                    if (existingApp) {
+                      return (
+                        <Link
+                          href={`/application/${existingApp.id}`}
+                          className="btn-secondary px-4 py-2 flex items-center space-x-2 text-center"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          <span>已申请</span>
+                        </Link>
+                      );
+                    }
+                    return (
+                      <button
+                        onClick={() => applyForSchool(row.school)}
+                        className="btn-primary px-4 py-2 flex items-center space-x-2"
+                        disabled={applyingId === row.id || loadingApplications}
+                      >
+                        {applyingId === row.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>创建中...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink className="h-4 w-4" />
+                            <span>申请</span>
+                          </>
+                        )}
+                      </button>
+                    );
+                  })()}
                 </td>
               </tr>
             ))}

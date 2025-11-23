@@ -118,6 +118,11 @@ export default function Layout({ children }: LayoutProps) {
       icon: Shield
     },
     {
+      href: '/admin/templates-v2',
+      label: '模版列表',
+      icon: FileText
+    },
+    {
       href: '/admin/users',
       label: t('admin.userManagement'),
       icon: Users

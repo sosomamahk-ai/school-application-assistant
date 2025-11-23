@@ -7,6 +7,44 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Verify admin access
+  const authResult = await authenticateAdmin(req);
+  if (!authResult) {
+    return res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+
+  const { id } = req.query;
+
+  if (req.method === 'PATCH') {
+    // Update template (e.g., toggle isActive)
+    try {
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ error: 'isActive must be a boolean' });
+      }
+
+      const template = await prisma.schoolFormTemplate.update({
+        where: { id: id as string },
+        data: { isActive }
+      });
+
+      return res.status(200).json({
+        success: true,
+        template: {
+          id: template.id,
+          isActive: template.isActive
+        }
+      });
+    } catch (error: any) {
+      console.error('Template update error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to update template',
+        message: error?.message || 'Unknown error occurred'
+      });
+    }
+  }
+
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

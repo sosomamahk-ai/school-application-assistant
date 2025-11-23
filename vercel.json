@@ -1,4 +1,10 @@
 {
-  "buildCommand": "npm run build"
+  "buildCommand": "npm run build",
+  "crons": [
+    {
+      "path": "/api/cron/wordpress-sync",
+      "schedule": "0 */6 * * *"
+    }
+  ]
 }
 
