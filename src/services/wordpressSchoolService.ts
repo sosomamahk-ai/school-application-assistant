@@ -679,6 +679,72 @@ export const invalidateWordPressSchoolCache = () => {
   }
 };
 
+/**
+ * Get category abbreviation for template ID
+ * @param category - School category
+ * @returns Category abbreviation (is/ls/lp/kg/un)
+ */
+export const getCategoryAbbreviation = (category: string | null | undefined): string => {
+  if (!category) return 'is'; // Default to international school
+  
+  const normalized = category.trim();
+  
+  // Map categories to abbreviations
+  const categoryMap: Record<string, string> = {
+    '国际学校': 'is',
+    '香港国际学校': 'is',
+    '香港本地中学': 'ls',
+    '本地中学': 'ls',
+    '香港本地小学': 'lp',
+    '本地小学': 'lp',
+    '香港幼稚园': 'kg',
+    '幼稚园': 'kg',
+    '大学': 'un',
+    'university': 'un'
+  };
+  
+  return categoryMap[normalized] || 'is'; // Default to 'is' if not found
+};
+
+/**
+ * Generate standardized template ID: name_short-category-year
+ * Format: {name_short}-{category_abbr}-{year}
+ * Example: isf-is-2025, spcc-ls-2025
+ * 
+ * @param school - WordPress school profile
+ * @param nameShort - School name abbreviation (name_short from ACF)
+ * @returns Standardized template ID
+ */
+export const buildStandardizedTemplateId = (
+  school: WordPressSchool,
+  nameShort?: string | null
+): string => {
+  const year = new Date().getFullYear();
+  const categoryAbbr = getCategoryAbbreviation(school.category);
+  
+  // Use name_short if provided, otherwise fallback to old format
+  if (nameShort && nameShort.trim()) {
+    // Normalize name_short: lowercase, remove spaces, keep only alphanumeric and hyphens
+    const normalized = nameShort
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    if (normalized) {
+      return `${normalized}-${categoryAbbr}-${year}`;
+    }
+  }
+  
+  // Fallback to old format if name_short is not available
+  return `wp-${school.type}-${school.id}`;
+};
+
+/**
+ * Legacy function - kept for backward compatibility
+ * @deprecated Use buildStandardizedTemplateId instead
+ */
 export const buildWordPressTemplateId = (school: WordPressSchool): string =>
   `wp-${school.type}-${school.id}`;
 

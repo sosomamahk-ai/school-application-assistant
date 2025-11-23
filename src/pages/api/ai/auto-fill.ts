@@ -29,10 +29,16 @@ export default async function handler(
       return res.status(400).json({ error: 'Fields array is required' });
     }
 
-    // Get user's profile
-    const profile = await prisma.userProfile.findUnique({
-      where: { userId }
-    });
+    // Get user's profile and user info
+    const [profile, user] = await Promise.all([
+      prisma.userProfile.findUnique({
+        where: { userId }
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true }
+      })
+    ]);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
@@ -41,7 +47,7 @@ export default async function handler(
     const userProfile: Partial<UserProfileData> = {
       basicInfo: {
         fullName: profile.fullName || '',
-        email: '',
+        email: user?.email || '',
         phone: profile.phone || '',
         birthday: profile.birthday?.toISOString() || '',
         nationality: profile.nationality || ''
@@ -52,7 +58,30 @@ export default async function handler(
       additional: profile.additionalData as any || {}
     };
 
+    console.log('[Auto-fill API] User profile data:', {
+      basicInfo: userProfile.basicInfo,
+      hasEducation: Array.isArray(userProfile.education) && userProfile.education.length > 0,
+      hasExperiences: Array.isArray(userProfile.experiences) && userProfile.experiences.length > 0,
+      hasEssays: userProfile.essays && Object.keys(userProfile.essays).length > 0,
+      additionalKeys: userProfile.additional && typeof userProfile.additional === 'object' 
+        ? Object.keys(userProfile.additional) 
+        : [],
+      additionalData: userProfile.additional
+    });
+
+    console.log('[Auto-fill API] Fields to match:', fields.length, fields.map((f: FormField) => ({ 
+      id: f.id, 
+      label: f.label, 
+      mapToUserField: f.mapToUserField 
+    })));
+
     const filledData = autoFillFormFromProfile(fields as FormField[], userProfile);
+
+    console.log('[Auto-fill API] Filled data:', {
+      filledCount: Object.keys(filledData).length,
+      filledFields: Object.keys(filledData),
+      filledData
+    });
 
     res.status(200).json({
       success: true,

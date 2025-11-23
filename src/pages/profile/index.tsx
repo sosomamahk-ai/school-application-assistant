@@ -106,7 +106,15 @@ export default function Profile() {
         // Initialize field values from profile data
         const values: { [key: string]: any } = {};
         
-        // Map existing profile fields to field values
+        // First, initialize all master template fields with empty values
+        // This ensures all fields exist in fieldValues, even if not filled
+        sections.forEach(section => {
+          section.fields.forEach(field => {
+            values[field.id] = '';
+          });
+        });
+        
+        // Then, map existing profile fields to field values
         if (data.profile.fullName) values.fullName = data.profile.fullName;
         if (data.profile.phone) values.phone = data.profile.phone;
         if (data.profile.birthday) {
@@ -114,10 +122,19 @@ export default function Profile() {
         }
         if (data.profile.nationality) values.nationality = data.profile.nationality;
         
-        // Map additional data if it exists
+        // Map additional data if it exists (this will overwrite empty values with actual data)
         if (data.profile.additional && typeof data.profile.additional === 'object') {
-          Object.assign(values, data.profile.additional);
+          Object.keys(data.profile.additional).forEach(key => {
+            const value = data.profile.additional[key];
+            // Only overwrite if value is not null/undefined, or if it's an empty string (preserve user's intent)
+            if (value !== null && value !== undefined) {
+              values[key] = value;
+            }
+          });
         }
+        
+        console.log('[Profile Load] Loaded', Object.keys(values).length, 'field values from profile');
+        console.log('[Profile Load] Fields with values:', Object.keys(values).filter(k => values[k] !== '' && values[k] !== null && values[k] !== undefined));
         
         setFieldValues(values);
       }
@@ -155,13 +172,27 @@ export default function Profile() {
       };
       
       // Store all template field values in additionalData
+      // IMPORTANT: Save ALL master template fields to additionalData, using field.id as key
+      // This ensures that when importing, we can match by field ID
       sections.forEach(section => {
         section.fields.forEach(field => {
-          if (fieldValues[field.id] !== undefined) {
-            profileData.additional[field.id] = fieldValues[field.id];
-          }
+          // Always save the field, even if empty
+          // Use field.id (from master template) as the key
+          const fieldValue = fieldValues[field.id];
+          // Save the value if it exists, otherwise save empty string
+          // Empty string is acceptable - it means the field exists but is not filled
+          profileData.additional[field.id] = fieldValue !== undefined && fieldValue !== null ? fieldValue : '';
         });
       });
+      
+      console.log('[Profile Save] Saving additionalData with', Object.keys(profileData.additional).length, 'fields');
+      console.log('[Profile Save] Sample field IDs (first 10):', Object.keys(profileData.additional).slice(0, 10));
+      console.log('[Profile Save] Fields with non-empty values:', 
+        Object.keys(profileData.additional).filter(k => {
+          const v = profileData.additional[k];
+          return v !== '' && v !== null && v !== undefined;
+        }).length
+      );
       
       const response = await fetch('/api/profile', {
         method: 'PUT',

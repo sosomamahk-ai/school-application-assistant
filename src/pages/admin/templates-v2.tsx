@@ -27,6 +27,7 @@ interface ProfileWithTemplate extends WordPressSchool {
   templateId?: string;
   template?: {
     id: string;
+    schoolId: string;
     isActive: boolean;
     fieldsData: any;
   } | null;
@@ -67,6 +68,7 @@ export default function TemplatesManagementV2() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('国际学校');
   const [updating, setUpdating] = useState<Set<string>>(new Set());
+  const [filterStatus, setFilterStatus] = useState<'all' | 'created' | 'pending'>('all');
 
   const fetchData = useCallback(async () => {
     try {
@@ -151,8 +153,16 @@ export default function TemplatesManagementV2() {
       });
 
       if (response.ok) {
-        alert('模板创建成功！');
-        await fetchData();
+        const result = await response.json();
+        const templateId = result.template?.id;
+        
+        if (templateId) {
+          // 跳转到模版编辑页面
+          router.push(`/admin/templates/edit/${templateId}`);
+        } else {
+          alert('模板创建成功！');
+          await fetchData();
+        }
       } else {
         const errorData = await response.json().catch(() => ({}));
         alert(errorData.error || '创建失败');
@@ -264,7 +274,13 @@ export default function TemplatesManagementV2() {
     return 0;
   };
 
-  const currentProfiles = data?.profiles[activeTab] || [];
+  // Filter profiles based on filterStatus
+  const allProfiles = data?.profiles[activeTab] || [];
+  const currentProfiles = filterStatus === 'all' 
+    ? allProfiles
+    : filterStatus === 'created'
+    ? allProfiles.filter(p => p.templateStatus === 'created')
+    : allProfiles.filter(p => p.templateStatus === 'pending');
 
   return (
     <Layout>
@@ -282,15 +298,30 @@ export default function TemplatesManagementV2() {
         {/* Stats */}
         {data?.stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="card">
+            <div 
+              className={`card cursor-pointer transition-all hover:shadow-md ${
+                filterStatus === 'all' ? 'ring-2 ring-primary-500' : ''
+              }`}
+              onClick={() => setFilterStatus('all')}
+            >
               <div className="text-sm text-gray-600">总学校数</div>
               <div className="text-2xl font-bold text-gray-900">{data.stats.total}</div>
             </div>
-            <div className="card">
+            <div 
+              className={`card cursor-pointer transition-all hover:shadow-md ${
+                filterStatus === 'created' ? 'ring-2 ring-green-500' : ''
+              }`}
+              onClick={() => setFilterStatus('created')}
+            >
               <div className="text-sm text-gray-600">已创建模板</div>
               <div className="text-2xl font-bold text-green-600">{data.stats.withTemplate}</div>
             </div>
-            <div className="card">
+            <div 
+              className={`card cursor-pointer transition-all hover:shadow-md ${
+                filterStatus === 'pending' ? 'ring-2 ring-orange-500' : ''
+              }`}
+              onClick={() => setFilterStatus('pending')}
+            >
               <div className="text-sm text-gray-600">待创建模板</div>
               <div className="text-2xl font-bold text-orange-600">{data.stats.withoutTemplate}</div>
             </div>
@@ -424,7 +455,7 @@ export default function TemplatesManagementV2() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500 font-mono">
-                            {template?.id || '-'}
+                            {template?.schoolId || profile.templateId || '-'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

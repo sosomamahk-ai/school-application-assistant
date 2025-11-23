@@ -68,13 +68,64 @@ export default function MyApplication() {
 
   const fetchTemplates = useCallback(async () => {
     try {
+      console.log('[my-application] Fetching templates from /api/templates...');
       const response = await fetch('/api/templates');
+      console.log('[my-application] Response status:', response.status, response.statusText);
+      
       if (response.ok) {
         const data = await response.json();
-        setTemplates(data.templates);
+        console.log('[my-application] Raw API response:', data);
+        
+        // Check response structure
+        if (!data) {
+          console.error('[my-application] Response data is null or undefined');
+          setTemplates([]);
+          return;
+        }
+        
+        if (!data.success) {
+          console.warn('[my-application] API returned success: false', data);
+        }
+        
+        // Ensure templates array exists and log for debugging
+        const templatesList = data.templates || [];
+        console.log('[my-application] Processed templates:', {
+          count: templatesList.length,
+          templates: templatesList.map((t: Template) => ({
+            id: t.id,
+            schoolName: typeof t.schoolName === 'string' ? t.schoolName : JSON.stringify(t.schoolName),
+            program: t.program,
+            category: t.category,
+            hasDescription: !!t.description
+          }))
+        });
+        
+        if (templatesList.length === 0) {
+          console.warn('[my-application] No templates found in response. Full response:', JSON.stringify(data, null, 2));
+          console.warn('[my-application] Response structure:', {
+            hasSuccess: 'success' in data,
+            hasTemplates: 'templates' in data,
+            dataKeys: Object.keys(data),
+            dataType: typeof data
+          });
+        } else {
+          console.log('[my-application] Successfully loaded templates, setting state...');
+        }
+        
+        // Ensure we set the templates even if empty (to trigger re-render)
+        setTemplates(templatesList);
+      } else {
+        const errorText = await response.text().catch(() => 'Unable to read error response');
+        console.error('[my-application] Failed to fetch templates:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        setTemplates([]);
       }
     } catch (error) {
-      console.error('Error fetching templates:', error);
+      console.error('[my-application] Error fetching templates:', error);
+      setTemplates([]);
     }
   }, []);
 
@@ -85,8 +136,10 @@ export default function MyApplication() {
       return;
     }
 
-    fetchApplications();
-    fetchTemplates();
+    // 并行执行两个 API 调用，减少加载时间
+    Promise.all([fetchApplications(), fetchTemplates()]).catch((error) => {
+      console.error('Error loading data:', error);
+    });
   }, [router, fetchApplications, fetchTemplates]);
 
   const createApplication = async (templateId: string) => {
@@ -221,8 +274,11 @@ export default function MyApplication() {
   // Category mapping
   const categoryMap: Record<string, string> = {
     '国际学校': 'international',
+    '香港国际学校': 'international', // Add mapping for 香港国际学校
     '香港本地中学': 'hkSecondary',
+    '本地中学': 'hkSecondary',
     '香港本地小学': 'hkPrimary',
+    '本地小学': 'hkPrimary',
     '香港幼稚园': 'hkKindergarten',
     '幼稚园': 'hkKindergarten',
     '大学': 'university',
@@ -266,44 +322,91 @@ export default function MyApplication() {
   }, [applications, selectedApplicationCategory, selectedStatus]);
 
   // Filter templates by category and search term
-  const filteredTemplates = templates.filter((template) => {
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      const templateCategory = template.category || '国际学校';
-      const categoryKey = categoryMap[templateCategory] || 'international';
-      if (categoryKey !== selectedCategory) {
-        return false;
+  const filteredTemplates = useMemo(() => {
+    console.log('[my-application] Filtering templates:', {
+      totalTemplates: templates.length,
+      selectedCategory,
+      searchTerm,
+      templates: templates.map(t => ({
+        id: t.id,
+        schoolName: typeof t.schoolName === 'string' ? t.schoolName : JSON.stringify(t.schoolName),
+        category: t.category,
+        categoryKey: categoryMap[t.category || '国际学校'] || 'international'
+      }))
+    });
+
+    const filtered = templates.filter((template) => {
+      // Filter by category
+      if (selectedCategory !== 'all') {
+        const templateCategory = template.category || '国际学校';
+        const categoryKey = categoryMap[templateCategory] || 'international';
+        console.log('[my-application] Category check:', {
+          templateId: template.id,
+          templateCategory,
+          categoryKey,
+          selectedCategory,
+          matches: categoryKey === selectedCategory
+        });
+        if (categoryKey !== selectedCategory) {
+          return false;
+        }
       }
-    }
 
-    // Filter by search term
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase();
-      const schoolName = getLocalizedSchoolName(template.schoolName, language).toLowerCase();
-      const program = (template.program || '').toLowerCase();
-      const description = (template.description || '').toLowerCase();
-      
-      return (
-        schoolName.includes(searchLower) ||
-        program.includes(searchLower) ||
-        description.includes(searchLower)
-      );
-    }
+      // Filter by search term
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase();
+        const schoolName = getLocalizedSchoolName(template.schoolName, language).toLowerCase();
+        const program = (template.program || '').toLowerCase();
+        const description = (template.description || '').toLowerCase();
+        
+        return (
+          schoolName.includes(searchLower) ||
+          program.includes(searchLower) ||
+          description.includes(searchLower)
+        );
+      }
 
-    return true;
-  });
+      return true;
+    });
+
+    console.log('[my-application] Filtered result:', {
+      filteredCount: filtered.length,
+      filteredIds: filtered.map(t => t.id),
+      filteredDetails: filtered.map(t => ({
+        id: t.id,
+        schoolName: typeof t.schoolName === 'string' ? t.schoolName : JSON.stringify(t.schoolName),
+        category: t.category
+      }))
+    });
+
+    return filtered;
+    // categoryMap is a constant, no need to include in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templates, selectedCategory, searchTerm, language]);
 
   // Get unique categories from templates
-  const categories = Array.from(
-    new Set(
-      templates
-        .map((t) => t.category || '国际学校')
-        .map((cat) => {
-          const key = categoryMap[cat] || 'international';
-          return key;
-        })
-    )
-  ).sort();
+  const categories = useMemo(() => {
+    const cats = Array.from(
+      new Set(
+        templates
+          .map((t) => t.category || '国际学校')
+          .map((cat) => {
+            const key = categoryMap[cat] || 'international';
+            return key;
+          })
+      )
+    ).sort();
+    
+    console.log('[my-application] Categories:', {
+      templatesCount: templates.length,
+      categories: cats,
+      templateCategories: templates.map(t => t.category)
+    });
+    
+    return cats;
+    // categoryMap is a constant, no need to include in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templates]);
 
   // Category display order
   const categoryOrder = ['international', 'hkSecondary', 'hkPrimary', 'hkKindergarten', 'university'];
@@ -597,38 +700,56 @@ export default function MyApplication() {
                         {t('admin.templates.clearSearch') || '清除搜索'}
                       </button>
                     )}
+                    {templates.length === 0 && (
+                      <div className="mt-4 text-sm text-gray-500">
+                        <p>提示：请检查浏览器控制台（F12）查看详细日志</p>
+                        <p>如果模版已创建但仍未显示，请检查模版的 isActive 状态</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredTemplates.map((template) => (
-                      <div
-                        key={template.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:bg-primary-50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          createApplication(template.id);
-                          setShowNewAppModal(false);
-                          setSelectedCategory('all');
-                          setSearchTerm('');
-                        }}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {getLocalizedSchoolName(template.schoolName, language)}
-                            </h3>
-                            <p className="text-gray-600 mt-1">{template.program}</p>
-                            {template.description && (
-                              <p className="text-sm text-gray-500 mt-2">{template.description}</p>
+                    {filteredTemplates.map((template, index) => {
+                      let schoolNameDisplay = '';
+                      try {
+                        schoolNameDisplay = getLocalizedSchoolName(template.schoolName, language);
+                      } catch (error) {
+                        console.error('Error getting localized school name:', error, template);
+                        schoolNameDisplay = typeof template.schoolName === 'string' 
+                          ? template.schoolName 
+                          : JSON.stringify(template.schoolName);
+                      }
+                      
+                      return (
+                        <div
+                          key={template.id}
+                          className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:bg-primary-50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            createApplication(template.id);
+                            setShowNewAppModal(false);
+                            setSelectedCategory('all');
+                            setSearchTerm('');
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {schoolNameDisplay}
+                              </h3>
+                              <p className="text-gray-600 mt-1">{template.program || '(无项目名称)'}</p>
+                              {template.description && (
+                                <p className="text-sm text-gray-500 mt-2">{template.description}</p>
+                              )}
+                            </div>
+                            {template.category && (
+                              <span className="ml-4 px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700 whitespace-nowrap">
+                                {getCategoryLabel(template.category)}
+                              </span>
                             )}
                           </div>
-                          {template.category && (
-                            <span className="ml-4 px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700 whitespace-nowrap">
-                              {getCategoryLabel(template.category)}
-                            </span>
-                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -2,8 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 import { getWordPressSchools } from '@/services/wordpressSchoolService';
-import { buildWordPressTemplateId, parseWordPressTemplateId } from '@/services/wordpressSchoolService';
+import { buildWordPressTemplateId, buildStandardizedTemplateId, parseWordPressTemplateId } from '@/services/wordpressSchoolService';
 import { serializeSchoolName } from '@/utils/templates';
+import { MASTER_TEMPLATE_PREFIX, MASTER_TEMPLATE_SCHOOL_ID } from '@/constants/templates';
 
 /**
  * Create a template from WordPress school profile
@@ -40,8 +41,14 @@ export default async function handler(
       return res.status(404).json({ error: 'WordPress profile not found' });
     }
 
+    // Generate standardized template ID: name_short-category-year
+    // Try to get name_short from ACF
+    const nameShort = profile.acf?.name_short || profile.acf?.nameShort || null;
+    
+    // Build standardized template ID
+    const templateId = buildStandardizedTemplateId(profile, nameShort);
+    
     // Check if template already exists
-    const templateId = buildWordPressTemplateId(profile);
     const existingTemplate = await prisma.schoolFormTemplate.findUnique({
       where: { schoolId: templateId }
     });
@@ -49,13 +56,16 @@ export default async function handler(
     if (existingTemplate) {
       return res.status(400).json({ 
         error: 'Template already exists',
-        templateId: existingTemplate.id
+        templateId: existingTemplate.id,
+        schoolId: existingTemplate.schoolId
       });
     }
 
-    // Get base template if provided
+    // Get base template - default to master template if not provided
     let fieldsData: any = [];
+    
     if (baseTemplateId) {
+      // Use provided base template
       const baseTemplate = await prisma.schoolFormTemplate.findUnique({
         where: { id: baseTemplateId },
         select: { fieldsData: true }
@@ -63,6 +73,44 @@ export default async function handler(
       if (baseTemplate) {
         fieldsData = baseTemplate.fieldsData;
       }
+    } else {
+      // Default: find and use master template
+      // Try legacy ID first, then try prefix-based search
+      let masterTemplate = await prisma.schoolFormTemplate.findUnique({
+        where: { schoolId: MASTER_TEMPLATE_SCHOOL_ID },
+        select: { fieldsData: true }
+      });
+      
+      // If not found, try to find any template with master prefix
+      if (!masterTemplate) {
+        const allTemplates = await prisma.schoolFormTemplate.findMany({
+          where: {
+            schoolId: {
+              startsWith: MASTER_TEMPLATE_PREFIX
+            }
+          },
+          select: { fieldsData: true },
+          take: 1
+        });
+        if (allTemplates.length > 0) {
+          masterTemplate = allTemplates[0];
+        }
+      }
+      
+      if (masterTemplate) {
+        fieldsData = masterTemplate.fieldsData;
+      }
+      // If still no master template found, fieldsData remains empty array
+      // This allows the system to work even without a master template
+      // However, we should log a warning if no master template is found
+      if (!masterTemplate) {
+        console.warn('[create-from-profile] No master template found, creating template with empty fieldsData');
+      }
+    }
+    
+    // Ensure fieldsData is valid (not null)
+    if (!fieldsData) {
+      fieldsData = [];
     }
 
     // Create template

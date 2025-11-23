@@ -61,24 +61,34 @@ export function serializeSchoolName(value: SchoolNameInput): string {
 export function deserializeSchoolName(value: unknown): string | LocalizedText {
   if (typeof value === 'string') {
     const trimmed = value.trim();
+    // Try to parse if it looks like JSON
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       try {
         const parsed = JSON.parse(trimmed);
-        if (parsed && typeof parsed === 'object') {
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           return parsed as LocalizedText;
         }
+        // If parsed to array or other non-object, return original string
+        return value;
       } catch (error) {
-        // Value is plain string, ignore parse error
+        // Value is plain string, ignore parse error and return as-is
+        return value;
       }
     }
     return value;
   }
 
-  if (value && typeof value === 'object') {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value as LocalizedText;
   }
 
-  return '';
+  // Fallback for null, undefined, or other types
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  // Convert other types to string as fallback
+  return String(value);
 }
 
 function parsePossibleJson(value: string): unknown {

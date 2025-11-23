@@ -44,8 +44,12 @@ export default async function handler(
       }
 
       // Get all active templates
+      // Simplified: only check isActive status, don't validate fieldsData structure
+      // This ensures all enabled templates are shown in the school list
       const templates = await prisma.schoolFormTemplate.findMany({
-        where: { isActive: true },
+        where: { 
+          isActive: true
+        },
         select: {
           id: true,
           schoolId: true,
@@ -53,22 +57,60 @@ export default async function handler(
           program: true,
           description: true,
           category: true,
-          fieldsData: true
+          fieldsData: true,
+          isActive: true
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
       });
 
-      res.status(200).json({
-        success: true,
-        templates: templates.map(template => ({
-          id: template.id,
-          schoolId: template.schoolId,
-          schoolName: deserializeSchoolName(template.schoolName),
-          program: template.program,
-          description: template.description,
-          category: template.category,
-          fields: template.fieldsData
+      // Debug logging
+      console.log('[api/templates] Query result:', {
+        totalCount: templates.length,
+        templates: templates.map(t => ({
+          id: t.id,
+          schoolId: t.schoolId,
+          schoolName: t.schoolName,
+          isActive: t.isActive,
+          category: t.category,
+          hasFieldsData: !!t.fieldsData,
+          fieldsDataType: Array.isArray(t.fieldsData) ? 'array' : typeof t.fieldsData
         }))
       });
+
+      // Return all active templates regardless of fieldsData structure
+      // This allows templates to be displayed even if fieldsData is empty or has different structures
+      const response = {
+        success: true,
+        templates: templates.map(template => {
+          // Ensure schoolName is properly deserialized
+          const deserializedName = deserializeSchoolName(template.schoolName);
+          
+          return {
+            id: template.id,
+            schoolId: template.schoolId,
+            schoolName: deserializedName,
+            program: template.program,
+            description: template.description,
+            category: template.category,
+            fields: template.fieldsData
+          };
+        })
+      };
+
+      console.log('[api/templates] Response:', {
+        success: response.success,
+        templateCount: response.templates.length,
+        templateIds: response.templates.map(t => t.id),
+        schoolNames: response.templates.map(t => ({
+          id: t.id,
+          schoolName: typeof t.schoolName === 'string' ? t.schoolName : JSON.stringify(t.schoolName),
+          schoolNameType: typeof t.schoolName
+        }))
+      });
+
+      res.status(200).json(response);
     } catch (error) {
       console.error('Templates API error:', error);
       res.status(500).json({ error: 'Internal server error' });

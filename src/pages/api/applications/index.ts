@@ -28,10 +28,16 @@ export default async function handler(
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Get user's profile
-    const profile = await prisma.userProfile.findUnique({
-      where: { userId }
-    });
+    // Get user's profile and user info
+    const [profile, user] = await Promise.all([
+      prisma.userProfile.findUnique({
+        where: { userId }
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true }
+      })
+    ]);
 
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
@@ -133,7 +139,7 @@ export default async function handler(
       const userProfile: Partial<UserProfileData> = {
         basicInfo: {
           fullName: profile.fullName || '',
-          email: '',
+          email: user?.email || '',
           phone: profile.phone || '',
           birthday: profile.birthday?.toISOString() || '',
           nationality: profile.nationality || ''

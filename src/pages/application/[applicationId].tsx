@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { Save, Download, Loader2, Bot } from 'lucide-react';
+import { Save, Download, Loader2, Bot, User } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
 import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 import ApplicationForm, {
@@ -359,6 +359,9 @@ export default function ApplicationPage() {
   const [autoApplying, setAutoApplying] = useState(false);
   const [autoApplyError, setAutoApplyError] = useState<string | null>(null);
   const [autoApplyMessage, setAutoApplyMessage] = useState<string | null>(null);
+  const [importingProfile, setImportingProfile] = useState(false);
+  const [importProfileError, setImportProfileError] = useState<string | null>(null);
+  const [importProfileSuccess, setImportProfileSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -774,6 +777,153 @@ export default function ApplicationPage() {
     }
   };
 
+  const handleImportProfile = async () => {
+    if (!application) {
+      return;
+    }
+
+    setImportingProfile(true);
+    setImportProfileError(null);
+    setImportProfileSuccess(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/auth/login');
+        return;
+      }
+
+      // Extract all fields from the template
+      const allFields: FormField[] = [];
+      
+      // Try to get fields from template.fields first
+      if (application.template.fields && Array.isArray(application.template.fields)) {
+        allFields.push(...application.template.fields);
+      } else {
+        // Fallback: extract fields from formTabs
+        formTabs.forEach(tab => {
+          tab.fields.forEach(field => {
+            allFields.push({
+              id: field.id,
+              label: field.label,
+              type: field.type === 'textarea' ? 'textarea' : 
+                    field.type === 'select' ? 'select' : 
+                    field.type === 'date' ? 'date' : 
+                    field.type === 'checkbox' ? 'text' : 'text',
+              required: field.required,
+              placeholder: field.placeholder,
+              helpText: field.helpText,
+              aiFillRule: field.aiFillRule,
+              options: field.options?.map(opt => opt.label)
+            });
+          });
+        });
+      }
+
+      if (allFields.length === 0) {
+        throw new Error('无法获取表单字段信息');
+      }
+
+      console.log('[Import Profile] Extracted fields:', allFields.length, allFields.map(f => ({ id: f.id, label: f.label })));
+
+      // Call auto-fill API
+      const response = await fetch('/api/ai/auto-fill', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ fields: allFields })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || '导入个人资料失败');
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.formData) {
+        throw new Error('导入个人资料失败：服务器返回无效数据');
+      }
+
+      console.log('[Import Profile] API returned formData:', Object.keys(data.formData).length, 'fields', data.formData);
+
+      // Merge imported data with current form data
+      // Only fill empty fields, don't overwrite existing values
+      setFormData((previous) => {
+        const next: StructuredFormDataState = 
+          previous && typeof previous === 'object' ? { ...previous } : {};
+        
+        let filledCount = 0;
+        let skippedCount = 0;
+        let emptyImportedCount = 0;
+        
+        Object.keys(data.formData).forEach(fieldId => {
+          const importedValue = data.formData[fieldId];
+          const currentValue = next[fieldId];
+          
+          // Check if imported value is actually empty (skip undefined, null, and empty strings)
+          const isImportedEmpty = importedValue === undefined || 
+                                   importedValue === null || 
+                                   (typeof importedValue === 'string' && importedValue.trim() === '') ||
+                                   (Array.isArray(importedValue) && importedValue.length === 0) ||
+                                   (typeof importedValue === 'object' && Object.keys(importedValue).length === 0);
+          
+          // Check if current field is empty
+          const isCurrentEmpty = currentValue === undefined || 
+                                 currentValue === null || 
+                                 (typeof currentValue === 'string' && currentValue.trim() === '') ||
+                                 (Array.isArray(currentValue) && currentValue.length === 0) ||
+                                 (typeof currentValue === 'object' && Object.keys(currentValue).length === 0);
+          
+          if (isImportedEmpty) {
+            emptyImportedCount++;
+            return; // Skip empty imported values
+          }
+          
+          // Only fill if current field is empty
+          if (isCurrentEmpty) {
+            next[fieldId] = importedValue;
+            filledCount++;
+          } else {
+            skippedCount++;
+          }
+        });
+        
+        console.log('[Import Profile] Results:', {
+          filled: filledCount,
+          skipped: skippedCount,
+          emptyImported: emptyImportedCount,
+          totalImported: Object.keys(data.formData).length
+        });
+        
+        // Preserve structure
+        next.__structure = previous?.__structure;
+        
+        if (filledCount > 0) {
+          setImportProfileSuccess(`成功导入 ${filledCount} 个字段的个人资料。${skippedCount > 0 ? `（跳过 ${skippedCount} 个已有内容的字段）` : ''}`);
+        } else if (skippedCount > 0) {
+          setImportProfileSuccess(`所有字段都已填写，无需导入。`);
+        } else {
+          setImportProfileError(`未能从个人资料中找到匹配的字段数据。请确保个人资料页面已保存相关数据。`);
+        }
+        setTimeout(() => {
+          setImportProfileSuccess(null);
+          setImportProfileError(null);
+        }, 5000);
+        
+        return next;
+      });
+    } catch (err) {
+      console.error('Error importing profile:', err);
+      const errorMessage = err instanceof Error ? err.message : '导入个人资料失败，请稍后再试';
+      setImportProfileError(errorMessage);
+      setTimeout(() => setImportProfileError(null), 5000);
+    } finally {
+      setImportingProfile(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -823,6 +973,16 @@ export default function ApplicationPage() {
               {autoApplyMessage}
             </div>
           )}
+          {importProfileError && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+              {importProfileError}
+            </div>
+          )}
+          {importProfileSuccess && (
+            <div className="rounded-2xl border border-green-200 bg-green-50 text-green-700 px-4 py-3 text-sm">
+              {importProfileSuccess}
+            </div>
+          )}
           <div className="flex flex-col justify-between gap-4 rounded-2xl bg-white p-6 shadow-sm md:flex-row md:items-center">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">{formState.name}</h1>
@@ -855,6 +1015,25 @@ export default function ApplicationPage() {
                   <option value="filled">仅导出有内容的页面</option>
                 </select>
               </div>
+              <button
+                type="button"
+                onClick={handleImportProfile}
+                disabled={importingProfile || application?.status === 'submitted'}
+                className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
+                title={application?.status === 'submitted' ? '已提交的申请无法导入个人资料' : '从个人资料页面导入数据到申请表中'}
+              >
+                {importingProfile ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>导入中...</span>
+                  </>
+                ) : (
+                  <>
+                    <User className="h-5 w-5" />
+                    <span>导入个人资料</span>
+                  </>
+                )}
+              </button>
               {canAutoApply && (
                 <button
                   type="button"
