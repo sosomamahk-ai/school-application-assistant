@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getWordPressSchools } from '@/services/wordpressSchoolService';
+import { getCache } from '@/services/wordpressCache';
 import { prisma } from '@/lib/prisma';
 import { buildWordPressTemplateId, parseWordPressTemplateId } from '@/services/wordpressSchoolService';
 import type { WordPressSchool } from '@/types/wordpress';
@@ -341,10 +342,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const forceRefresh = req.query.refresh === 'true';
+    const startTime = Date.now();
     
-    // Get WordPress schools (for basic info)
-    const wordPressData = await getWordPressSchools({ forceRefresh });
+    // 🔥 STEP 1: Try to get WordPress schools from cache first (fast)
+    let wordPressData;
+    let fromCache = false;
+    
+    if (!forceRefresh) {
+      const cacheResult = await getCache();
+      if (cacheResult?.success && cacheResult.data) {
+        const maxAge = Number(process.env.WORDPRESS_CACHE_TTL || 3600 * 1000); // 1 hour default
+        if (cacheResult.age !== undefined && cacheResult.age < maxAge) {
+          wordPressData = cacheResult.data;
+          fromCache = true;
+          console.log(`[school-profiles] ✅ Using cached data (age: ${Math.round(cacheResult.age / 1000)}s, backend: ${cacheResult.backend})`);
+        }
+      }
+    }
+    
+    // If not from cache or cache expired, fetch fresh data
+    if (!wordPressData) {
+      console.log(`[school-profiles] Fetching fresh data from WordPress...`);
+      wordPressData = await getWordPressSchools({ forceRefresh });
+      fromCache = false;
+    }
+    
     const profiles = wordPressData.profiles || [];
+    console.log(`[school-profiles] Loaded ${profiles.length} profiles (fromCache: ${fromCache})`);
 
     // Get raw WordPress data directly from API to extract profile_type slug
     const baseUrl = process.env.WORDPRESS_BASE_URL || process.env.NEXT_PUBLIC_WORDPRESS_BASE_URL;
@@ -355,142 +379,129 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const wpBaseUrl = baseUrl.replace(/\/+$/, '');
-    let rawProfiles: any[] = [];
     
-    // Auto-detect endpoint
+    // 🔥 STEP 2: Auto-detect endpoint (only once)
     let endpointBase = await detectProfileEndpoint(wpBaseUrl);
     if (!endpointBase) {
-      // If auto-detection fails, fall back to using data from getWordPressSchools
-      // but we won't have raw post data with _embedded taxonomy
-      console.warn(`[school-profiles] ⚠️  Could not detect endpoint, will use data from getWordPressSchools (may lack taxonomy data)`);
+      console.warn(`[school-profiles] ⚠️  Could not detect endpoint, will use data from cache (may lack taxonomy data)`);
       endpointBase = null;
     }
     
+    // 🔥 STEP 3: Batch fetch raw post data for profiles (only what we need)
+    // Instead of fetching ALL profiles, we'll fetch only the ones we have in our list
+    const rawProfileMap = new Map<number, any>();
+    const rawProfileMapByString = new Map<string, any>();
+    
     try {
-      // 🔥 STEP 1: Paginated fetch ALL profile posts with _embed
-      console.log(`[school-profiles] Starting paginated fetch from ${wpBaseUrl}...`);
-      
-      let page = 1;
-      let totalPages = 1;
-      const allRawProfiles: any[] = [];
-      
-      if (endpointBase === 'unified') {
-        // Use unified endpoint
-        const unifiedEndpoint = `${wpBaseUrl}/wp-json/schools/v1/list`;
-        const response = await fetch(unifiedEndpoint, {
-          headers: { Accept: 'application/json' }
-        });
+      if (endpointBase && profiles.length > 0) {
+        console.log(`[school-profiles] Batch fetching raw post data for ${profiles.length} profiles...`);
         
-        if (response.ok) {
-          const data = await response.json();
-          // Unified endpoint may return different structure
-          if (data?.profiles && Array.isArray(data.profiles)) {
-            allRawProfiles.push(...data.profiles);
-            console.log(`[school-profiles] ✅ Fetched ${data.profiles.length} profiles from unified endpoint`);
-          } else if (Array.isArray(data)) {
-            allRawProfiles.push(...data);
-            console.log(`[school-profiles] ✅ Fetched ${data.length} profiles from unified endpoint`);
+        // Strategy: Fetch in batches by ID to get _embedded taxonomy data
+        // WordPress REST API supports include parameter to fetch specific posts
+        const BATCH_SIZE = 50; // WordPress REST API limit
+        const profileIds = profiles.map(p => p.id).filter(id => id > 0);
+        
+        for (let i = 0; i < profileIds.length; i += BATCH_SIZE) {
+          const batchIds = profileIds.slice(i, i + BATCH_SIZE);
+          const includeParam = batchIds.join(',');
+          
+          let endpoint: string;
+          if (endpointBase === 'unified') {
+            // Unified endpoint might not support include parameter, so try standard profile endpoint
+            // Try 'profile' first, then 'school_profile' as fallback
+            endpoint = `${wpBaseUrl}/wp-json/wp/v2/profile?include=${includeParam}&per_page=${BATCH_SIZE}&_embed&acf_format=standard`;
+          } else {
+            endpoint = `${wpBaseUrl}/wp-json/wp/v2/${endpointBase}?include=${includeParam}&per_page=${BATCH_SIZE}&_embed&acf_format=standard`;
           }
-        } else {
-          throw new Error(`Unified endpoint returned ${response.status}: ${response.statusText}`);
-        }
-      } else if (endpointBase) {
-        // Use standard REST API endpoint
-        // First request to get total pages
-        let firstEndpoint = `${wpBaseUrl}/wp-json/wp/v2/${endpointBase}?per_page=100&page=1&_embed&acf_format=standard`;
-        let firstResponse = await fetch(firstEndpoint, {
-          headers: { Accept: 'application/json' }
-        });
-
-        if (!firstResponse.ok) {
-          const errorText = await firstResponse.text().catch(() => 'Unknown error');
-          console.error(`[school-profiles] WordPress API error:`, {
-            status: firstResponse.status,
-            statusText: firstResponse.statusText,
-            endpoint: firstEndpoint,
-            errorText: errorText.substring(0, 200)
-          });
-          throw new Error(`WordPress API returned ${firstResponse.status}: ${firstResponse.statusText}. Endpoint: ${firstEndpoint}`);
-        }
-
-        const firstPageData = await firstResponse.json();
-        if (Array.isArray(firstPageData) && firstPageData.length > 0) {
-          allRawProfiles.push(...firstPageData);
           
-          const totalPagesHeader = firstResponse.headers.get('X-WP-TotalPages');
-          totalPages = totalPagesHeader ? Number(totalPagesHeader) : 1;
-          
-          console.log(`[school-profiles] Fetched page 1/${totalPages}, ${firstPageData.length} profiles`);
-          console.log(`[school-profiles] Total pages to fetch: ${totalPages}`);
-          
-          // Fetch remaining pages
-          page = 2;
-          while (page <= totalPages) {
-            const endpoint = `${wpBaseUrl}/wp-json/wp/v2/${endpointBase}?per_page=100&page=${page}&_embed&acf_format=standard`;
+          try {
             const response = await fetch(endpoint, {
               headers: { Accept: 'application/json' }
             });
             
             if (response.ok) {
-              const pageData = await response.json();
-              if (Array.isArray(pageData) && pageData.length > 0) {
-                allRawProfiles.push(...pageData);
-                console.log(`[school-profiles] Fetched page ${page}/${totalPages}, ${pageData.length} profiles`);
-                page++;
-              } else {
-                break;
+              const batchData = await response.json();
+              if (Array.isArray(batchData)) {
+                batchData.forEach((post: any) => {
+                  const id = Number(post?.id ?? post?.ID ?? 0);
+                  const idString = String(post?.id ?? post?.ID ?? '');
+                  if (id) {
+                    rawProfileMap.set(id, post);
+                    rawProfileMapByString.set(idString, post);
+                  }
+                });
+                console.log(`[school-profiles] Fetched batch ${Math.floor(i / BATCH_SIZE) + 1}, ${batchData.length} profiles`);
               }
             } else {
-              console.error(`[school-profiles] Failed to fetch page ${page}: ${response.status} ${response.statusText}`);
-              break;
+              // If profile endpoint fails and we're using unified, try school_profile
+              if (endpointBase === 'unified' && response.status === 404) {
+                const fallbackEndpoint = `${wpBaseUrl}/wp-json/wp/v2/school_profile?include=${includeParam}&per_page=${BATCH_SIZE}&_embed&acf_format=standard`;
+                try {
+                  const fallbackResponse = await fetch(fallbackEndpoint, {
+                    headers: { Accept: 'application/json' }
+                  });
+                  if (fallbackResponse.ok) {
+                    const fallbackData = await fallbackResponse.json();
+                    if (Array.isArray(fallbackData)) {
+                      fallbackData.forEach((post: any) => {
+                        const id = Number(post?.id ?? post?.ID ?? 0);
+                        const idString = String(post?.id ?? post?.ID ?? '');
+                        if (id) {
+                          rawProfileMap.set(id, post);
+                          rawProfileMapByString.set(idString, post);
+                        }
+                      });
+                      console.log(`[school-profiles] Fetched batch ${Math.floor(i / BATCH_SIZE) + 1} via fallback endpoint, ${fallbackData.length} profiles`);
+                    }
+                  } else {
+                    console.warn(`[school-profiles] Batch fetch failed (status ${response.status}), will try individual fetches`);
+                  }
+                } catch (fallbackError) {
+                  console.warn(`[school-profiles] Fallback endpoint also failed:`, fallbackError);
+                }
+              } else {
+                console.warn(`[school-profiles] Batch fetch failed (status ${response.status}), will try individual fetches`);
+              }
             }
+          } catch (error) {
+            console.warn(`[school-profiles] Batch fetch error for batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error);
+          }
+          
+          // Small delay between batches
+          if (i + BATCH_SIZE < profileIds.length) {
+            await new Promise(resolve => setTimeout(resolve, 50));
           }
         }
+        
+        console.log(`[school-profiles] ✅ Batch fetch complete: ${rawProfileMap.size} profiles with raw data`);
       } else {
-        // No endpoint found - use data from getWordPressSchools but without raw taxonomy data
-        console.warn(`[school-profiles] ⚠️  No REST API endpoint available, using processed data from getWordPressSchools`);
-        // We'll continue with empty rawProfiles and rely on fallback mechanisms
+        console.warn(`[school-profiles] ⚠️  No endpoint or no profiles, skipping raw data fetch`);
       }
-      
-      rawProfiles = allRawProfiles;
-      console.log(`[school-profiles] ✅ Paginated fetch complete: ${rawProfiles.length} total profiles`);
     } catch (error) {
-      console.error('[school-profiles] ❌ Failed to fetch raw WordPress data:', error);
-      return res.status(500).json({
-        error: 'Failed to fetch WordPress profiles',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('[school-profiles] ❌ Error during batch fetch:', error);
+      // Continue with what we have - don't fail the entire request
     }
 
-    // Create a map of profile ID to raw WordPress post data
-    const rawProfileMap = new Map<number, any>();
-    const rawProfileMapByString = new Map<string, any>();
-    
-    rawProfiles.forEach((post: any) => {
-      const id = Number(post?.id ?? post?.ID ?? 0);
-      const idString = String(post?.id ?? post?.ID ?? '');
-      if (id) {
-        rawProfileMap.set(id, post);
-      }
-      if (idString) {
-        rawProfileMapByString.set(idString, post);
-      }
-    });
-
-    console.log(`[school-profiles] Built raw profile map: ${rawProfileMap.size} entries`);
-
-    // 🔥 STEP 2: Identify missing profiles and apply fallback mechanism
+    // 🔥 STEP 4: For missing profiles, try individual fetch (fallback)
     const missingProfiles = profiles.filter(p => {
       return !rawProfileMap.has(p.id) && !rawProfileMapByString.has(String(p.id));
     });
 
     if (missingProfiles.length > 0) {
-      console.log(`[school-profiles] ⚠️  Found ${missingProfiles.length} missing profiles, starting fallback mechanism...`);
+      console.log(`[school-profiles] ⚠️  Found ${missingProfiles.length} missing profiles (${Math.round(missingProfiles.length / profiles.length * 100)}%), starting fallback mechanism...`);
+      
+      // Only fetch missing profiles individually (limit to avoid timeout)
+      const MAX_FALLBACK = 20; // Limit fallback to prevent timeout
+      const profilesToFetch = missingProfiles.slice(0, MAX_FALLBACK);
+      
+      if (profilesToFetch.length < missingProfiles.length) {
+        console.warn(`[school-profiles] ⚠️  Limiting fallback to ${MAX_FALLBACK} profiles (${missingProfiles.length - MAX_FALLBACK} will be marked as unresolved)`);
+      }
       
       // Process missing profiles with fallback (limit concurrent requests)
       const BATCH_SIZE = 5;
-      for (let i = 0; i < missingProfiles.length; i += BATCH_SIZE) {
-        const batch = missingProfiles.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < profilesToFetch.length; i += BATCH_SIZE) {
+        const batch = profilesToFetch.slice(i, i + BATCH_SIZE);
         const results = await Promise.all(
           batch.map(profile => fetchMissingProfile(wpBaseUrl, profile, endpointBase || 'profile'))
         );
@@ -502,25 +513,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             rawProfileMap.set(profile.id, result.post);
             rawProfileMapByString.set(String(profile.id), result.post);
             
-            console.log(`[school-profiles] ✅ Found profile ${profile.id} (${profile.title}) via ${result.foundBy}`, {
-              profileId: profile.id,
-              title: profile.title,
-              foundBy: result.foundBy,
-              attempted: result.attempted,
-              statuses: result.statuses
-            });
+            console.log(`[school-profiles] ✅ Found profile ${profile.id} (${profile.title}) via ${result.foundBy}`);
           } else {
-            console.warn(`[school-profiles] ❌ Could not find profile ${profile.id} (${profile.title})`, {
-              profileId: profile.id,
-              title: profile.title,
-              attempted: result.attempted,
-              statuses: result.statuses
-            });
+            console.warn(`[school-profiles] ❌ Could not find profile ${profile.id} (${profile.title})`);
           }
         });
 
         // Small delay between batches to avoid overwhelming the server
-        if (i + BATCH_SIZE < missingProfiles.length) {
+        if (i + BATCH_SIZE < profilesToFetch.length) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
@@ -650,8 +650,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.warn(`[school-profiles] ⚠️  ${unresolvedCount} profiles could not be classified and are marked as unresolved_raw`);
     }
 
-    console.log(`[school-profiles] ✅ Classification complete:`, {
+    const duration = Date.now() - startTime;
+    console.log(`[school-profiles] ✅ Classification complete in ${duration}ms:`, {
       total: profiles.length,
+      fromCache,
+      rawDataCount: rawProfileMap.size,
       byType: Object.keys(groupedProfiles).reduce((acc, key) => {
         acc[key] = groupedProfiles[key].length;
         return acc;
