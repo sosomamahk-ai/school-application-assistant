@@ -36,9 +36,44 @@ const categoryMap: Record<string, string> = {
   '大学': '大学'
 };
 
-const getCategoryLabel = (category: string | null | undefined): string => {
-  if (!category) return '国际学校';
-  return categoryMap[category] || category;
+// Extract category from schoolId if it follows the new format: {name_short}-{category_abbr}-{year}
+// Category abbreviations: is (国际学校), ls (本地中学), lp (本地小学), kg (幼稚园), un (大学)
+const extractCategoryFromSchoolId = (schoolId: string | null | undefined): string | null => {
+  if (!schoolId) return null;
+  
+  // Match pattern: {name_short}-{category_abbr}-{year}
+  const match = schoolId.match(/-([a-z]{2})-\d{4}$/);
+  if (match) {
+    const abbr = match[1];
+    const abbrMap: Record<string, string> = {
+      'is': '国际学校',
+      'ls': '本地中学',
+      'lp': '本地小学',
+      'kg': '幼稚园',
+      'un': '大学'
+    };
+    return abbrMap[abbr] || null;
+  }
+  
+  return null;
+};
+
+const getCategoryLabel = (category: string | null | undefined, schoolId?: string | null): string => {
+  // First try to use the category field
+  if (category) {
+    return categoryMap[category] || category;
+  }
+  
+  // If category is null/undefined, try to extract from schoolId (for new format templates)
+  if (schoolId) {
+    const extractedCategory = extractCategoryFromSchoolId(schoolId);
+    if (extractedCategory) {
+      return extractedCategory;
+    }
+  }
+  
+  // Default fallback
+  return '国际学校';
 };
 
 const categoryIcons: Record<string, any> = {
@@ -172,7 +207,7 @@ export default function SchoolsPage() {
   const filteredTemplates = useMemo(() => {
     if (!selectedCategory) return enrichedTemplates;
     return enrichedTemplates.filter((template) => {
-      const category = getCategoryLabel(template.category);
+      const category = getCategoryLabel(template.category, template.schoolId);
       return category === selectedCategory;
     });
   }, [enrichedTemplates, selectedCategory]);
@@ -188,7 +223,7 @@ export default function SchoolsPage() {
     };
 
     enrichedTemplates.forEach((template) => {
-      const category = getCategoryLabel(template.category);
+      const category = getCategoryLabel(template.category, template.schoolId);
       if (statsMap.hasOwnProperty(category)) {
         statsMap[category]++;
       }
@@ -315,7 +350,7 @@ export default function SchoolsPage() {
                               </td>
                               <td className="px-4 py-4 text-center whitespace-nowrap">
                                 <span className="text-sm text-gray-600">
-                                  {getCategoryLabel(template.category)}
+                                  {getCategoryLabel(template.category, template.schoolId)}
                                 </span>
                               </td>
                               <td className="px-4 py-4 text-center text-gray-600">

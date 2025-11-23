@@ -68,6 +68,7 @@ export default function TemplatesManagementV2() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('国际学校');
   const [updating, setUpdating] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<'all' | 'created' | 'pending'>('all');
 
   const fetchData = useCallback(async () => {
@@ -136,8 +137,10 @@ export default function TemplatesManagementV2() {
   };
 
   const handleCreateTemplate = async (profile: ProfileWithTemplate) => {
-    if (!confirm(`确定要为"${profile.title}"创建模板吗？`)) return;
+    const profileKey = `${profile.type}-${profile.id}`;
+    if (creating.has(profileKey)) return;
 
+    setCreating(prev => new Set(prev).add(profileKey));
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/admin/templates/create-from-profile', {
@@ -170,6 +173,12 @@ export default function TemplatesManagementV2() {
     } catch (error) {
       console.error('Error creating template:', error);
       alert('创建失败，请重试');
+    } finally {
+      setCreating(prev => {
+        const next = new Set(prev);
+        next.delete(profileKey);
+        return next;
+      });
     }
   };
 
@@ -535,11 +544,21 @@ export default function TemplatesManagementV2() {
                             ) : (
                               <button
                                 onClick={() => handleCreateTemplate(profile)}
-                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+                                disabled={creating.has(`${profile.type}-${profile.id}`)}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="基于此模版创建"
                               >
-                                <Plus className="h-3 w-3 mr-1" />
-                                创建模板
+                                {creating.has(`${profile.type}-${profile.id}`) ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    创建中
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    创建模板
+                                  </>
+                                )}
                               </button>
                             )}
                           </div>

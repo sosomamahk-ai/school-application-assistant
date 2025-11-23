@@ -41,6 +41,60 @@ export default async function handler(
       return res.status(404).json({ error: 'WordPress profile not found' });
     }
 
+    // Extract profile_type from WordPress REST API to get accurate category
+    let accurateCategory: string | null = null;
+    try {
+      const baseUrl = process.env.WORDPRESS_BASE_URL || process.env.NEXT_PUBLIC_WORDPRESS_BASE_URL;
+      if (baseUrl) {
+        const wpBaseUrl = baseUrl.replace(/\/+$/, '');
+        // Try profile endpoint first, then school_profile as fallback
+        let endpoint = `${wpBaseUrl}/wp-json/wp/v2/${profileType}/${profileId}?_embed&acf_format=standard`;
+        let response = await fetch(endpoint, {
+          headers: { Accept: 'application/json' }
+        });
+
+        // Fallback to school_profile if profile fails
+        if (!response.ok && response.status === 404 && profileType === 'profile') {
+          endpoint = `${wpBaseUrl}/wp-json/wp/v2/school_profile/${profileId}?_embed&acf_format=standard`;
+          response = await fetch(endpoint, {
+            headers: { Accept: 'application/json' }
+          });
+        }
+
+        if (response.ok) {
+          const post = await response.json();
+          
+          // Extract profile_type slug from taxonomy terms
+          const embeddedTerms = post?._embedded?.['wp:term'];
+          if (Array.isArray(embeddedTerms)) {
+            for (const termGroup of embeddedTerms) {
+              if (Array.isArray(termGroup)) {
+                for (const term of termGroup) {
+                  if (term?.taxonomy === 'profile_type') {
+                    const slug = term?.slug || term?.name;
+                    if (slug) {
+                      // Map slug to category
+                      const slugMap: Record<string, string> = {
+                        'hk-is-template': '国际学校',
+                        'hk-ls-template': '本地中学',
+                        'hk-ls-primary-template': '本地小学',
+                        'hk-kg-template': '幼稚园'
+                      };
+                      accurateCategory = slugMap[slug] || null;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[create-from-profile] Failed to fetch profile_type from WordPress API:', error);
+      // Continue with fallback category
+    }
+
     // Generate standardized template ID: name_short-category-year
     // Try to get name_short from ACF
     const nameShort = profile.acf?.name_short || profile.acf?.nameShort || null;
@@ -120,13 +174,30 @@ export default async function handler(
       'zh-TW': profile.acf?.name_chinese || profile.title
     };
 
+    // Use accurate category if available, otherwise fallback to profile.category
+    // Map profile.category to standard category names if needed
+    const categoryMap: Record<string, string> = {
+      '国际学校': '国际学校',
+      '香港国际学校': '国际学校',
+      '香港本地中学': '本地中学',
+      '本地中学': '本地中学',
+      '香港本地小学': '本地小学',
+      '本地小学': '本地小学',
+      '香港幼稚园': '幼稚园',
+      '幼稚园': '幼稚园',
+      '大学': '大学'
+    };
+
+    const finalCategory = accurateCategory || 
+      (profile.category ? (categoryMap[profile.category] || profile.category) : null);
+
     const template = await prisma.schoolFormTemplate.create({
       data: {
         schoolId: templateId,
         schoolName: serializeSchoolName(schoolName),
         program: profile.acf?.program || '申请表单',
         description: profile.acf?.description || null,
-        category: profile.category || null,
+        category: finalCategory,
         fieldsData: fieldsData,
         isActive: true
       }
