@@ -143,7 +143,7 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sections]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');

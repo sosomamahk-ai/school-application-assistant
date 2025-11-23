@@ -61,9 +61,8 @@ export default function MyApplication() {
       }
     } catch (error) {
       console.error('Error fetching applications:', error);
-    } finally {
-      setLoading(false);
     }
+    // 移除 finally 中的 setLoading(false)，让两个请求都完成后再设置
   }, []);
 
   const fetchTemplates = useCallback(async () => {
@@ -137,9 +136,15 @@ export default function MyApplication() {
     }
 
     // 并行执行两个 API 调用，减少加载时间
-    Promise.all([fetchApplications(), fetchTemplates()]).catch((error) => {
-      console.error('Error loading data:', error);
-    });
+    // 两个请求都完成后才设置 loading 为 false
+    Promise.all([fetchApplications(), fetchTemplates()])
+      .then(() => {
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error loading data:', error);
+        setLoading(false);
+      });
   }, [router, fetchApplications, fetchTemplates]);
 
   const createApplication = async (templateId: string) => {

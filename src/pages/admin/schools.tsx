@@ -305,19 +305,29 @@ export default function AdminSchoolsPage() {
       router.push('/auth/login');
       return;
     }
-    fetchTemplates();
-  }, [fetchTemplates, router]);
-
-  useEffect(() => {
-    // 首次加载时立即执行，搜索时使用较短的 debounce
+    // 首次加载时，并行执行模板和学校数据加载，减少等待时间
     const isInitialLoad = searchTerm === '';
-    const delay = isInitialLoad ? 0 : 150;
+    let timeoutId: NodeJS.Timeout | null = null;
     
-    const handler = setTimeout(() => {
-      fetchSchools();
-    }, delay);
-    return () => clearTimeout(handler);
-  }, [fetchSchools, searchTerm]);
+    if (isInitialLoad) {
+      // 首次加载：并行执行，不等待
+      Promise.all([fetchTemplates(), fetchSchools()]).catch((error) => {
+        console.error('Error loading initial data:', error);
+      });
+    } else {
+      // 搜索时：只加载模板（如果还没加载），学校数据使用 debounce
+      fetchTemplates();
+      timeoutId = setTimeout(() => {
+        fetchSchools();
+      }, 150);
+    }
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [fetchTemplates, fetchSchools, router, searchTerm]);
 
   const validateRow = useCallback(
     (row: GridSchool) => {

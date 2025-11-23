@@ -810,7 +810,7 @@ export default function ApplicationPage() {
                     field.type === 'select' ? 'select' : 
                     field.type === 'date' ? 'date' : 
                     field.type === 'checkbox' ? 'text' : 'text',
-              required: field.required,
+              required: Boolean(field.required),
               placeholder: field.placeholder,
               helpText: field.helpText,
               aiFillRule: field.aiFillRule,
