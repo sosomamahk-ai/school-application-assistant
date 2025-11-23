@@ -8,6 +8,7 @@ export interface SchoolItem {
   schoolName: string | { [lang: string]: string };
   program: string;
   category?: string | null;
+  nameShort?: string | null;
   campusLocation?: string | null;
   gradeRange?: string | null;
   applicationStart?: string | null;

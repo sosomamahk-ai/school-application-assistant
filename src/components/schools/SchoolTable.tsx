@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Link2, Loader2, Pencil } from 'lucide-react';
+import { ExternalLink, Loader2, Pencil } from 'lucide-react';
 import { useRouter } from 'next/router';
 import type { SchoolItem } from '@/hooks/useSchools';
 import { getLocalizedSchoolName } from '@/utils/i18n';
@@ -70,6 +70,7 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
       name: school.name || getLocalizedSchoolName(school.schoolName, 'zh-CN'),
       program: school.program,
       category: school.category,
+      nameShort: school.nameShort,
       applicationWindow:
         school.applicationStart && school.applicationEnd
           ? `${new Date(school.applicationStart).toLocaleDateString()} - ${new Date(
@@ -122,7 +123,15 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
             {tableRows.map((row) => (
               <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-4">
-                  {row.permalink ? (
+                  {row.officialLink ? (
+                    <Link
+                      href={row.officialLink}
+                      target="_blank"
+                      className="font-semibold text-gray-900 hover:text-primary-600 transition-colors"
+                    >
+                      {row.name}
+                    </Link>
+                  ) : row.permalink ? (
                     <Link
                       href={row.permalink}
                       target="_blank"
@@ -133,16 +142,8 @@ export default function SchoolTable({ schools }: SchoolTableProps) {
                   ) : (
                     <div className="font-semibold text-gray-900">{row.name}</div>
                   )}
-                  <div className="text-xs text-gray-500 mt-1">{row.program}</div>
-                  {row.officialLink && (
-                    <Link
-                      href={row.officialLink}
-                      target="_blank"
-                      className="inline-flex items-center text-xs text-primary-600 hover:text-primary-700 mt-1"
-                    >
-                      <Link2 className="h-3 w-3 mr-1" />
-                      官网
-                    </Link>
+                  {row.nameShort && (
+                    <div className="text-xs text-gray-500 mt-1">{row.nameShort}</div>
                   )}
                 </td>
                 <td className="px-4 py-4 text-gray-600">{getCategoryLabel(row.category)}</td>

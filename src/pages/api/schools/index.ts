@@ -52,6 +52,7 @@ export default async function handler(
         schoolName: deserializeSchoolName(school.template.schoolName),
         program: school.template.program,
         category: school.template.category,
+        nameShort: school.shortName,
         campusLocation: school.campusLocation,
         gradeRange: school.gradeRange,
         applicationStart: school.applicationStart,

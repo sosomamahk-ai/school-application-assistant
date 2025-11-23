@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Optimize for faster startup
+  swcMinify: true,
   // Add API route headers to handle CORS
   async headers() {
     return [

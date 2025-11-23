@@ -13,7 +13,35 @@ export default async function handler(
   }
 
   if (req.method === 'GET') {
-    const applications = await prisma.userApplication.findMany({
+    // Get user's profile
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { id: true }
+    });
+
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Get all applications from Application table
+    const allApplications = await prisma.application.findMany({
+      where: { profileId: profile.id },
+      include: {
+        template: {
+          select: {
+            schoolId: true,
+            schoolName: true,
+            program: true,
+            category: true
+          }
+        },
+        userApplication: true
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    // Get all UserApplication records
+    const userApplications = await prisma.userApplication.findMany({
       where: { userId },
       include: {
         application: {
@@ -30,35 +58,42 @@ export default async function handler(
             }
           }
         }
-      },
-      orderBy: { updatedAt: 'desc' }
+      }
+    });
+
+    // Create a map of applicationId -> UserApplication for quick lookup
+    const userAppMap = new Map(
+      userApplications.map(ua => [ua.applicationId, ua])
+    );
+
+    // Merge Application records with UserApplication records
+    const mergedApplications = allApplications.map((app) => {
+      const userApp = app.userApplication || userAppMap.get(app.id);
+      const template = app.template;
+      
+      return {
+        id: userApp?.id || app.id,
+        schoolId: template.schoolId,
+        localizedSchoolName: deserializeSchoolName(template.schoolName),
+        program: template.program,
+        category: template.category,
+        applicationId: app.id,
+        applicationStatus: app.status,
+        fillingProgress: userApp?.fillingProgress ?? 0,
+        interviewTime: userApp?.interviewTime,
+        examTime: userApp?.examTime,
+        result: (userApp?.result || 'pending') as 'pending' | 'admitted' | 'rejected' | 'waitlisted',
+        resultTime: userApp?.resultTime,
+        notes: userApp?.notes,
+        reminderSettings: userApp?.reminderSettings,
+        updatedAt: app.updatedAt.toISOString(),
+        templateId: app.templateId
+      };
     });
 
     return res.status(200).json({
       success: true,
-      applications: applications.map((record) => ({
-        id: record.id,
-        schoolId: record.schoolId,
-        schoolName: record.school?.name || record.school?.template?.schoolName || '',
-        localizedSchoolName: record.school?.template
-          ? deserializeSchoolName(record.school.template.schoolName)
-          : record.application?.template
-            ? deserializeSchoolName(record.application.template.schoolName)
-            : record.school?.name,
-        program: record.school?.template?.program || record.application?.template?.program,
-        category: record.school?.template?.category,
-        applicationId: record.applicationId,
-        applicationStatus: record.application?.status,
-        fillingProgress: record.fillingProgress,
-        interviewTime: record.interviewTime,
-        examTime: record.examTime,
-        result: record.result,
-        resultTime: record.resultTime,
-        notes: record.notes,
-        reminderSettings: record.reminderSettings,
-        updatedAt: record.updatedAt,
-        templateId: record.application?.templateId
-      }))
+      applications: mergedApplications
     });
   }
 
