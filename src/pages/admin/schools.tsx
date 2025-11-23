@@ -309,11 +309,15 @@ export default function AdminSchoolsPage() {
   }, [fetchTemplates, router]);
 
   useEffect(() => {
+    // 首次加载时立即执行，搜索时使用较短的 debounce
+    const isInitialLoad = searchTerm === '';
+    const delay = isInitialLoad ? 0 : 150;
+    
     const handler = setTimeout(() => {
       fetchSchools();
-    }, 300);
+    }, delay);
     return () => clearTimeout(handler);
-  }, [fetchSchools]);
+  }, [fetchSchools, searchTerm]);
 
   const validateRow = useCallback(
     (row: GridSchool) => {
