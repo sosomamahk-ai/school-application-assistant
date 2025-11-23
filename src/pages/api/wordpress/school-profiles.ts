@@ -369,6 +369,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const profiles = wordPressData.profiles || [];
     console.log(`[school-profiles] Loaded ${profiles.length} profiles (fromCache: ${fromCache})`);
+    
+    // Debug: Check if profiles have ACF data with name_short
+    if (profiles.length > 0 && process.env.NODE_ENV === 'development') {
+      const sampleProfile = profiles[0];
+      console.log(`[school-profiles] Sample profile ACF check:`, {
+        profileId: sampleProfile.id,
+        title: sampleProfile.title,
+        hasAcf: !!sampleProfile.acf,
+        acfKeys: sampleProfile.acf ? Object.keys(sampleProfile.acf) : [],
+        nameShort: sampleProfile.acf?.name_short,
+        acfType: typeof sampleProfile.acf
+      });
+    }
 
     // Get raw WordPress data directly from API to extract profile_type slug
     const baseUrl = process.env.WORDPRESS_BASE_URL || process.env.NEXT_PUBLIC_WORDPRESS_BASE_URL;
@@ -428,6 +441,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   if (id) {
                     rawProfileMap.set(id, post);
                     rawProfileMapByString.set(idString, post);
+                    
+                    // Debug: log ACF structure for first item in first batch
+                    if (i === 0 && batchData[0] === post && process.env.NODE_ENV === 'development') {
+                      console.log(`[school-profiles] Sample raw post ACF structure:`, {
+                        id,
+                        hasAcf: !!post.acf,
+                        acfKeys: post.acf ? Object.keys(post.acf) : [],
+                        nameShort: post.acf?.name_short,
+                        acfFormat: typeof post.acf
+                      });
+                    }
                   }
                 });
                 console.log(`[school-profiles] Fetched batch ${Math.floor(i / BATCH_SIZE) + 1}, ${batchData.length} profiles`);
@@ -609,6 +633,66 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Map slug to category (returns 'unresolved_raw' if slug is null)
       const profileType = mapSlugToCategory(profileTypeSlug);
 
+      // Extract name_short from multiple sources
+      // Priority: rawPost.acf > profile.acf (profile comes from getWordPressSchools which has complete ACF)
+      let nameShort: string | undefined;
+      
+      // First try from raw post data (has full ACF data from WordPress REST API)
+      if (rawPost?.acf) {
+        nameShort = rawPost.acf.name_short || 
+                   rawPost.acf.nameShort ||
+                   undefined;
+      }
+      
+      // Fallback to profile.acf (from getWordPressSchools - this should have complete ACF)
+      // This is important because getWordPressSchools uses normalizeAcf which preserves all ACF fields
+      if (!nameShort && profile.acf) {
+        nameShort = profile.acf.name_short || 
+                   profile.acf.nameShort ||
+                   undefined;
+      }
+      
+      // Also try direct fields (less common)
+      if (!nameShort) {
+        nameShort = rawPost?.name_short || undefined;
+      }
+      
+      // Clean up the value
+      if (nameShort && typeof nameShort === 'string') {
+        nameShort = nameShort.trim() || undefined;
+      } else if (nameShort && typeof nameShort !== 'string') {
+        nameShort = undefined;
+      }
+
+      // Merge ACF data: start with profile.acf (from getWordPressSchools, has complete ACF),
+      // then overlay rawPost.acf (rawPost takes precedence for any conflicts)
+      // This ensures we have all ACF fields from both sources
+      const mergedAcf: Record<string, any> = { ...(profile.acf || {}) };
+      
+      if (rawPost?.acf && typeof rawPost.acf === 'object' && !Array.isArray(rawPost.acf)) {
+        // Merge rawPost ACF into mergedAcf (rawPost takes precedence)
+        Object.assign(mergedAcf, rawPost.acf);
+      }
+
+      // Ensure name_short is set if we found it anywhere
+      if (nameShort) {
+        mergedAcf.name_short = nameShort;
+      }
+      
+      // Debug logging for missing name_short
+      if (!nameShort && process.env.NODE_ENV === 'development') {
+        console.log(`[school-profiles] Profile ${profile.id} (${profile.title}): name_short not found`, {
+          profileId: profile.id,
+          title: profile.title,
+          hasRawPost: !!rawPost,
+          hasRawPostAcf: !!rawPost?.acf,
+          rawPostAcfKeys: rawPost?.acf ? Object.keys(rawPost.acf) : [],
+          hasProfileAcf: !!profile.acf,
+          profileAcfKeys: profile.acf ? Object.keys(profile.acf) : [],
+          profileAcfNameShort: profile.acf?.name_short
+        });
+      }
+
       // Find associated template
       const key = `profile-${profile.id}`;
       const template = templateMap.get(key) || null;
@@ -618,6 +702,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return {
         ...profile,
+        acf: mergedAcf, // Use merged ACF data
         templateId,
         template,
         hasTemplate,

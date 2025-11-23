@@ -281,7 +281,7 @@ export default function TemplatesManagementV2() {
 
         {/* Stats */}
         {data?.stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="card">
               <div className="text-sm text-gray-600">总学校数</div>
               <div className="text-2xl font-bold text-gray-900">{data.stats.total}</div>
@@ -294,17 +294,6 @@ export default function TemplatesManagementV2() {
               <div className="text-sm text-gray-600">待创建模板</div>
               <div className="text-2xl font-bold text-orange-600">{data.stats.withoutTemplate}</div>
             </div>
-            <div className="card">
-              <div className="text-sm text-gray-600">当前分类</div>
-              <div className="text-2xl font-bold text-blue-600">{currentProfiles.length}</div>
-            </div>
-            {data?.stats.unresolved && data.stats.unresolved > 0 && (
-              <div className="card border-yellow-300 bg-yellow-50">
-                <div className="text-sm text-yellow-800">未分类学校</div>
-                <div className="text-2xl font-bold text-yellow-600">{data.stats.unresolved}</div>
-                <div className="text-xs text-yellow-700 mt-1">需要检查 WordPress 数据</div>
-              </div>
-            )}
           </div>
         )}
 
