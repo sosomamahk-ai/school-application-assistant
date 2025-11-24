@@ -2,7 +2,76 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { deserializeSchoolName } from '@/utils/templates';
 import { parseWordPressTemplateId } from '@/services/wordpressSchoolService';
-import { getWordPressSchools } from '@/services/wordpressSchoolService';
+
+// Helper function to get templateId -> category mapping from /api/wordpress/school-profiles processed data
+// This uses the same data source that the template list page uses
+async function getTemplateCategoryMap(): Promise<Map<string, string>> {
+  const categoryMap = new Map<string, string>();
+  
+  try {
+    // Call /api/wordpress/school-profiles internally to get processed data
+    // For server-side calls, use absolute URL
+    let baseUrl = 'http://localhost:3000';
+    if (process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    } else if (process.env.NEXT_PUBLIC_APP_URL) {
+      baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    }
+    
+    const url = `${baseUrl}/api/wordpress/school-profiles`;
+    console.log(`[api/templates] Fetching from ${url}`);
+    
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
+    
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        // Add a special header to indicate this is an internal call
+        'X-Internal-Request': 'true'
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`[api/templates] Failed to fetch from /api/wordpress/school-profiles: ${response.status} ${response.statusText}`);
+      return categoryMap;
+    }
+
+    const data = await response.json();
+    if (!data.success || !data.profiles) {
+      console.warn('[api/templates] Invalid response from /api/wordpress/school-profiles:', data);
+      return categoryMap;
+    }
+
+    // Extract templateId -> profileType mapping from the grouped profiles
+    // The data.profiles is an object with keys like '国际学校', '本地中学', etc.
+    Object.values(data.profiles).forEach((profileGroup: any) => {
+      if (Array.isArray(profileGroup)) {
+        profileGroup.forEach((profile: any) => {
+          // Each profile has templateId and profileType (already processed by /api/wordpress/school-profiles)
+          if (profile.templateId && profile.profileType) {
+            categoryMap.set(profile.templateId, profile.profileType);
+            console.log(`[api/templates] Mapped template ${profile.templateId} -> ${profile.profileType}`);
+          }
+        });
+      }
+    });
+
+    console.log(`[api/templates] ✅ Built category map with ${categoryMap.size} entries from /api/wordpress/school-profiles`);
+  } catch (error: any) {
+    if (error.name === 'TimeoutError') {
+      console.error('[api/templates] Timeout while fetching from /api/wordpress/school-profiles');
+    } else {
+      console.error('[api/templates] Failed to build template category map from /api/wordpress/school-profiles:', error);
+    }
+  }
+  
+  return categoryMap;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -98,14 +167,30 @@ export default async function handler(
         return null;
       };
 
-      // Get WordPress schools data to enrich category information
-      let wordPressSchools: any[] = [];
-      try {
-        const wpData = await getWordPressSchools({ forceRefresh: false });
-        wordPressSchools = wpData.profiles || [];
-      } catch (error) {
-        console.warn('[api/templates] Failed to fetch WordPress schools for category enrichment:', error);
-      }
+      // Build a map of templateId -> category
+      // Priority: 1. New format schoolId extraction, 2. /api/wordpress/school-profiles data
+      const templateCategoryMap = new Map<string, string>();
+      
+      // First pass: extract categories from new format schoolIds
+      templates.forEach((template) => {
+        const extractedCategory = extractCategoryFromSchoolId(template.schoolId);
+        if (extractedCategory) {
+          templateCategoryMap.set(template.id, extractedCategory);
+        }
+      });
+
+      // Second pass: get categories from /api/wordpress/school-profiles processed data
+      // This uses the same data source that the template list page uses
+      const wpCategoryMap = await getTemplateCategoryMap();
+      
+      // Merge WordPress category map (only for templates not already in map)
+      wpCategoryMap.forEach((category, templateId) => {
+        if (!templateCategoryMap.has(templateId)) {
+          templateCategoryMap.set(templateId, category);
+        }
+      });
+
+      console.log(`[api/templates] Category map: ${templateCategoryMap.size} templates with categories`);
 
       // Return all active templates regardless of fieldsData structure
       // This allows templates to be displayed even if fieldsData is empty or has different structures
@@ -115,47 +200,15 @@ export default async function handler(
           // Ensure schoolName is properly deserialized
           const deserializedName = deserializeSchoolName(template.schoolName);
           
-          // Determine category: use template.category if available, otherwise try to extract from schoolId or WordPress
+          // Determine category: use template.category if available and not default, 
+          // otherwise use the category from WordPress lookup
           let finalCategory = template.category;
           
-          // If category is null or default value, try to get it from schoolId or WordPress
-          // Note: We check for both null and "国际学校" because the database default is "国际学校"
-          // but we want to get the actual category from WordPress if available
+          // If category is null or default value, use the one from WordPress lookup
           if (!finalCategory || finalCategory === '国际学校') {
-            // First try to extract from new format schoolId (e.g., "isf-is-2025")
-            const extractedCategory = extractCategoryFromSchoolId(template.schoolId);
-            if (extractedCategory && extractedCategory !== '国际学校') {
-              finalCategory = extractedCategory;
-            } else {
-              // Try to get from WordPress by parsing old format schoolId (e.g., "wp-profile-123")
-              const parsed = parseWordPressTemplateId(template.schoolId);
-              if (parsed) {
-                const wpSchool = wordPressSchools.find(
-                  (wp: any) => wp.id === parsed.id && wp.type === parsed.type
-                );
-                if (wpSchool && wpSchool.category) {
-                  // Map WordPress category to standard category
-                  const categoryMap: Record<string, string> = {
-                    '国际学校': '国际学校',
-                    '香港国际学校': '国际学校',
-                    '香港本地中学': '本地中学',
-                    '本地中学': '本地中学',
-                    '香港本地小学': '本地小学',
-                    '本地小学': '本地小学',
-                    '香港幼稚园': '幼稚园',
-                    '幼稚园': '幼稚园',
-                    '大学': '大学'
-                  };
-                  const mappedCategory = categoryMap[wpSchool.category] || wpSchool.category;
-                  // Only use WordPress category if it's different from default
-                  if (mappedCategory && mappedCategory !== '国际学校') {
-                    finalCategory = mappedCategory;
-                  } else if (!finalCategory) {
-                    // If template.category is null, use WordPress category even if it's "国际学校"
-                    finalCategory = mappedCategory || '国际学校';
-                  }
-                }
-              }
+            const wpCategory = templateCategoryMap.get(template.id);
+            if (wpCategory) {
+              finalCategory = wpCategory;
             }
           }
           
