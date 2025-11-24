@@ -200,21 +200,35 @@ export default async function handler(
           // Ensure schoolName is properly deserialized
           const deserializedName = deserializeSchoolName(template.schoolName);
           
-          // Determine category: use template.category if available and not default, 
-          // otherwise use the category from WordPress lookup
+          // Priority for category (defensive fallback chain):
+          // 1. Use database category field if it exists and is not null
+          // 2. Try to extract from schoolId format (for new standardized format: {name_short}-{category_abbr}-{year})
+          // 3. Try WordPress lookup via templateCategoryMap (from /api/wordpress/school-profiles)
+          // 4. Fallback to default ('国际学校')
           let finalCategory = template.category;
           
-          // If category is null or default value, use the one from WordPress lookup
-          if (!finalCategory || finalCategory === '国际学校') {
-            const wpCategory = templateCategoryMap.get(template.id);
-            if (wpCategory) {
-              finalCategory = wpCategory;
+          // Only if category is null in database, try fallback strategies
+          if (!finalCategory) {
+            // Strategy 1: Extract from schoolId format (most reliable for new templates)
+            const extractedCategory = extractCategoryFromSchoolId(template.schoolId);
+            if (extractedCategory) {
+              finalCategory = extractedCategory;
+              console.log(`[api/templates] Template ${template.id} (${template.schoolId}): Extracted category from schoolId: ${extractedCategory}`);
+            } 
+            // Strategy 2: Try WordPress lookup (for templates created from WordPress profiles)
+            else {
+              const wpCategory = templateCategoryMap.get(template.id);
+              if (wpCategory) {
+                finalCategory = wpCategory;
+                console.log(`[api/templates] Template ${template.id} (${template.schoolId}): Found category from WordPress: ${wpCategory}`);
+              }
             }
           }
           
-          // Fallback to default if still null
+          // Final fallback: ensure category is never null (defensive programming)
           if (!finalCategory) {
             finalCategory = '国际学校';
+            console.warn(`[api/templates] ⚠️ Template ${template.id} (${template.schoolId}) has null category in DB and no fallback found. Using default '国际学校'. This should be fixed by backfill script.`);
           }
           
           return {
@@ -248,10 +262,29 @@ export default async function handler(
   } else if (req.method === 'POST') {
     try {
       // Create new template (admin function)
-      const { schoolId, schoolName, program, description, fields } = req.body;
+      const { schoolId, schoolName, program, description, fields, category } = req.body;
 
       if (!schoolId || !schoolName || !program || !fields) {
         return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Extract category from schoolId if not provided
+      let finalCategory = category;
+      if (!finalCategory) {
+        const match = schoolId.match(/-([a-z]{2})-\d{4}$/);
+        if (match) {
+          const abbr = match[1];
+          const abbrMap: Record<string, string> = {
+            'is': '国际学校',
+            'ls': '本地中学',
+            'lp': '本地小学',
+            'kg': '幼稚园',
+            'un': '大学'
+          };
+          finalCategory = abbrMap[abbr] || '国际学校';
+        } else {
+          finalCategory = '国际学校'; // Default fallback
+        }
       }
 
       const template = await prisma.schoolFormTemplate.create({
@@ -260,6 +293,7 @@ export default async function handler(
           schoolName,
           program,
           description,
+          category: finalCategory, // Always set category to prevent null values
           fieldsData: fields
         }
       });

@@ -188,8 +188,34 @@ export default async function handler(
       '大学': '大学'
     };
 
-    const finalCategory = accurateCategory || 
-      (profile.category ? (categoryMap[profile.category] || profile.category) : null);
+    // Ensure finalCategory is never null - use multiple fallback strategies
+    let finalCategory: string = '国际学校'; // Default fallback
+    
+    // Priority 1: Use accurate category from WordPress API (profile_type taxonomy)
+    if (accurateCategory) {
+      finalCategory = accurateCategory;
+    }
+    // Priority 2: Use profile.category from WordPress data
+    else if (profile.category) {
+      finalCategory = categoryMap[profile.category] || profile.category;
+    }
+    // Priority 3: Try to extract from schoolId format (for new standardized format)
+    else {
+      const schoolIdMatch = templateId.match(/-([a-z]{2})-\d{4}$/);
+      if (schoolIdMatch) {
+        const abbr = schoolIdMatch[1];
+        const abbrMap: Record<string, string> = {
+          'is': '国际学校',
+          'ls': '本地中学',
+          'lp': '本地小学',
+          'kg': '幼稚园',
+          'un': '大学'
+        };
+        finalCategory = abbrMap[abbr] || '国际学校';
+      }
+    }
+    
+    // finalCategory is guaranteed to be non-null at this point
 
     const template = await prisma.schoolFormTemplate.create({
       data: {
@@ -197,7 +223,7 @@ export default async function handler(
         schoolName: serializeSchoolName(schoolName),
         program: profile.acf?.program || '申请表单',
         description: profile.acf?.description || null,
-        category: finalCategory,
+        category: finalCategory, // Guaranteed to be non-null (default: '国际学校')
         fieldsData: fieldsData,
         isActive: true
       }

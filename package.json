@@ -34,7 +34,9 @@
     "test:worker": "node scripts/test-worker-with-auth.js",
     "test:openai": "node scripts/test-openai-direct.js",
     "fix:wordpress-url": "node scripts/fix-wordpress-url.js",
-    "fix:wordpress-url:auto": "node scripts/fix-wordpress-url-auto.js"
+    "fix:wordpress-url:auto": "node scripts/fix-wordpress-url-auto.js",
+    "backfill:template-category": "ts-node --project tsconfig.json scripts/backfill-template-category.ts",
+    "test:template-category": "ts-node --project tsconfig.json scripts/test-template-category-fix.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
