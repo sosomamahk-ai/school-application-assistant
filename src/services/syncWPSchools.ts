@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { getWordPressSchools } from './wordpressSchoolService';
+import { getWordPressSchools, parseWordPressTemplateId } from './wordpressSchoolService';
 import type { WordPressSchool } from '@/types/wordpress';
 
 type AcfRecord = Record<string, any>;
@@ -8,6 +8,77 @@ type AcfDataMap = Map<number, AcfRecord>;
 const WORDPRESS_ACF_PER_PAGE = Number(process.env.WORDPRESS_ACF_PER_PAGE ?? 100);
 const WORDPRESS_ACF_TIMEOUT_MS = Number(process.env.WORDPRESS_ACF_TIMEOUT_MS ?? 60000);
 const WORDPRESS_ACF_MAX_PAGES = Number(process.env.WORDPRESS_ACF_MAX_PAGES ?? 30);
+
+const normalizeToString = (value: any): string | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const normalized = normalizeToString(item);
+      if (normalized) return normalized;
+    }
+    return null;
+  }
+  if (typeof value === 'object') {
+    if ('value' in value) {
+      return normalizeToString((value as any).value);
+    }
+    if ('label' in value) {
+      return normalizeToString((value as any).label);
+    }
+    if ('name' in value) {
+      return normalizeToString((value as any).name);
+    }
+  }
+  const stringValue = String(value).trim();
+  return stringValue || null;
+};
+
+const pickFromSources = (
+  keys: string[],
+  sources: Array<Record<string, any> | null | undefined>
+): string | null => {
+  for (const key of keys) {
+    for (const source of sources) {
+      if (!source || typeof source !== 'object') continue;
+      if (key in source) {
+        const normalized = normalizeToString((source as any)[key]);
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const getTaxonomyValue = (
+  taxonomies: Record<string, string[]> | undefined,
+  keys: string[]
+): string | null => {
+  if (!taxonomies) return null;
+  for (const key of keys) {
+    const variants = [
+      key,
+      key.replace(/_/g, '-'),
+      key.replace(/-/g, '_')
+    ].map((variant) => variant.trim().toLowerCase());
+
+    for (const variant of variants) {
+      const values = taxonomies[variant];
+      if (Array.isArray(values) && values.length > 0) {
+        const normalized = normalizeToString(values[0]);
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+  }
+  return null;
+};
 
 async function fetchAcfCollection(
   baseUrl: string,
@@ -113,6 +184,23 @@ export async function syncAllWPSchools(): Promise<{
   try {
     console.log('[syncAllWPSchools] Starting sync of all WordPress schools...');
     
+    // Build template lookup map (WordPress id -> templateId)
+    const templateMap = new Map<string, string>();
+    const templates = await prisma.schoolFormTemplate.findMany({
+      select: { id: true, schoolId: true }
+    });
+    templates.forEach((template) => {
+      const parsed = parseWordPressTemplateId(template.schoolId);
+      if (!parsed) {
+        return;
+      }
+      const key = `${parsed.type}:${parsed.id}`;
+      templateMap.set(key, template.id);
+    });
+    console.log(
+      `[syncAllWPSchools] Template lookup ready: ${templateMap.size} WordPress IDs mapped to template IDs`
+    );
+
     // Fetch all schools from WordPress
     const wordPressData = await getWordPressSchools({ forceRefresh: true });
     const allSchools = wordPressData.all || [];
@@ -182,6 +270,24 @@ export async function syncAllWPSchools(): Promise<{
           }
         }
         
+        const nameEnglish =
+          pickFromSources(
+            ['name_english', 'nameEnglish', 'english_name', 'englishName'],
+            [acfFromApi, wpSchool.acf]
+          ) || null;
+
+        let country =
+          pickFromSources(['country'], [acfFromApi, wpSchool.acf]) ||
+          getTaxonomyValue(wpSchool.taxonomies, ['country', 'countries']);
+
+        let location =
+          pickFromSources(['location', 'district', 'region'], [acfFromApi, wpSchool.acf]) ||
+          getTaxonomyValue(wpSchool.taxonomies, ['location', 'locations', 'district', 'region']);
+
+        let bandType =
+          pickFromSources(['band_type', 'band-type', 'bandType'], [acfFromApi, wpSchool.acf]) ||
+          getTaxonomyValue(wpSchool.taxonomies, ['band-type', 'band_type', 'bandtype', 'band']);
+
         // Debug logging for schools without name_short
         if (!nameShort && i < 10) {
           console.log(`[syncAllWPSchools] School ${wpId} (${name}) has no name_short:`, {
@@ -194,6 +300,18 @@ export async function syncAllWPSchools(): Promise<{
         
         const permalink = wpSchool.permalink || wpSchool.url || null;
         
+        // Determine template association (if template exists for this WordPress ID)
+        let templateId: string | null = null;
+        if (wpId) {
+          const key = `${wpSchool.type}:${wpId}`;
+          templateId = templateMap.get(key) || null;
+
+          // Some legacy template ids may not include type prefixes; try fallback keys
+          if (!templateId) {
+            templateId = templateMap.get(`profile:${wpId}`) || templateMap.get(`university:${wpId}`) || null;
+          }
+        }
+
         // Extract profile_type from category or ACF
         // Map category to profile_type
         const categoryToProfileType: Record<string, string> = {
@@ -209,10 +327,6 @@ export async function syncAllWPSchools(): Promise<{
         };
         
         const profileType = categoryToProfileType[wpSchool.category || ''] || 'local';
-
-        // Find associated template if exists (by matching wp_id or name)
-        // Optimized: Skip template lookup to speed up sync (can be done later if needed)
-        let templateId: string | null = null;
 
         // Upsert school into database
         // Strategy: Use wpId as primary identifier (unique constraint)
@@ -234,10 +348,14 @@ export async function syncAllWPSchools(): Promise<{
                 where: { id: existing.id },
                 data: {
                   name: name,
+                  nameEnglish: nameEnglish || undefined,
                   nameShort: nameShort || undefined,
                   permalink: permalink || undefined,
                   profileType: profileType,
                   templateId: templateId || undefined,
+                  country: country || undefined,
+                  location: location || undefined,
+                  bandType: bandType || undefined,
                   metadataSource: 'wordpress',
                   metadataLastFetchedAt: new Date(),
                   updatedAt: new Date()
@@ -257,9 +375,13 @@ export async function syncAllWPSchools(): Promise<{
                     data: {
                       wpId: wpId,
                       name: name,
+                      nameEnglish: nameEnglish || undefined,
                       nameShort: nameShort,  // Allow null
                       permalink: permalink || undefined,
                       profileType: profileType,
+                      country: country || undefined,
+                      location: location || undefined,
+                      bandType: bandType || undefined,
                       metadataSource: 'wordpress',
                       metadataLastFetchedAt: new Date(),
                       updatedAt: new Date()
@@ -271,10 +393,14 @@ export async function syncAllWPSchools(): Promise<{
                     data: {
                       wpId: wpId,
                       name: name,
+                      nameEnglish: nameEnglish || undefined,
                       nameShort: nameShort,  // Can be null
                       permalink: permalink,
                       profileType: profileType,
                       templateId: templateId,
+                      country: country || undefined,
+                      location: location || undefined,
+                      bandType: bandType || undefined,
                       metadataSource: 'wordpress',
                       metadataLastFetchedAt: new Date()
                     }
@@ -286,9 +412,13 @@ export async function syncAllWPSchools(): Promise<{
                   data: {
                     wpId: wpId,
                     name: name,
+                    nameEnglish: nameEnglish || undefined,
                     nameShort: nameShort,  // Can be null
                     permalink: permalink,
                     profileType: profileType,
+                    country: country || undefined,
+                    location: location || undefined,
+                    bandType: bandType || undefined,
                     metadataSource: 'wordpress',
                     metadataLastFetchedAt: new Date()
                   }
@@ -307,10 +437,14 @@ export async function syncAllWPSchools(): Promise<{
                   where: { id: existing.id },
                   data: {
                     name: name,
+                    nameEnglish: nameEnglish || undefined,
                     nameShort: nameShort,  // Allow null
                     permalink: permalink || undefined,
                     profileType: profileType,
                     templateId: templateId || undefined,
+                    country: country || undefined,
+                    location: location || undefined,
+                    bandType: bandType || undefined,
                     metadataSource: 'wordpress',
                     metadataLastFetchedAt: new Date(),
                     updatedAt: new Date()
@@ -330,19 +464,27 @@ export async function syncAllWPSchools(): Promise<{
               where: { templateId: templateId },
               update: {
                 name: name,
+                nameEnglish: nameEnglish || undefined,
                 nameShort: nameShort,  // Allow null
                 permalink: permalink || undefined,
                 profileType: profileType,
+                country: country || undefined,
+                location: location || undefined,
+                bandType: bandType || undefined,
                 metadataSource: 'wordpress',
                 metadataLastFetchedAt: new Date(),
                 updatedAt: new Date()
               },
               create: {
                 name: name,
+                nameEnglish: nameEnglish || undefined,
                 nameShort: nameShort,  // Can be null
                 permalink: permalink,
                 profileType: profileType,
                 templateId: templateId,
+                country: country || undefined,
+                location: location || undefined,
+                bandType: bandType || undefined,
                 metadataSource: 'wordpress',
                 metadataLastFetchedAt: new Date()
               }
@@ -362,9 +504,13 @@ export async function syncAllWPSchools(): Promise<{
                   where: { id: existing.id },
                   data: {
                     name: name,
+                    nameEnglish: nameEnglish || undefined,
                     nameShort: nameShort,  // Allow null
                     permalink: permalink || undefined,
                     profileType: profileType,
+                    country: country || undefined,
+                    location: location || undefined,
+                    bandType: bandType || undefined,
                     metadataSource: 'wordpress',
                     metadataLastFetchedAt: new Date(),
                     updatedAt: new Date()

@@ -296,6 +296,43 @@ const extractProfileType = (post: any): string | null => {
   return null;
 };
 
+const extractTaxonomies = (post: any): Record<string, string[]> => {
+  const result: Record<string, string[]> = {};
+  const embeddedTerms = post?._embedded?.['wp:term'];
+  if (!Array.isArray(embeddedTerms)) {
+    return result;
+  }
+
+  for (const termGroup of embeddedTerms) {
+    if (!Array.isArray(termGroup)) continue;
+    for (const term of termGroup) {
+      const taxonomy = term?.taxonomy;
+      if (!taxonomy || typeof taxonomy !== 'string') continue;
+      const normalizedTaxonomy = taxonomy.trim().toLowerCase();
+      if (!normalizedTaxonomy) continue;
+
+      let name: string | null = null;
+      if (term?.name && typeof term.name === 'string') {
+        name = term.name.trim();
+      } else if (term?.slug && typeof term.slug === 'string') {
+        name = term.slug.trim();
+      } else if (term?.title?.rendered) {
+        name = String(term.title.rendered).trim();
+      }
+
+      if (!name) continue;
+      if (!result[normalizedTaxonomy]) {
+        result[normalizedTaxonomy] = [];
+      }
+      if (!result[normalizedTaxonomy].includes(name)) {
+        result[normalizedTaxonomy].push(name);
+      }
+    }
+  }
+
+  return result;
+};
+
 const toWordPressSchool = (post: any, type: WordPressSchoolType): WordPressSchool => {
   const title = sanitizeHtml(post?.title?.rendered ?? post?.title ?? '');
   
@@ -323,6 +360,7 @@ const toWordPressSchool = (post: any, type: WordPressSchoolType): WordPressSchoo
   // Extract name_short from ACF
   const acfData = normalizeAcf(post?.acf);
   const nameShort = acfData?.name_short || acfData?.nameShort || null;
+  const taxonomies = extractTaxonomies(post);
 
   return {
     id: Number(post?.id ?? post?.ID ?? 0),
@@ -333,7 +371,8 @@ const toWordPressSchool = (post: any, type: WordPressSchoolType): WordPressSchoo
     url: permalink,
     permalink: permalink,
     nameShort: nameShort,
-    acf: acfData
+    acf: acfData,
+    taxonomies
   };
 };
 

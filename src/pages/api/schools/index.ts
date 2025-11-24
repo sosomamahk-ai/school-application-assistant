@@ -46,31 +46,42 @@ export default async function handler(
 
     return res.status(200).json({
       success: true,
-      schools: schools.map((school) => ({
-        id: school.id,
-        templateId: school.templateId,
-        templateSchoolId: school.template?.schoolId || null,
-        name: school.name,
-        schoolName: school.template ? deserializeSchoolName(school.template.schoolName) : school.name,
-        program: school.template?.program || null,
-        category: school.template?.category || school.profileType || null,
-        nameShort: school.nameShort || school.shortName || null,
-        campusLocation: school.campusLocation,
-        gradeRange: school.gradeRange,
-        applicationStart: school.applicationStart || school.template?.applicationStartDate || null,
-        applicationEnd: school.applicationEnd || school.template?.applicationEndDate || null,
-        interviewTime: school.interviewTime,
-        examTime: school.examTime,
-        resultTime: school.resultTime,
-        applicationMaterials: normalizeJsonArray(school.requiredDocuments),
-        applicationRequirements: normalizeJsonArray(school.requirements),
-        officialLink: (school as any).overviewWebsiteSchool || school.officialLink,
-        permalink: school.permalink || null,
-        applicationNotes: school.notes,
-        metadataSource: school.metadataSource,
-        metadataLastFetchedAt: school.metadataLastFetchedAt,
-        wpId: school.wpId
-      }))
+      schools: schools.map((school) => {
+        const nameShortValue = school.nameShort || school.shortName || null;
+        const nameEnglishValue = school.nameEnglish || null;
+        return {
+          id: school.id,
+          templateId: school.templateId,
+          templateSchoolId: school.template?.schoolId || null,
+          name: school.name,
+          nameEnglish: nameEnglishValue,
+          name_english: nameEnglishValue,
+          schoolName: school.template ? deserializeSchoolName(school.template.schoolName) : school.name,
+          program: school.template?.program || null,
+          category: school.template?.category || school.profileType || null,
+          nameShort: nameShortValue,
+          name_short: nameShortValue,
+          country: school.country || null,
+          location: school.location || null,
+          bandType: school.bandType || null,
+          band_type: school.bandType || null,
+          campusLocation: school.campusLocation,
+          gradeRange: school.gradeRange,
+          applicationStart: school.applicationStart || school.template?.applicationStartDate || null,
+          applicationEnd: school.applicationEnd || school.template?.applicationEndDate || null,
+          interviewTime: school.interviewTime,
+          examTime: school.examTime,
+          resultTime: school.resultTime,
+          applicationMaterials: normalizeJsonArray(school.requiredDocuments),
+          applicationRequirements: normalizeJsonArray(school.requirements),
+          officialLink: (school as any).overviewWebsiteSchool || school.officialLink,
+          permalink: school.permalink || null,
+          applicationNotes: school.notes,
+          metadataSource: school.metadataSource,
+          metadataLastFetchedAt: school.metadataLastFetchedAt,
+          wpId: school.wpId
+        };
+      })
     });
   } catch (error) {
     console.error('Failed to fetch schools', error);

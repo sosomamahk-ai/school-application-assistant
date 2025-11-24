@@ -58,6 +58,7 @@ model SchoolFormTemplate {
 model School {
   id                    String             @id @default(cuid())
   name                  String
+  nameEnglish           String?
   shortName             String?
   nameShort             String?
   wpId                  Int?               @unique
@@ -79,6 +80,9 @@ model School {
   metadataSource        String?
   metadataLastFetchedAt DateTime?
   profileType            String?
+  country               String?
+  location              String?
+  bandType              String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   userApplications      UserApplication[]

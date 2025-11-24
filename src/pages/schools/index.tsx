@@ -7,22 +7,26 @@ import { useTranslation } from '@/contexts/TranslationContext';
 import { getLocalizedSchoolName, LocalizedText } from '@/utils/i18n';
 import { GraduationCap, BookOpen, Users, Baby, School } from 'lucide-react';
 
-interface Template {
+interface SchoolRecord {
   id: string;
-  schoolId: string;
+  templateId: string | null;
+  templateSchoolId: string | null;
   schoolName: string | LocalizedText;
-  program: string;
-  category: string | null;
-  description?: string | null;
-}
-
-interface SchoolWithWordPress extends Template {
+  name: string;
+  nameEnglish?: string | null;
+  program?: string | null;
+  category?: string | null;
   nameShort?: string | null;
+  name_short?: string | null;
   permalink?: string | null;
   applicationStart?: string | null;
   applicationEnd?: string | null;
+  country?: string | null;
+  location?: string | null;
+  bandType?: string | null;
   hasApplication?: boolean;
   applicationId?: string | null;
+  wpId?: number | null;
 }
 
 const categoryMap: Record<string, string> = {
@@ -59,15 +63,18 @@ const extractCategoryFromSchoolId = (schoolId: string | null | undefined): strin
   return null;
 };
 
-const getCategoryLabel = (category: string | null | undefined, schoolId?: string | null): string => {
+const getCategoryLabel = (
+  category: string | null | undefined,
+  templateSchoolId?: string | null
+): string => {
   // First try to use the category field
   if (category) {
     return categoryMap[category] || category;
   }
   
   // If category is null/undefined, try to extract from schoolId (for new format templates)
-  if (schoolId) {
-    const extractedCategory = extractCategoryFromSchoolId(schoolId);
+  if (templateSchoolId) {
+    const extractedCategory = extractCategoryFromSchoolId(templateSchoolId);
     if (extractedCategory) {
       return extractedCategory;
     }
@@ -88,23 +95,28 @@ const categoryIcons: Record<string, any> = {
 export default function SchoolsPage() {
   const router = useRouter();
   const { t, language } = useTranslation();
-  const [templates, setTemplates] = useState<SchoolWithWordPress[]>([]);
+  const [schoolRecords, setSchoolRecords] = useState<SchoolRecord[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Fetch templates
-  const fetchTemplates = useCallback(async () => {
+  // Fetch schools with template data
+  const fetchSchools = useCallback(async () => {
     try {
-      const response = await fetch('/api/templates');
+      const response = await fetch('/api/schools');
       if (response.ok) {
         const data = await response.json();
-        const templatesList = data.templates || [];
-        setTemplates(templatesList);
+        const schoolList: SchoolRecord[] = (data.schools || [])
+          .filter((school: any) => school.templateId)
+          .map((school: any) => ({
+            ...school,
+            schoolName: school.schoolName ?? school.name
+          }));
+        setSchoolRecords(schoolList);
       }
     } catch (error) {
-      console.error('Error fetching templates:', error);
+      console.error('Error fetching school records:', error);
     }
   }, []);
 
@@ -142,74 +154,40 @@ export default function SchoolsPage() {
       return;
     }
 
-    Promise.all([fetchTemplates(), fetchApplications()]).finally(() => {
+    Promise.all([fetchSchools(), fetchApplications()]).finally(() => {
       setLoading(false);
     });
-  }, [mounted, router, fetchTemplates, fetchApplications]);
-
-  // Fetch school data (application times, name_short) from School table
-  const [schoolsData, setSchoolsData] = useState<Record<string, any>>({});
-
-  const fetchSchoolsData = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      // Fetch from a new API endpoint that combines template and school data
-      const response = await fetch('/api/schools/list', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const schoolsMap: Record<string, any> = {};
-        (data.schools || []).forEach((school: any) => {
-          if (school.templateId) {
-            schoolsMap[school.templateId] = school;
-          }
-        });
-        setSchoolsData(schoolsMap);
-      }
-    } catch (error) {
-      console.error('Error fetching schools data:', error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    fetchSchoolsData();
-  }, [mounted, fetchSchoolsData]);
+  }, [mounted, router, fetchSchools, fetchApplications]);
 
   // Enrich templates with WordPress data and application status
   const enrichedTemplates = useMemo(() => {
-    return templates.map((template) => {
-      // Find if user has applied to this school
+    return schoolRecords.map((record) => {
       const application = applications.find(
-        (app) => app.templateId === template.id
+        (app) => app.templateId === record.templateId
       );
 
-      // Get school data from School table
-      const schoolData = schoolsData[template.id];
+      const schoolName = record.schoolName ?? record.name;
+      const nameShort =
+        record.nameShort || record.name_short || null;
 
       return {
-        ...template,
-        nameShort: schoolData?.nameShort || schoolData?.shortName || null,
-        permalink: schoolData?.permalink || null,
-        applicationStart: schoolData?.applicationStart || null,
-        applicationEnd: schoolData?.applicationEnd || null,
+        ...record,
+        schoolName,
+        nameShort,
+        permalink: record.permalink || null,
+        applicationStart: record.applicationStart || null,
+        applicationEnd: record.applicationEnd || null,
         hasApplication: !!application,
         applicationId: application?.id || null
       };
     });
-  }, [templates, applications, schoolsData]);
+  }, [schoolRecords, applications]);
 
   // Filter templates by category
   const filteredTemplates = useMemo(() => {
     if (!selectedCategory) return enrichedTemplates;
     return enrichedTemplates.filter((template) => {
-      const category = getCategoryLabel(template.category, template.schoolId);
+      const category = getCategoryLabel(template.category, template.templateSchoolId);
       return category === selectedCategory;
     });
   }, [enrichedTemplates, selectedCategory]);
@@ -225,7 +203,7 @@ export default function SchoolsPage() {
     };
 
     enrichedTemplates.forEach((template) => {
-      const category = getCategoryLabel(template.category, template.schoolId);
+      const category = getCategoryLabel(template.category, template.templateSchoolId);
       if (statsMap.hasOwnProperty(category)) {
         statsMap[category]++;
       }
@@ -234,7 +212,12 @@ export default function SchoolsPage() {
     return statsMap;
   }, [enrichedTemplates]);
 
-  const handleApply = async (template: SchoolWithWordPress) => {
+  const handleApply = async (template: SchoolRecord) => {
+    if (!template.templateId) {
+      alert('该学校暂未提供在线模板');
+      return;
+    }
+
     if (template.hasApplication && template.applicationId) {
       // Already applied, navigate to application
       router.push(`/application/${template.applicationId}`);
@@ -256,7 +239,7 @@ export default function SchoolsPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          templateId: template.id
+          templateId: template.templateId
         })
       });
 
@@ -363,7 +346,7 @@ export default function SchoolsPage() {
                               </td>
                               <td className="px-4 py-4 text-center whitespace-nowrap">
                                 <span className="text-sm text-gray-600">
-                                  {getCategoryLabel(template.category, template.schoolId)}
+                                  {getCategoryLabel(template.category, template.templateSchoolId)}
                                 </span>
                               </td>
                               <td className="px-4 py-4 text-center text-gray-600">

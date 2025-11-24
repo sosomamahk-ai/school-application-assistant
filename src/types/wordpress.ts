@@ -20,6 +20,7 @@ export interface WordPressSchool {
   permalink?: string;
   nameShort?: string | null;
   acf: Record<string, any>;
+  taxonomies?: Record<string, string[]>;
 }
 
 export interface WordPressSchoolResponse {

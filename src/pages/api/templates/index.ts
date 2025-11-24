@@ -1,77 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { deserializeSchoolName } from '@/utils/templates';
-import { parseWordPressTemplateId } from '@/services/wordpressSchoolService';
-
-// Helper function to get templateId -> category mapping from /api/wordpress/school-profiles processed data
-// This uses the same data source that the template list page uses
-async function getTemplateCategoryMap(): Promise<Map<string, string>> {
-  const categoryMap = new Map<string, string>();
-  
-  try {
-    // Call /api/wordpress/school-profiles internally to get processed data
-    // For server-side calls, use absolute URL
-    let baseUrl = 'http://localhost:3000';
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`;
-    } else if (process.env.NEXT_PUBLIC_APP_URL) {
-      baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-    }
-    
-    const url = `${baseUrl}/api/wordpress/school-profiles`;
-    console.log(`[api/templates] Fetching from ${url}`);
-    
-    // Create AbortController for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
-    
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        // Add a special header to indicate this is an internal call
-        'X-Internal-Request': 'true'
-      },
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      console.warn(`[api/templates] Failed to fetch from /api/wordpress/school-profiles: ${response.status} ${response.statusText}`);
-      return categoryMap;
-    }
-
-    const data = await response.json();
-    if (!data.success || !data.profiles) {
-      console.warn('[api/templates] Invalid response from /api/wordpress/school-profiles:', data);
-      return categoryMap;
-    }
-
-    // Extract templateId -> profileType mapping from the grouped profiles
-    // The data.profiles is an object with keys like '国际学校', '本地中学', etc.
-    Object.values(data.profiles).forEach((profileGroup: any) => {
-      if (Array.isArray(profileGroup)) {
-        profileGroup.forEach((profile: any) => {
-          // Each profile has templateId and profileType (already processed by /api/wordpress/school-profiles)
-          if (profile.templateId && profile.profileType) {
-            categoryMap.set(profile.templateId, profile.profileType);
-            console.log(`[api/templates] Mapped template ${profile.templateId} -> ${profile.profileType}`);
-          }
-        });
-      }
-    });
-
-    console.log(`[api/templates] ✅ Built category map with ${categoryMap.size} entries from /api/wordpress/school-profiles`);
-  } catch (error: any) {
-    if (error.name === 'TimeoutError') {
-      console.error('[api/templates] Timeout while fetching from /api/wordpress/school-profiles');
-    } else {
-      console.error('[api/templates] Failed to build template category map from /api/wordpress/school-profiles:', error);
-    }
-  }
-  
-  return categoryMap;
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -98,7 +27,12 @@ export default async function handler(
             school: {
               select: {
                 nameShort: true,
-                permalink: true
+                nameEnglish: true,
+                permalink: true,
+                country: true,
+                location: true,
+                bandType: true,
+                profileType: true
               }
             }
           }
@@ -121,7 +55,11 @@ export default async function handler(
             applicationStartDate: template.applicationStartDate,
             applicationEndDate: template.applicationEndDate,
             nameShort: template.school?.nameShort || null,
-            permalink: template.school?.permalink || null
+            nameEnglish: template.school?.nameEnglish || null,
+            permalink: template.school?.permalink || null,
+            country: template.school?.country || null,
+            location: template.school?.location || null,
+            bandType: template.school?.bandType || null
           }
         });
       }
@@ -147,7 +85,12 @@ export default async function handler(
           school: {
             select: {
               nameShort: true,
-              permalink: true
+              nameEnglish: true,
+              permalink: true,
+              country: true,
+              location: true,
+              bandType: true,
+              profileType: true
             }
           }
         },
@@ -187,31 +130,6 @@ export default async function handler(
         return null;
       };
 
-      // Build a map of templateId -> category
-      // Priority: 1. New format schoolId extraction, 2. /api/wordpress/school-profiles data
-      const templateCategoryMap = new Map<string, string>();
-      
-      // First pass: extract categories from new format schoolIds
-      templates.forEach((template) => {
-        const extractedCategory = extractCategoryFromSchoolId(template.schoolId);
-        if (extractedCategory) {
-          templateCategoryMap.set(template.id, extractedCategory);
-        }
-      });
-
-      // Second pass: get categories from /api/wordpress/school-profiles processed data
-      // This uses the same data source that the template list page uses
-      const wpCategoryMap = await getTemplateCategoryMap();
-      
-      // Merge WordPress category map (only for templates not already in map)
-      wpCategoryMap.forEach((category, templateId) => {
-        if (!templateCategoryMap.has(templateId)) {
-          templateCategoryMap.set(templateId, category);
-        }
-      });
-
-      console.log(`[api/templates] Category map: ${templateCategoryMap.size} templates with categories`);
-
       // Return all active templates regardless of fieldsData structure
       // This allows templates to be displayed even if fieldsData is empty or has different structures
       const response = {
@@ -223,25 +141,17 @@ export default async function handler(
           // Priority for category (defensive fallback chain):
           // 1. Use database category field if it exists and is not null
           // 2. Try to extract from schoolId format (for new standardized format: {name_short}-{category_abbr}-{year})
-          // 3. Try WordPress lookup via templateCategoryMap (from /api/wordpress/school-profiles)
-          // 4. Fallback to default ('国际学校')
+          // 3. Fallback to school.profileType or default
           let finalCategory = template.category;
           
-          // Only if category is null in database, try fallback strategies
           if (!finalCategory) {
-            // Strategy 1: Extract from schoolId format (most reliable for new templates)
             const extractedCategory = extractCategoryFromSchoolId(template.schoolId);
             if (extractedCategory) {
               finalCategory = extractedCategory;
               console.log(`[api/templates] Template ${template.id} (${template.schoolId}): Extracted category from schoolId: ${extractedCategory}`);
             } 
-            // Strategy 2: Try WordPress lookup (for templates created from WordPress profiles)
-            else {
-              const wpCategory = templateCategoryMap.get(template.id);
-              if (wpCategory) {
-                finalCategory = wpCategory;
-                console.log(`[api/templates] Template ${template.id} (${template.schoolId}): Found category from WordPress: ${wpCategory}`);
-              }
+            else if (template.school?.profileType) {
+              finalCategory = template.school.profileType;
             }
           }
           
@@ -252,20 +162,12 @@ export default async function handler(
           }
           
           // Get nameShort from School table, fallback to WordPress if available
-          let nameShort = template.school?.nameShort || null;
-          let permalink = template.school?.permalink || null;
-          
-          // If School record doesn't exist or nameShort is null, try to get from WordPress
-          // This is a fallback for templates created before School sync was implemented
-          if (!nameShort || !permalink) {
-            // Try to parse schoolId to get WordPress ID
-            const parsed = parseWordPressTemplateId(template.schoolId);
-            if (parsed) {
-              // Note: We can't easily fetch WordPress data here without making another API call
-              // The nameShort should be synced to School table when template is created
-              // For now, we'll just return what's in the School table
-            }
-          }
+          const nameShort = template.school?.nameShort || null;
+          const nameEnglish = template.school?.nameEnglish || null;
+          const permalink = template.school?.permalink || null;
+          const country = template.school?.country || null;
+          const location = template.school?.location || null;
+          const bandType = template.school?.bandType || null;
           
           return {
             id: template.id,
@@ -278,7 +180,11 @@ export default async function handler(
             applicationStartDate: template.applicationStartDate,
             applicationEndDate: template.applicationEndDate,
             nameShort: nameShort,
-            permalink: permalink
+            nameEnglish: nameEnglish,
+            permalink: permalink,
+            country,
+            location,
+            bandType
           };
         })
       };
