@@ -38,6 +38,8 @@ export default async function handler(
         templateId: true,
         name: true,
         shortName: true,
+        nameShort: true,
+        permalink: true,
         applicationStart: true,
         applicationEnd: true
       }
@@ -49,16 +51,22 @@ export default async function handler(
     
     // Create a map of templateId -> school data
     const schoolsMap = new Map<string, any>();
-    schools.forEach(school => {
-      schoolsMap.set(school.templateId, {
-        id: school.id,
-        templateId: school.templateId,
-        name: school.name,
-        shortName: school.shortName,
-        applicationStart: school.applicationStart,
-        applicationEnd: school.applicationEnd
+      schools.forEach(school => {
+        if (!school.templateId) {
+          return;
+        }
+
+        schoolsMap.set(school.templateId, {
+          id: school.id,
+          templateId: school.templateId,
+          name: school.name,
+          shortName: school.shortName,
+          nameShort: school.nameShort,
+          permalink: school.permalink,
+          applicationStart: school.applicationStart,
+          applicationEnd: school.applicationEnd
+        });
       });
-    });
 
     // Enrich with WordPress name_short if available
     templates.forEach(template => {
@@ -67,6 +75,7 @@ export default async function handler(
         schoolsMap.set(template.id, {
           templateId: template.id,
           nameShort: null,
+          permalink: null,
           applicationStart: null,
           applicationEnd: null
         });
@@ -86,10 +95,19 @@ export default async function handler(
 
         if (wpSchool) {
           // Use WordPress name_short if School table doesn't have it
-          if (!schoolEntry.shortName && wpSchool.acf?.name_short) {
-            schoolEntry.shortName = wpSchool.acf.name_short;
-          } else if (!schoolEntry.shortName && wpSchool.acf?.nameShort) {
-            schoolEntry.shortName = wpSchool.acf.nameShort;
+          if (!schoolEntry.nameShort && wpSchool.nameShort) {
+            schoolEntry.nameShort = wpSchool.nameShort;
+          } else if (!schoolEntry.nameShort && wpSchool.acf?.name_short) {
+            schoolEntry.nameShort = wpSchool.acf.name_short;
+          } else if (!schoolEntry.nameShort && wpSchool.acf?.nameShort) {
+            schoolEntry.nameShort = wpSchool.acf.nameShort;
+          }
+          
+          // Use WordPress permalink if School table doesn't have it
+          if (!schoolEntry.permalink && wpSchool.permalink) {
+            schoolEntry.permalink = wpSchool.permalink;
+          } else if (!schoolEntry.permalink && wpSchool.url) {
+            schoolEntry.permalink = wpSchool.url;
           }
         }
       }

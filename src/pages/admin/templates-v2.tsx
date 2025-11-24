@@ -30,6 +30,10 @@ interface ProfileWithTemplate extends WordPressSchool {
     schoolId: string;
     isActive: boolean;
     fieldsData: any;
+    school?: {
+      nameShort?: string | null;
+      permalink?: string | null;
+    } | null;
   } | null;
   hasTemplate: boolean;
   templateStatus: 'pending' | 'created';
@@ -442,7 +446,7 @@ export default function TemplatesManagementV2() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">
-                            {profile.acf?.name_short || '-'}
+                            {template?.school?.nameShort || profile.nameShort || profile.acf?.name_short || '-'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

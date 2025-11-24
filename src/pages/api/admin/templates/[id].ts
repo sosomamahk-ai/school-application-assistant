@@ -16,24 +16,44 @@ export default async function handler(
   const { id } = req.query;
 
   if (req.method === 'PATCH') {
-    // Update template (e.g., toggle isActive)
+    // Update template (e.g., toggle isActive, update dates)
     try {
-      const { isActive } = req.body;
+      const { isActive, applicationStartDate, applicationEndDate } = req.body;
 
-      if (typeof isActive !== 'boolean') {
-        return res.status(400).json({ error: 'isActive must be a boolean' });
+      const updateData: any = {};
+      
+      if (typeof isActive === 'boolean') {
+        updateData.isActive = isActive;
+      }
+      
+      if (applicationStartDate !== undefined) {
+        updateData.applicationStartDate = applicationStartDate 
+          ? new Date(applicationStartDate) 
+          : null;
+      }
+      
+      if (applicationEndDate !== undefined) {
+        updateData.applicationEndDate = applicationEndDate 
+          ? new Date(applicationEndDate) 
+          : null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
       }
 
       const template = await prisma.schoolFormTemplate.update({
         where: { id: id as string },
-        data: { isActive }
+        data: updateData
       });
 
       return res.status(200).json({
         success: true,
         template: {
           id: template.id,
-          isActive: template.isActive
+          isActive: template.isActive,
+          applicationStartDate: template.applicationStartDate,
+          applicationEndDate: template.applicationEndDate
         }
       });
     } catch (error: any) {

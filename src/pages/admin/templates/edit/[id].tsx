@@ -52,6 +52,29 @@ export default function EditTemplate() {
 
     try {
       const token = localStorage.getItem('token');
+      
+      // First update application dates if changed
+      if (template.applicationStartDate !== undefined || template.applicationEndDate !== undefined) {
+        const dateResponse = await fetch(`/api/admin/templates/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            applicationStartDate: template.applicationStartDate,
+            applicationEndDate: template.applicationEndDate
+          })
+        });
+
+        if (!dateResponse.ok) {
+          const error = await dateResponse.json();
+          alert(`更新日期失败: ${error.error || '未知错误'}`);
+          return;
+        }
+      }
+
+      // Then update template data via import endpoint
       const response = await fetch('/api/admin/templates/import', {
         method: 'POST',
         headers: {
@@ -63,7 +86,7 @@ export default function EditTemplate() {
 
       if (response.ok) {
         alert('模板更新成功！');
-        router.push('/admin/templates');
+        router.push('/admin/templates-v2');
       } else {
         const error = await response.json();
         alert(`更新失败: ${error.error || '未知错误'}`);
@@ -113,6 +136,44 @@ export default function EditTemplate() {
           </Link>
           <h1 className="text-3xl font-bold text-gray-900">编辑模板：{template.schoolName}</h1>
           <p className="text-gray-600 mt-2">修改学校信息和表单字段配置</p>
+        </div>
+
+        <div className="card mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">基本信息</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                申请开始日期
+              </label>
+              <input
+                type="date"
+                value={template.applicationStartDate ? new Date(template.applicationStartDate).toISOString().split('T')[0] : ''}
+                onChange={(e) => {
+                  setTemplate({
+                    ...template,
+                    applicationStartDate: e.target.value ? new Date(e.target.value).toISOString() : null
+                  });
+                }}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                申请结束日期
+              </label>
+              <input
+                type="date"
+                value={template.applicationEndDate ? new Date(template.applicationEndDate).toISOString().split('T')[0] : ''}
+                onChange={(e) => {
+                  setTemplate({
+                    ...template,
+                    applicationEndDate: e.target.value ? new Date(e.target.value).toISOString() : null
+                  });
+                }}
+                className="input-field"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="card mb-6">

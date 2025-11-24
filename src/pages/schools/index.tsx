@@ -18,6 +18,7 @@ interface Template {
 
 interface SchoolWithWordPress extends Template {
   nameShort?: string | null;
+  permalink?: string | null;
   applicationStart?: string | null;
   applicationEnd?: string | null;
   hasApplication?: boolean;
@@ -194,7 +195,8 @@ export default function SchoolsPage() {
 
       return {
         ...template,
-        nameShort: schoolData?.shortName || null,
+        nameShort: schoolData?.nameShort || schoolData?.shortName || null,
+        permalink: schoolData?.permalink || null,
         applicationStart: schoolData?.applicationStart || null,
         applicationEnd: schoolData?.applicationEnd || null,
         hasApplication: !!application,
@@ -343,7 +345,18 @@ export default function SchoolsPage() {
                           return (
                             <tr key={template.id} className="hover:bg-gray-50">
                               <td className="px-4 py-4">
-                                <div className="font-semibold text-gray-900">{schoolName}</div>
+                                {template.permalink ? (
+                                  <a
+                                    href={template.permalink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-semibold text-gray-900 hover:text-primary-600 hover:underline"
+                                  >
+                                    {schoolName}
+                                  </a>
+                                ) : (
+                                  <div className="font-semibold text-gray-900">{schoolName}</div>
+                                )}
                                 {template.nameShort && (
                                   <div className="text-xs text-gray-500 mt-1">{template.nameShort}</div>
                                 )}

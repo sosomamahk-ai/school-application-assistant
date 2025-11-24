@@ -96,8 +96,8 @@ export default async function handler(
     }
 
     // Generate standardized template ID: name_short-category-year
-    // Try to get name_short from ACF
-    const nameShort = profile.acf?.name_short || profile.acf?.nameShort || null;
+    // Try to get name_short from ACF or profile.nameShort
+    const nameShort = profile.nameShort || profile.acf?.name_short || profile.acf?.nameShort || null;
     
     // Build standardized template ID
     const templateId = buildStandardizedTemplateId(profile, nameShort);
@@ -226,6 +226,32 @@ export default async function handler(
         category: finalCategory, // Guaranteed to be non-null (default: '国际学校')
         fieldsData: fieldsData,
         isActive: true
+      }
+    });
+
+    // Sync School table with WordPress data (name_short, permalink, and wp_id)
+    // Reuse nameShort from above (line 100)
+    const permalink = profile.permalink || profile.url || null;
+    const wpId = profile.id || null;
+
+    await prisma.school.upsert({
+      where: { templateId: template.id },
+      update: {
+        name: profile.title,
+        nameShort: nameShort || undefined,
+        permalink: permalink || undefined,
+        wpId: wpId || undefined,
+        metadataSource: 'wordpress',
+        metadataLastFetchedAt: new Date()
+      },
+      create: {
+        name: profile.title,
+        nameShort: nameShort,
+        permalink: permalink,
+        wpId: wpId,
+        templateId: template.id,
+        metadataSource: 'wordpress',
+        metadataLastFetchedAt: new Date()
       }
     });
 

@@ -92,7 +92,15 @@ export default async function handler(
             program: true,
             description: true,
             category: true,
-            fieldsData: true
+            fieldsData: true,
+            applicationStartDate: true,
+            applicationEndDate: true,
+            school: {
+              select: {
+                nameShort: true,
+                permalink: true
+              }
+            }
           }
         });
 
@@ -109,7 +117,11 @@ export default async function handler(
             program: template.program,
             description: template.description,
             category: template.category,
-            fields: template.fieldsData
+            fields: template.fieldsData,
+            applicationStartDate: template.applicationStartDate,
+            applicationEndDate: template.applicationEndDate,
+            nameShort: template.school?.nameShort || null,
+            permalink: template.school?.permalink || null
           }
         });
       }
@@ -129,7 +141,15 @@ export default async function handler(
           description: true,
           category: true,
           fieldsData: true,
-          isActive: true
+          isActive: true,
+          applicationStartDate: true,
+          applicationEndDate: true,
+          school: {
+            select: {
+              nameShort: true,
+              permalink: true
+            }
+          }
         },
         orderBy: {
           createdAt: 'desc'
@@ -231,6 +251,22 @@ export default async function handler(
             console.warn(`[api/templates] ⚠️ Template ${template.id} (${template.schoolId}) has null category in DB and no fallback found. Using default '国际学校'. This should be fixed by backfill script.`);
           }
           
+          // Get nameShort from School table, fallback to WordPress if available
+          let nameShort = template.school?.nameShort || null;
+          let permalink = template.school?.permalink || null;
+          
+          // If School record doesn't exist or nameShort is null, try to get from WordPress
+          // This is a fallback for templates created before School sync was implemented
+          if (!nameShort || !permalink) {
+            // Try to parse schoolId to get WordPress ID
+            const parsed = parseWordPressTemplateId(template.schoolId);
+            if (parsed) {
+              // Note: We can't easily fetch WordPress data here without making another API call
+              // The nameShort should be synced to School table when template is created
+              // For now, we'll just return what's in the School table
+            }
+          }
+          
           return {
             id: template.id,
             schoolId: template.schoolId,
@@ -238,7 +274,11 @@ export default async function handler(
             program: template.program,
             description: template.description,
             category: finalCategory,
-            fields: template.fieldsData
+            fields: template.fieldsData,
+            applicationStartDate: template.applicationStartDate,
+            applicationEndDate: template.applicationEndDate,
+            nameShort: nameShort,
+            permalink: permalink
           };
         })
       };

@@ -39,26 +39,30 @@ model UserProfile {
 }
 
 model SchoolFormTemplate {
-  id           String        @id @default(cuid())
-  schoolId     String        @unique
-  schoolName   String
-  program      String
-  description  String?
-  fieldsData   Json
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  category     String?       @default("国际学校")
-  applications Application[]
-  school       School?
+  id                  String        @id @default(cuid())
+  schoolId            String        @unique
+  schoolName          String
+  program             String
+  description         String?
+  fieldsData          Json
+  isActive            Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  category            String?       @default("国际学校")
+  applicationStartDate DateTime?
+  applicationEndDate  DateTime?
+  applications        Application[]
+  school              School?
 }
 
 model School {
   id                    String             @id @default(cuid())
   name                  String
   shortName             String?
-  templateId            String             @unique
-  template              SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  nameShort             String?
+  wpId                  Int?               @unique
+  templateId            String?            @unique
+  template              SchoolFormTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
   campusLocation        String?
   gradeRange            String?
   applicationStart      DateTime?
@@ -74,12 +78,15 @@ model School {
   notes                 String?
   metadataSource        String?
   metadataLastFetchedAt DateTime?
+  profileType            String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   userApplications      UserApplication[]
 
   @@index([applicationEnd])
   @@index([applicationStart])
+  @@index([wpId])
+  @@index([templateId])
 }
 
 model Application {

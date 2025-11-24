@@ -9,6 +9,7 @@
 | `quick-start-iframe.php` | iframe 嵌入方式（最简单） | ⭐ |
 | `api-integration.php` | 完整 API 集成（推荐） | ⭐⭐⭐ |
 | `hide-header-on-login.php` | 隐藏 WordPress Header（登录后） | ⭐⭐ |
+| `check-acf-config.php` | ACF 配置检查和修复工具 | ⭐⭐ |
 
 ---
 

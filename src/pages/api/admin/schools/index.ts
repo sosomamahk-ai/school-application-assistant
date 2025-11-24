@@ -79,7 +79,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 schoolId: true,
                 schoolName: true,
                 program: true,
-                category: true
+                category: true,
+                applicationStartDate: true,
+                applicationEndDate: true
               }
             }
           },

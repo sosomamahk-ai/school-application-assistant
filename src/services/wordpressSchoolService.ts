@@ -10,8 +10,12 @@ type FetchOptions = {
 };
 
 // 增加缓存时间到 30 分钟，减少服务器压力
-const DEFAULT_CACHE_TTL = Number(process.env.NEXT_PUBLIC_WORDPRESS_SCHOOL_CACHE_TTL ?? 30 * 60 * 1000);
-const MAX_PAGES = 10;
+const DEFAULT_CACHE_TTL = Number(
+  process.env.NEXT_PUBLIC_WORDPRESS_SCHOOL_CACHE_TTL ?? 30 * 60 * 1000
+);
+const WORDPRESS_PER_PAGE = Number(process.env.WORDPRESS_REST_PER_PAGE ?? 50);
+const WORDPRESS_REQUEST_TIMEOUT_MS = Number(process.env.WORDPRESS_REST_TIMEOUT_MS ?? 60000);
+const MAX_PAGES = Number(process.env.WORDPRESS_MAX_PAGES ?? 40);
 const WORDPRESS_UNIFIED_ENDPOINT = '/wp-json/schools/v1/list';
 
 const CATEGORY_ALIASES: Record<string, WordPressSchoolCategory> = {
@@ -309,18 +313,27 @@ const toWordPressSchool = (post: any, type: WordPressSchoolType): WordPressSchoo
     post?.acf?.segment ||
     null;
 
+  // Extract permalink from post.link (WordPress REST API standard field)
+  const permalink = typeof post?.link === 'string' && post.link
+    ? post.link
+    : typeof post?.url === 'string' && post.url
+      ? post.url
+      : '';
+
+  // Extract name_short from ACF
+  const acfData = normalizeAcf(post?.acf);
+  const nameShort = acfData?.name_short || acfData?.nameShort || null;
+
   return {
     id: Number(post?.id ?? post?.ID ?? 0),
     title,
     type,
     category: normalizeCategory(categorySource, type),
     logo: extractLogoUrl(post),
-    url: typeof post?.url === 'string' && post.url
-      ? post.url
-      : typeof post?.link === 'string' && post.link
-        ? post.link
-        : '',
-    acf: normalizeAcf(post?.acf)
+    url: permalink,
+    permalink: permalink,
+    nameShort: nameShort,
+    acf: acfData
   };
 };
 
@@ -350,11 +363,34 @@ const normalizeUnifiedPayload = (payload: any): WordPressSchoolResponse => {
   
   const normalizeArray = (items: any[], fallbackType: WordPressSchoolType): WordPressSchool[] =>
     (Array.isArray(items) ? items : []).map((item) => {
+      // Handle ACF data - unified endpoint may return acf as array or object
+      // WordPress unified endpoint returns acf as empty array [] when ACF is not configured
+      let acfData = item?.acf;
+      if (Array.isArray(acfData)) {
+        // If acf is an array, try to find the first object or convert to object
+        if (acfData.length > 0 && typeof acfData[0] === 'object') {
+          acfData = acfData[0];
+        } else {
+          acfData = {}; // Empty array means no ACF data from unified endpoint
+          // Try to get ACF from other fields if available
+          // Some WordPress endpoints might put ACF fields at root level
+          if (item?.name_short) {
+            acfData = { name_short: item.name_short, ...acfData };
+          }
+        }
+      } else if (!acfData || typeof acfData !== 'object') {
+        acfData = {};
+        // Try to get ACF from other fields if available
+        if (item?.name_short) {
+          acfData = { name_short: item.name_short, ...acfData };
+        }
+      }
+      
       // Ensure _embedded data is preserved
       const normalizedItem = {
         ...item,
         title: { rendered: item?.title ?? item?.name ?? '' },
-        acf: item?.acf ?? item,
+        acf: acfData, // Use normalized ACF data
         _embedded: item?._embedded || item?._links ? { 
           ...item._embedded,
           'wp:term': item?._embedded?.['wp:term'] || item?._links?.['wp:term'] ? [item._links['wp:term']] : undefined,
@@ -371,7 +407,9 @@ const normalizeUnifiedPayload = (payload: any): WordPressSchoolResponse => {
           embeddedTerms: normalizedItem._embedded?.['wp:term'],
           embeddedMedia: normalizedItem._embedded?.['wp:featuredmedia'],
           featuredMedia: normalizedItem.featured_media,
-          meta: normalizedItem.meta
+          meta: normalizedItem.meta,
+          acf: normalizedItem.acf,
+          hasAcf: !!normalizedItem.acf && Object.keys(normalizedItem.acf).length > 0
         });
       }
       
@@ -429,12 +467,14 @@ const fetchCollection = async (baseUrl: string, type: WordPressSchoolType): Prom
   while (page <= totalPages && page <= MAX_PAGES) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+      const timeoutId = setTimeout(() => controller.abort(), WORDPRESS_REQUEST_TIMEOUT_MS);
       
       // _embed parameter includes taxonomy terms and featured media
       // Note: Removed profile_type=all as it's not a valid WordPress REST API parameter
-      const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=100&page=${page}&_embed&acf_format=standard`;
-      console.log(`[wordpressSchoolService] Fetching ${type} CPT from: ${endpoint}`);
+      const endpoint = `${baseUrl}/wp-json/wp/v2/${type}?per_page=${WORDPRESS_PER_PAGE}&page=${page}&_embed&acf_format=standard`;
+      console.log(
+        `[wordpressSchoolService] Fetching ${type} CPT from: ${endpoint} (timeout ${WORDPRESS_REQUEST_TIMEOUT_MS}ms)`
+      );
       
       const response = await fetch(endpoint, {
         headers: { Accept: 'application/json' },

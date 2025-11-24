@@ -17,6 +17,8 @@ export interface WordPressSchool {
   category: WordPressSchoolCategory | string;
   logo: string | null;
   url: string;
+  permalink?: string;
+  nameShort?: string | null;
   acf: Record<string, any>;
 }
 

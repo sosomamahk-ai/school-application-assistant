@@ -420,7 +420,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           
           let endpoint: string;
           if (endpointBase === 'unified') {
-            // Unified endpoint might not support include parameter, so try standard profile endpoint
+            // Unified endpoint doesn't return ACF data properly, so always use standard REST API
             // Try 'profile' first, then 'school_profile' as fallback
             endpoint = `${wpBaseUrl}/wp-json/wp/v2/profile?include=${includeParam}&per_page=${BATCH_SIZE}&_embed&acf_format=standard`;
           } else {
@@ -550,7 +550,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Get all templates from database
+    // Get all templates from database with School data
     const templates = await prisma.schoolFormTemplate.findMany({
       select: {
         id: true,
@@ -558,8 +558,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        fieldsData: true
+        fieldsData: true,
+        school: {
+          select: {
+            nameShort: true,
+            permalink: true
+          }
+        }
       }
+    });
+
+    // Pre-fetch all School records to avoid N+1 queries
+    const allSchools = await prisma.school.findMany({
+      select: {
+        templateId: true,
+        nameShort: true,
+        permalink: true
+      }
+    });
+    const schoolMap = new Map<string, typeof allSchools[0]>();
+    allSchools.forEach(school => {
+      if (!school.templateId) {
+        return;
+      }
+
+      schoolMap.set(school.templateId, school);
     });
 
     // Build mapping: WordPress profile ID -> Template
@@ -592,7 +615,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
 
     // Process profiles - use raw data directly if available
-    const processedProfiles = profiles.map((profile) => {
+    const processedProfiles = await Promise.all(profiles.map(async (profile) => {
       // Extract profile_type slug from raw WordPress data
       let rawPost = rawProfileMap.get(profile.id) || rawProfileMapByString.get(String(profile.id));
       
@@ -635,18 +658,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Extract name_short from multiple sources
       // Priority: rawPost.acf > profile.acf (profile comes from getWordPressSchools which has complete ACF)
+      // Note: WordPress unified endpoint returns acf as empty array [], so we need to fetch from REST API
       let nameShort: string | undefined;
       
       // First try from raw post data (has full ACF data from WordPress REST API)
-      if (rawPost?.acf) {
+      // rawPost comes from batch fetch which uses standard REST API with acf_format=standard
+      if (rawPost?.acf && typeof rawPost.acf === 'object' && !Array.isArray(rawPost.acf)) {
         nameShort = rawPost.acf.name_short || 
                    rawPost.acf.nameShort ||
                    undefined;
       }
       
-      // Fallback to profile.acf (from getWordPressSchools - this should have complete ACF)
-      // This is important because getWordPressSchools uses normalizeAcf which preserves all ACF fields
-      if (!nameShort && profile.acf) {
+      // Fallback to profile.acf (from getWordPressSchools - but unified endpoint may have empty acf)
+      if (!nameShort && profile.acf && typeof profile.acf === 'object' && !Array.isArray(profile.acf)) {
         nameShort = profile.acf.name_short || 
                    profile.acf.nameShort ||
                    undefined;
@@ -654,7 +678,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Also try direct fields (less common)
       if (!nameShort) {
-        nameShort = rawPost?.name_short || undefined;
+        nameShort = rawPost?.name_short || profile.nameShort || undefined;
       }
       
       // Clean up the value
@@ -662,6 +686,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         nameShort = nameShort.trim() || undefined;
       } else if (nameShort && typeof nameShort !== 'string') {
         nameShort = undefined;
+      }
+
+      // If we found nameShort and there's a template, sync it to the database
+      if (nameShort) {
+        const key = `profile-${profile.id}`;
+        const template = templateMap.get(key);
+        if (template) {
+          // Update School record with nameShort
+          try {
+            await prisma.school.upsert({
+              where: { templateId: template.id },
+              update: {
+                nameShort: nameShort,
+                permalink: profile.permalink || profile.url || undefined,
+                metadataSource: 'wordpress',
+                metadataLastFetchedAt: new Date()
+              },
+              create: {
+                name: profile.title,
+                nameShort: nameShort,
+                permalink: profile.permalink || profile.url || undefined,
+                templateId: template.id,
+                metadataSource: 'wordpress',
+                metadataLastFetchedAt: new Date()
+              }
+            });
+          } catch (error) {
+            console.warn(`[school-profiles] Failed to sync nameShort for template ${template.id}:`, error);
+          }
+        }
       }
 
       // Merge ACF data: start with profile.acf (from getWordPressSchools, has complete ACF),
@@ -700,18 +754,141 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const hasTemplate = !!template;
       const templateStatus: 'pending' | 'created' = hasTemplate ? 'created' : 'pending';
 
+      // If template exists, get the latest School data from pre-fetched map
+      let templateWithSchool = template;
+      if (template) {
+        const schoolData = schoolMap.get(template.id);
+        if (schoolData) {
+          templateWithSchool = {
+            ...template,
+            school: schoolData
+          };
+        }
+      }
+
       return {
         ...profile,
+        nameShort: nameShort || profile.nameShort || templateWithSchool?.school?.nameShort || undefined, // Ensure nameShort is set
+        permalink: profile.permalink || profile.url || templateWithSchool?.school?.permalink || undefined, // Ensure permalink is set
         acf: mergedAcf, // Use merged ACF data
         templateId,
-        template,
+        template: templateWithSchool,
         hasTemplate,
         templateStatus,
         profileType,
         profileTypeSlug: profileTypeSlug || null,
         unresolvedReason
       };
+    }));
+
+    // Batch update School records with nameShort if found
+    const schoolUpdates: Array<{ templateId: string; nameShort: string; permalink: string | null }> = [];
+    const schoolCreates: Array<{ templateId: string; name: string; nameShort: string; permalink: string | null }> = [];
+    
+    processedProfiles.forEach((profileWithTemplate) => {
+      if (profileWithTemplate.nameShort && profileWithTemplate.template) {
+        const existingSchool = schoolMap.get(profileWithTemplate.template.id);
+        if (existingSchool) {
+          // Update if nameShort is missing
+          if (!existingSchool.nameShort) {
+            schoolUpdates.push({
+              templateId: profileWithTemplate.template.id,
+              nameShort: profileWithTemplate.nameShort,
+              permalink: profileWithTemplate.permalink || null
+            });
+          }
+        } else {
+          // Create new School record
+          schoolCreates.push({
+            templateId: profileWithTemplate.template.id,
+            name: profileWithTemplate.title,
+            nameShort: profileWithTemplate.nameShort,
+            permalink: profileWithTemplate.permalink || null
+          });
+        }
+      }
     });
+
+    // Batch update School records
+    if (schoolUpdates.length > 0) {
+      try {
+        await Promise.all(schoolUpdates.map(update => 
+          prisma.school.update({
+            where: { templateId: update.templateId },
+            data: {
+              nameShort: update.nameShort,
+              permalink: update.permalink || undefined,
+              metadataSource: 'wordpress',
+              metadataLastFetchedAt: new Date()
+            }
+          })
+        ));
+        console.log(`[school-profiles] ✅ Updated ${schoolUpdates.length} School records with nameShort`);
+      } catch (error) {
+        console.warn(`[school-profiles] Failed to batch update School records:`, error);
+      }
+    }
+
+    // Batch create School records
+    if (schoolCreates.length > 0) {
+      try {
+        await Promise.all(schoolCreates.map(create => 
+          prisma.school.create({
+            data: {
+              name: create.name,
+              nameShort: create.nameShort,
+              permalink: create.permalink || undefined,
+              templateId: create.templateId,
+              metadataSource: 'wordpress',
+              metadataLastFetchedAt: new Date()
+            }
+          })
+        ));
+        console.log(`[school-profiles] ✅ Created ${schoolCreates.length} School records`);
+      } catch (error) {
+        console.warn(`[school-profiles] Failed to batch create School records:`, error);
+      }
+    }
+
+    // Re-fetch School data after updates to ensure we have the latest
+    if (schoolUpdates.length > 0 || schoolCreates.length > 0) {
+      const updatedSchools = await prisma.school.findMany({
+        where: {
+          templateId: {
+            in: [...schoolUpdates.map(u => u.templateId), ...schoolCreates.map(c => c.templateId)]
+          }
+        },
+        select: {
+          templateId: true,
+          nameShort: true,
+          permalink: true
+        }
+      });
+      updatedSchools.forEach(school => {
+        if (!school.templateId) {
+          return;
+        }
+
+        schoolMap.set(school.templateId, school);
+      });
+      
+      // Update processedProfiles with latest School data
+      processedProfiles.forEach(profile => {
+        if (profile.template) {
+          const updatedSchool = schoolMap.get(profile.template.id);
+          if (updatedSchool) {
+            profile.template = {
+              ...profile.template,
+              school: updatedSchool
+            };
+            // Also update profile.nameShort from database
+            if (updatedSchool.nameShort) {
+              profile.nameShort = updatedSchool.nameShort;
+            }
+          }
+        }
+      });
+    }
 
     // Group processed profiles
     processedProfiles.forEach((profileWithTemplate) => {
