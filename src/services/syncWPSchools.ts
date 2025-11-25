@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { getWordPressSchools, parseWordPressTemplateId } from './wordpressSchoolService';
 import type { WordPressSchool } from '@/types/wordpress';
@@ -338,7 +339,7 @@ export async function syncAllWPSchools(): Promise<{
           // Primary strategy: Use wpId (most reliable)
           try {
             // Try to find existing school by wpId
-            const existing = await prisma.school.findUnique({
+            const existing = await prisma.school.findFirst({
               where: { wpId: wpId }
             });
 
@@ -391,6 +392,7 @@ export async function syncAllWPSchools(): Promise<{
                   // Create new school with wpId
                   await prisma.school.create({
                     data: {
+                      id: randomUUID(),
                       wpId: wpId,
                       name: name,
                       nameEnglish: nameEnglish || undefined,
@@ -402,7 +404,8 @@ export async function syncAllWPSchools(): Promise<{
                       location: location || undefined,
                       bandType: bandType || undefined,
                       metadataSource: 'wordpress',
-                      metadataLastFetchedAt: new Date()
+                      metadataLastFetchedAt: new Date(),
+                      updatedAt: new Date()
                     }
                   });
                 }
@@ -410,6 +413,7 @@ export async function syncAllWPSchools(): Promise<{
                 // Create new school without template
                 await prisma.school.create({
                   data: {
+                    id: randomUUID(),
                     wpId: wpId,
                     name: name,
                     nameEnglish: nameEnglish || undefined,
@@ -420,7 +424,8 @@ export async function syncAllWPSchools(): Promise<{
                     location: location || undefined,
                     bandType: bandType || undefined,
                     metadataSource: 'wordpress',
-                    metadataLastFetchedAt: new Date()
+                    metadataLastFetchedAt: new Date(),
+                    updatedAt: new Date()
                   }
                 });
               }
@@ -429,7 +434,7 @@ export async function syncAllWPSchools(): Promise<{
             // Handle unique constraint violation (wpId already exists but we didn't find it)
             if (error.code === 'P2002' && error.meta?.target?.includes('wpId')) {
               // Try to find by wpId again (race condition)
-              const existing = await prisma.school.findUnique({
+              const existing = await prisma.school.findFirst({
                 where: { wpId: wpId }
               });
               if (existing) {
@@ -476,6 +481,7 @@ export async function syncAllWPSchools(): Promise<{
                 updatedAt: new Date()
               },
               create: {
+                id: randomUUID(),
                 name: name,
                 nameEnglish: nameEnglish || undefined,
                 nameShort: nameShort,  // Can be null
@@ -486,7 +492,8 @@ export async function syncAllWPSchools(): Promise<{
                 location: location || undefined,
                 bandType: bandType || undefined,
                 metadataSource: 'wordpress',
-                metadataLastFetchedAt: new Date()
+                metadataLastFetchedAt: new Date(),
+                updatedAt: new Date()
               }
             });
           } catch (error: any) {

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { authenticateAdmin } from '@/utils/auth';
 
@@ -121,9 +122,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             officialLink: row.officialLink ?? undefined,
             requiredDocuments: normalizeTextArray(row.requiredDocuments),
             requirements: normalizeTextArray(row.requirements),
-            notes: row.notes ?? undefined
+            notes: row.notes ?? undefined,
+            updatedAt: new Date()
           },
           create: {
+            id: row.id || randomUUID(),
             name: row.name || '未命名学校',
             shortName: row.shortName ?? row.name ?? null,
             templateId: row.templateId,
@@ -138,7 +141,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             requiredDocuments: normalizeTextArray(row.requiredDocuments),
             requirements: normalizeTextArray(row.requirements),
             notes: row.notes ?? undefined,
-            metadataSource: 'manual'
+            metadataSource: 'manual',
+            updatedAt: new Date()
           }
         })
       );
@@ -174,7 +178,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           officialLink: row.officialLink ?? undefined,
           requiredDocuments: normalizeTextArray(row.requiredDocuments),
           requirements: normalizeTextArray(row.requirements),
-          notes: row.notes ?? undefined
+          notes: row.notes ?? undefined,
+          updatedAt: new Date()
         },
         include: {
           template: {

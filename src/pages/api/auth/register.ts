@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { ensureUserRoleColumn, isRoleColumnMissingError } from '@/lib/prisma-role-column';
 
@@ -76,15 +77,20 @@ export default async function handler(
     
     try {
       // Try creating with role field first (if column exists in DB)
+      const userIdValue = randomUUID();
       user = await prisma.user.create({
         data: {
+          id: userIdValue,
           email: emailInput,
           username: body.username ?? null,
           password: hashedPassword,
           role: 'user', // Default role for new users
+          updatedAt: new Date(),
           profile: {
             create: {
-              fullName: fullNameInput || null
+              id: randomUUID(),
+              fullName: fullNameInput || null,
+              updatedAt: new Date()
             }
           }
         },
@@ -100,15 +106,20 @@ export default async function handler(
         console.warn('⚠️ Role column does not exist in database. Attempting in-app fix...');
         try {
           await ensureUserRoleColumn(prisma);
+          const retryUserId = randomUUID();
           user = await prisma.user.create({
             data: {
+              id: retryUserId,
               email: emailInput,
               username: body.username ?? null,
               password: hashedPassword,
               role: 'user',
+              updatedAt: new Date(),
               profile: {
                 create: {
-                  fullName: fullNameInput || null
+                  id: randomUUID(),
+                  fullName: fullNameInput || null,
+                  updatedAt: new Date()
                 }
               }
             },

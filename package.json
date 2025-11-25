@@ -43,7 +43,15 @@
     "fix:wordpress-url": "node scripts/fix-wordpress-url.js",
     "fix:wordpress-url:auto": "node scripts/fix-wordpress-url-auto.js",
     "backfill:template-category": "ts-node --project tsconfig.json scripts/backfill-template-category.ts",
-    "test:template-category": "ts-node --project tsconfig.json scripts/test-template-category-fix.ts"
+    "test:template-category": "ts-node --project tsconfig.json scripts/test-template-category-fix.ts",
+    "sync:profile-to-school": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/index.ts",
+    "sync:profile-to-school:setup": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/setup-env.ts",
+    "sync:profile-to-school:detect-endpoint": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/detect-wp-endpoint.ts",
+    "sync:profile-to-school:test-post": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/test-single-post.ts",
+    "sync:profile-to-school:test-extraction": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/test-field-extraction.ts",
+    "sync:profile-to-school:verify": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/verify-sync.ts",
+    "sync:profile-to-school:resync": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/resync-missing-fields.ts",
+    "sync:profile-to-school:resync-all": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/resync-all-profiles.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",

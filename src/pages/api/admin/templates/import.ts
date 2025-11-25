@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
 import { serializeSchoolName, deserializeSchoolName } from '@/utils/templates';
@@ -46,13 +47,15 @@ export default async function handler(
         updatedAt: new Date()
       },
       create: {
+        id: cleanTemplateData.schoolId || randomUUID(),
         schoolId: cleanTemplateData.schoolId,
         schoolName: schoolNameValue,
         program: cleanTemplateData.program,
         description: cleanTemplateData.description || null,
         category: cleanTemplateData.category || null,
         fieldsData: fieldsData as any,
-        isActive: cleanTemplateData.isActive !== undefined ? cleanTemplateData.isActive : true
+        isActive: cleanTemplateData.isActive !== undefined ? cleanTemplateData.isActive : true,
+        updatedAt: new Date()
       }
     });
 

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
 
@@ -67,9 +68,11 @@ export default async function handler(
         updatedAt: new Date(),
       },
       create: {
+        id: randomUUID(),
         schoolId,
         userId: paramUserId,
         data: data as any,
+        updatedAt: new Date(),
       },
     });
 

@@ -8,62 +8,74 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model User {
-  id               String            @id @default(cuid())
-  email            String            @unique
-  password         String
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  role             String            @default("user")
-  username         String?           @unique
-  profile          UserProfile?
-  userApplications UserApplication[]
-  fieldMappings    FieldMapping[]
+model AIConversation {
+  id            String   @id
+  userId        String
+  applicationId String?
+  messages      Json
+  context       Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+
+  @@index([userId])
 }
 
-model UserProfile {
-  id              String        @id @default(cuid())
-  userId          String        @unique
-  fullName        String?
-  phone           String?
-  birthday        DateTime?
-  nationality     String?
-  educationData   Json?
-  experiencesData Json?
-  essaysData      Json?
-  additionalData  Json?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  applications    Application[]
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Application {
+  id                   String             @id
+  profileId            String
+  templateId           String
+  formData             Json
+  status               String             @default("draft")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime
+  submittedAt          DateTime?
+  targetSubmissionDate DateTime?
+  interviewDate        DateTime?
+  writtenTestDate      DateTime?
+  resultDate           DateTime?
+  progressNotes        String?
+  timelineOverrides    Json?
+  reminderSettings     Json?
+  profile              UserProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  template             SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: NoAction)
+  userApplication      UserApplication?
+
+  @@index([profileId])
+  @@index([templateId])
 }
 
-model SchoolFormTemplate {
-  id                  String        @id @default(cuid())
-  schoolId            String        @unique
-  schoolName          String
-  program             String
-  description         String?
-  fieldsData          Json
-  isActive            Boolean       @default(true)
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  category            String?       @default("国际学校")
-  applicationStartDate DateTime?
-  applicationEndDate  DateTime?
-  applications        Application[]
-  school              School?
+model ApplicationData {
+  id        String   @id
+  schoolId  String
+  userId    String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([schoolId, userId])
+  @@index([schoolId])
+  @@index([userId])
+}
+
+model FieldMapping {
+  id           String   @id
+  userId       String
+  domain       String
+  selector     String
+  domId        String?
+  domName      String?
+  profileField String
+  createdAt    DateTime @default(now())
+  User         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, domain, selector])
 }
 
 model School {
-  id                    String             @id @default(cuid())
+  id                    String              @id
   name                  String
-  nameEnglish           String?
   shortName             String?
-  nameShort             String?
-  wpId                  Int?               @unique
-  templateId            String?            @unique
-  template              SchoolFormTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId            String?             @unique
   campusLocation        String?
   gradeRange            String?
   applicationStart      DateTime?
@@ -74,110 +86,98 @@ model School {
   requiredDocuments     Json?
   requirements          Json?
   officialLink          String?
-  permalink             String?
-  overviewWebsiteSchool String?
   notes                 String?
   metadataSource        String?
   metadataLastFetchedAt DateTime?
-  profileType            String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime
+  overviewWebsiteSchool String?
+  permalink             String?
+  nameShort             String?
+  wpId                  Int?
+  nameEnglish           String?
   country               String?
   location              String?
   bandType              String?
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-  userApplications      UserApplication[]
+  school_profile_type   String?            // ACF 字段: acf.school_profile_type
+  profileType           String?            // Taxonomy 字段: taxonomy.profile_type
+  template              SchoolFormTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  UserApplication       UserApplication[]
 
   @@index([applicationEnd])
   @@index([applicationStart])
+  @@index([templateId])
   @@index([wpId])
-  @@index([templateId])
 }
 
-model Application {
-  id                   String             @id @default(cuid())
-  profileId            String
-  templateId           String
-  formData             Json
-  status               String             @default("draft")
-  targetSubmissionDate DateTime?
-  interviewDate        DateTime?
-  writtenTestDate      DateTime?
-  resultDate           DateTime?
-  progressNotes        String?
-  timelineOverrides    Json?
-  reminderSettings     Json?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  submittedAt          DateTime?
-  profile              UserProfile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  template             SchoolFormTemplate @relation(fields: [templateId], references: [id], onDelete: NoAction)
-  userApplication      UserApplication?
-
-  @@index([profileId])
-  @@index([templateId])
+model SchoolFormTemplate {
+  id                   String        @id
+  schoolId             String        @unique
+  schoolName           String
+  program              String
+  description          String?
+  fieldsData           Json
+  isActive             Boolean       @default(true)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime
+  category             String?       @default("国际学校")
+  applicationEndDate   DateTime?
+  applicationStartDate DateTime?
+  Application          Application[]
+  school               School?
 }
 
-model AIConversation {
-  id            String   @id @default(cuid())
-  userId        String
-  applicationId String?
-  messages      Json
-  context       Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([userId])
-}
-
-model ApplicationData {
-  id        String   @id @default(cuid())
-  schoolId  String
-  userId    String
-  data      Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([schoolId, userId])
-  @@index([schoolId])
-  @@index([userId])
+model User {
+  id              String            @id
+  email           String            @unique
+  password        String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  role            String            @default("user")
+  username        String?           @unique
+  FieldMapping    FieldMapping[]
+  UserApplication UserApplication[]
+  profile         UserProfile?
 }
 
 model UserApplication {
-  id               String    @id @default(cuid())
+  id               String       @id
   userId           String
   schoolId         String
-  applicationId    String?   @unique
-  fillingProgress  Int       @default(0)
+  applicationId    String?      @unique
+  fillingProgress  Int          @default(0)
   interviewTime    DateTime?
   examTime         DateTime?
-  result           String    @default("pending")
+  result           String       @default("pending")
   resultTime       DateTime?
   reminderSettings Json?
   notes            String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school      School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  application Application? @relation(fields: [applicationId], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime
+  application      Application? @relation(fields: [applicationId], references: [id])
+  school           School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, schoolId])
   @@index([schoolId])
   @@index([userId])
 }
 
-model FieldMapping {
-  id           String   @id @default(cuid())
-  userId       String
-  domain       String
-  selector     String
-  domId        String?
-  domName      String?
-  profileField String
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id])
-
-  @@unique([userId, domain, selector])
+model UserProfile {
+  id              String        @id
+  userId          String        @unique
+  fullName        String?
+  phone           String?
+  birthday        DateTime?
+  nationality     String?
+  educationData   Json?
+  experiencesData Json?
+  essaysData      Json?
+  additionalData  Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime
+  Application     Application[]
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model WordPressProfileCache {
@@ -185,7 +185,7 @@ model WordPressProfileCache {
   rawData      Json
   lastSyncedAt DateTime @default(now())
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  updatedAt    DateTime
 
   @@index([lastSyncedAt])
 }

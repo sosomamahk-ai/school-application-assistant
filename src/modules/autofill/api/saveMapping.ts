@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
 
@@ -36,6 +37,7 @@ export default async function saveMappingHandler(req: NextApiRequest, res: NextA
         domName,
       },
       create: {
+        id: randomUUID(),
         userId,
         domain,
         selector,

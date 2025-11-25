@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
 import {
@@ -198,10 +199,12 @@ export default async function handler(
 
       const application = await prisma.application.create({
         data: {
+          id: randomUUID(),
           profileId: profile.id,
           templateId,
           formData: mergedFormData,
-          status: 'draft'
+          status: 'draft',
+          updatedAt: new Date()
         },
         include: {
           template: {
@@ -229,14 +232,17 @@ export default async function handler(
             }
           },
           update: {
-            applicationId: application.id
+            applicationId: application.id,
+            updatedAt: new Date()
           },
           create: {
+            id: randomUUID(),
             userId,
             schoolId: school.id,
             applicationId: application.id,
             fillingProgress: 0,
-            result: 'pending'
+            result: 'pending',
+            updatedAt: new Date()
           }
         });
       }

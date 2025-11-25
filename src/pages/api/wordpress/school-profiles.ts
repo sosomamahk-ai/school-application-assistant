@@ -103,6 +103,32 @@ function mapSlugToCategory(slug: string | null): string {
 }
 
 /**
+ * Map school_profile_type code (ACF field) to display category
+ * A -> 国际学校, B -> 本地中学, C -> 本地小学, D -> 幼稚园
+ */
+function mapSchoolProfileTypeCode(code: string | null | undefined): {
+  category: string;
+  normalizedCode: string | null;
+} {
+  if (!code || typeof code !== 'string') {
+    return { category: 'unresolved_raw', normalizedCode: null };
+  }
+
+  const normalizedCode = code.trim().toUpperCase();
+  const codeMap: Record<string, string> = {
+    A: '国际学校',
+    B: '本地中学',
+    C: '本地小学',
+    D: '幼稚园'
+  };
+
+  return {
+    category: codeMap[normalizedCode] || 'unresolved_raw',
+    normalizedCode: normalizedCode || null
+  };
+}
+
+/**
  * Fetch a single profile by ID with _embed
  */
 async function fetchProfileById(
@@ -562,7 +588,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         school: {
           select: {
             nameShort: true,
-            permalink: true
+            permalink: true,
+            school_profile_type: true
           }
         }
       }
@@ -573,7 +600,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         templateId: true,
         nameShort: true,
-        permalink: true
+        permalink: true,
+        school_profile_type: true
       }
     });
     const schoolMap = new Map<string, typeof allSchools[0]>();
@@ -605,6 +633,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       templateStatus: 'pending' | 'created';
       profileType: string;
       profileTypeSlug?: string | null;
+      schoolProfileType?: string | null;
+      classificationSource?: 'school_profile_type' | 'taxonomy';
       unresolvedReason?: string;
     }>> = {
       '国际学校': [],
@@ -653,9 +683,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      // Map slug to category (returns 'unresolved_raw' if slug is null)
-      const profileType = mapSlugToCategory(profileTypeSlug);
-
       // Extract name_short from multiple sources
       // Priority: rawPost.acf > profile.acf (profile comes from getWordPressSchools which has complete ACF)
       // Note: WordPress unified endpoint returns acf as empty array [], so we need to fetch from REST API
@@ -688,33 +715,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         nameShort = undefined;
       }
 
+      const templateKey = `profile-${profile.id}`;
+      const template = templateMap.get(templateKey) || null;
+
       // If we found nameShort and there's a template, sync it to the database
-      if (nameShort) {
-        const key = `profile-${profile.id}`;
-        const template = templateMap.get(key);
-        if (template) {
-          // Update School record with nameShort
-          try {
-            await prisma.school.upsert({
-              where: { templateId: template.id },
-              update: {
-                nameShort: nameShort,
-                permalink: profile.permalink || profile.url || undefined,
-                metadataSource: 'wordpress',
-                metadataLastFetchedAt: new Date()
-              },
-              create: {
-                name: profile.title,
-                nameShort: nameShort,
-                permalink: profile.permalink || profile.url || undefined,
-                templateId: template.id,
-                metadataSource: 'wordpress',
-                metadataLastFetchedAt: new Date()
-              }
-            });
-          } catch (error) {
-            console.warn(`[school-profiles] Failed to sync nameShort for template ${template.id}:`, error);
-          }
+      if (nameShort && template) {
+        try {
+          await prisma.school.upsert({
+            where: { templateId: template.id },
+            update: {
+              nameShort: nameShort,
+              permalink: profile.permalink || profile.url || undefined,
+              metadataSource: 'wordpress',
+              metadataLastFetchedAt: new Date(),
+              updatedAt: new Date()
+            },
+            create: {
+              id: `${template.id}-school`,
+              name: profile.title,
+              nameShort: nameShort,
+              permalink: profile.permalink || profile.url || undefined,
+              templateId: template.id,
+              metadataSource: 'wordpress',
+              metadataLastFetchedAt: new Date(),
+              updatedAt: new Date()
+            }
+          });
+        } catch (error) {
+          console.warn(`[school-profiles] Failed to sync nameShort for template ${template.id}:`, error);
         }
       }
 
@@ -748,8 +776,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Find associated template
-      const key = `profile-${profile.id}`;
-      const template = templateMap.get(key) || null;
       const templateId = template ? template.id : undefined;
       const hasTemplate = !!template;
       const templateStatus: 'pending' | 'created' = hasTemplate ? 'created' : 'pending';
@@ -766,6 +792,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
+      // Determine school_profile_type (ACF field or database) and map to category
+      const schoolProfileTypeRawSource =
+        templateWithSchool?.school?.school_profile_type ??
+        mergedAcf?.school_profile_type ??
+        mergedAcf?.schoolProfileType ??
+        mergedAcf?.school_profileType ??
+        null;
+
+      let schoolProfileTypeRaw: string | null = null;
+      if (typeof schoolProfileTypeRawSource === 'string') {
+        schoolProfileTypeRaw = schoolProfileTypeRawSource;
+      } else if (Array.isArray(schoolProfileTypeRawSource) && schoolProfileTypeRawSource.length > 0) {
+        schoolProfileTypeRaw = typeof schoolProfileTypeRawSource[0] === 'string' ? schoolProfileTypeRawSource[0] : null;
+      }
+
+      const { category: schoolProfileTypeCategory, normalizedCode: normalizedSchoolProfileType } =
+        mapSchoolProfileTypeCode(schoolProfileTypeRaw);
+
+      // Map taxonomy slug to category (fallback if school_profile_type missing)
+      const taxonomyCategory = mapSlugToCategory(profileTypeSlug);
+
+      const profileType =
+        schoolProfileTypeCategory !== 'unresolved_raw' ? schoolProfileTypeCategory : taxonomyCategory;
+
+      const classificationSource: 'school_profile_type' | 'taxonomy' | undefined =
+        schoolProfileTypeCategory !== 'unresolved_raw'
+          ? 'school_profile_type'
+          : taxonomyCategory !== 'unresolved_raw'
+          ? 'taxonomy'
+          : undefined;
+
       return {
         ...profile,
         nameShort: nameShort || profile.nameShort || templateWithSchool?.school?.nameShort || undefined, // Ensure nameShort is set
@@ -777,6 +834,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         templateStatus,
         profileType,
         profileTypeSlug: profileTypeSlug || null,
+        schoolProfileType: normalizedSchoolProfileType,
+        classificationSource,
         unresolvedReason
       };
     }));
@@ -819,7 +878,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               nameShort: update.nameShort,
               permalink: update.permalink || undefined,
               metadataSource: 'wordpress',
-              metadataLastFetchedAt: new Date()
+              metadataLastFetchedAt: new Date(),
+              updatedAt: new Date()
             }
           })
         ));
@@ -835,12 +895,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await Promise.all(schoolCreates.map(create => 
           prisma.school.create({
             data: {
+              id: `${create.templateId}-school`,
               name: create.name,
               nameShort: create.nameShort,
               permalink: create.permalink || undefined,
               templateId: create.templateId,
               metadataSource: 'wordpress',
-              metadataLastFetchedAt: new Date()
+              metadataLastFetchedAt: new Date(),
+              updatedAt: new Date()
             }
           })
         ));
@@ -861,7 +923,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         select: {
           templateId: true,
           nameShort: true,
-          permalink: true
+          permalink: true,
+          school_profile_type: true
         }
       });
       updatedSchools.forEach(school => {

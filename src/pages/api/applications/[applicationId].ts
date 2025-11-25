@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
 import {
@@ -65,7 +66,7 @@ export default async function handler(
         try {
           await prisma.application.update({
             where: { id: application.id },
-            data: { formData }
+            data: { formData, updatedAt: new Date() }
           });
         } catch (err) {
           console.warn('Failed to persist form structure for application', application.id, err);
@@ -126,7 +127,8 @@ export default async function handler(
         data: {
           formData: nextFormData,
           status: status || undefined,
-          submittedAt: status === 'submitted' ? new Date() : undefined
+          submittedAt: status === 'submitted' ? new Date() : undefined,
+          updatedAt: new Date()
         }
       });
 
@@ -139,12 +141,15 @@ export default async function handler(
             }
           },
           update: {
-            data: nextFormData
+            data: nextFormData,
+            updatedAt: new Date()
           },
           create: {
+            id: randomUUID(),
             schoolId: application.template.schoolId,
             userId: profile.userId,
-            data: nextFormData
+            data: nextFormData,
+            updatedAt: new Date()
           }
         });
       }

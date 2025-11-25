@@ -219,13 +219,15 @@ export default async function handler(
 
     const template = await prisma.schoolFormTemplate.create({
       data: {
+        id: templateId,
         schoolId: templateId,
         schoolName: serializeSchoolName(schoolName),
         program: profile.acf?.program || '申请表单',
         description: profile.acf?.description || null,
         category: finalCategory, // Guaranteed to be non-null (default: '国际学校')
         fieldsData: fieldsData,
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     });
 
@@ -242,16 +244,19 @@ export default async function handler(
         permalink: permalink || undefined,
         wpId: wpId || undefined,
         metadataSource: 'wordpress',
-        metadataLastFetchedAt: new Date()
+        metadataLastFetchedAt: new Date(),
+        updatedAt: new Date()
       },
       create: {
+        id: `${template.id}-school`,
         name: profile.title,
         nameShort: nameShort,
         permalink: permalink,
         wpId: wpId,
         templateId: template.id,
         metadataSource: 'wordpress',
-        metadataLastFetchedAt: new Date()
+        metadataLastFetchedAt: new Date(),
+        updatedAt: new Date()
       }
     });
 

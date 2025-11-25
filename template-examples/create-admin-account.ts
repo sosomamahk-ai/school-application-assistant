@@ -7,6 +7,7 @@
  */
 
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
@@ -41,7 +42,8 @@ async function createAdminAccount() {
         where: { email: adminEmail },
         data: {
           password: hashedPassword,
-          role: 'admin'
+          role: 'admin',
+          updatedAt: new Date()
         }
       });
       console.log('✅ 管理员账号已更新:');
@@ -52,9 +54,11 @@ async function createAdminAccount() {
       const hashedPassword = await bcrypt.hash(adminPassword, 10);
       const admin = await prisma.user.create({
         data: {
+          id: randomUUID(),
           email: adminEmail,
           password: hashedPassword,
-          role: 'admin'
+          role: 'admin',
+          updatedAt: new Date()
         }
       });
       console.log('✅ 管理员账号已创建:');

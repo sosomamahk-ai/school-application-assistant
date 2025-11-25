@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { deserializeSchoolName } from '@/utils/templates';
 
@@ -235,12 +236,14 @@ export default async function handler(
 
       const template = await prisma.schoolFormTemplate.create({
         data: {
+          id: randomUUID(),
           schoolId,
           schoolName,
           program,
           description,
           category: finalCategory, // Always set category to prevent null values
-          fieldsData: fields
+          fieldsData: fields,
+          updatedAt: new Date()
         }
       });
 

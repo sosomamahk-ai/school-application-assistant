@@ -39,6 +39,7 @@ interface ProfileWithTemplate extends WordPressSchool {
   templateStatus: 'pending' | 'created';
   profileType?: string;
   profileTypeSlug?: string | null;
+  schoolProfileType?: string | null;
   unresolvedReason?: string;
 }
 
@@ -79,7 +80,7 @@ export default function TemplatesManagementV2() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/wordpress/school-profiles', {
+      const response = await fetch('/api/admin/templates-v2', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -459,6 +460,11 @@ export default function TemplatesManagementV2() {
                             <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                               {profile.profileType || profile.category || activeTab}
                             </span>
+                          )}
+                          {profile.schoolProfileType && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              school_profile_type: {profile.schoolProfileType}
+                            </div>
                           )}
                           {profile.unresolvedReason && (
                             <div className="text-xs text-gray-500 mt-1">

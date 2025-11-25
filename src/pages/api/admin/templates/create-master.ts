@@ -81,13 +81,15 @@ export default async function handler(
         updatedAt: new Date()
       },
       create: {
+        id: templateData.schoolId,
         schoolId: templateData.schoolId,
         schoolName: schoolNameValue,
         program: templateData.program,
         description: templateData.description || null,
         category: templateData.category || null,
         fieldsData: templateData.fieldsData as any,
-        isActive: templateData.isActive
+        isActive: templateData.isActive,
+        updatedAt: new Date()
       }
     });
 

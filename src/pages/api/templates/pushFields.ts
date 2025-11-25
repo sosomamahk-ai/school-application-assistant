@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
 
@@ -93,11 +94,13 @@ export default async function handler(
         updatedAt: new Date(),
       },
       create: {
+        id: randomUUID(),
         schoolId,
         schoolName: schoolId.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
         program: 'General',
         fieldsData: mergedFields as any,
         isActive: true,
+        updatedAt: new Date(),
       },
     });
 

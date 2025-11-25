@@ -173,12 +173,14 @@ async function verifyAndFixNameShort() {
         
         await prisma.school.create({
           data: {
+            id: `${template.id}-school`,
             name: schoolName,
             nameShort: nameShort,
             permalink: permalink,
             templateId: template.id,
             metadataSource: 'wordpress',
-            metadataLastFetchedAt: new Date()
+            metadataLastFetchedAt: new Date(),
+            updatedAt: new Date()
           }
         });
         createdCount++;
@@ -196,7 +198,8 @@ async function verifyAndFixNameShort() {
               nameShort: nameShort || undefined,
               permalink: permalink || undefined,
               metadataSource: 'wordpress',
-              metadataLastFetchedAt: new Date()
+              metadataLastFetchedAt: new Date(),
+              updatedAt: new Date()
             }
           });
           fixedCount++;

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { authenticate } from "@/utils/auth";
 import type { NextApiRequest, NextApiResponse } from "next";
+import { randomUUID } from "crypto";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -25,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         userId_domain_selector: { userId, domain, selector },
       },
       update: { profileField, domId, domName },
-      create: { userId, domain, selector, profileField, domId, domName },
+      create: { id: randomUUID(), userId, domain, selector, profileField, domId, domName },
     });
 
     return res.json({ success: true, mapping });

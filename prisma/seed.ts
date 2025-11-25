@@ -365,12 +365,14 @@ async function main() {
   for (const template of sampleTemplates) {
     const createdTemplate = await prisma.schoolFormTemplate.create({
       data: {
+        id: template.schoolId,
         schoolId: template.schoolId,
         schoolName: template.schoolName,
         program: template.program,
         description: template.description,
         fieldsData: template.fields as any,
-        isActive: true
+        isActive: true,
+        updatedAt: new Date()
       }
     });
     console.log(`Created template: ${template.schoolName} - ${template.program}`);
@@ -379,6 +381,7 @@ async function main() {
     if (meta) {
       await prisma.school.create({
         data: {
+          id: `${template.schoolId}-school`,
           name: meta?.name || template.schoolName as string,
           templateId: createdTemplate.id,
           shortName: meta.shortName,
@@ -392,7 +395,8 @@ async function main() {
           resultTime: meta.resultTime,
           requiredDocuments: meta.requiredDocuments as any,
           requirements: meta.requirements as any,
-          metadataSource: 'seed'
+          metadataSource: 'seed',
+          updatedAt: new Date()
         }
       });
       console.log(`Linked school metadata for ${template.schoolName}`);
