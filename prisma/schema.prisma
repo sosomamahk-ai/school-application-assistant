@@ -99,9 +99,9 @@ model School {
   country               String?
   location              String?
   bandType              String?
-  school_profile_type   String?            // ACF 字段: acf.school_profile_type
-  profileType           String?            // Taxonomy 字段: taxonomy.profile_type
-  postType              String?            // WordPress post type: 'profile' | 'university'
+  school_profile_type   String? // ACF 字段: acf.school_profile_type
+  profileType           String? // Taxonomy 字段: taxonomy.profile_type
+  postType              String? // WordPress post type: 'profile' | 'university'
   template              SchoolFormTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
   UserApplication       UserApplication[]
 
@@ -112,20 +112,35 @@ model School {
 }
 
 model SchoolFormTemplate {
-  id                   String        @id
-  schoolId             String        @unique
-  schoolName           String
-  program              String
-  description          String?
-  fieldsData           Json
-  isActive             Boolean       @default(true)
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime
-  category             String?       @default("国际学校")
-  applicationEndDate   DateTime?
-  applicationStartDate DateTime?
-  Application          Application[]
-  school               School?
+  id                       String        @id
+  schoolId                 String        @unique
+  schoolName               String
+  program                  String
+  description              String?
+  fieldsData               Json
+  isActive                 Boolean       @default(true)
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime
+  category                 String?       @default("国际学校")
+  // General "Open All Year" option
+  isApplicationOpenAllYear Boolean       @default(false)
+  // Standard dates (for International Schools and others)
+  applicationStartDate     DateTime?
+  applicationEndDate       DateTime?
+  // University dates (Early Decision + Regular Decision)
+  earlyStartDate           DateTime?
+  earlyEndDate             DateTime?
+  regularStartDate         DateTime?
+  regularEndDate           DateTime?
+  // Local Primary/Secondary School dates (Spring Transfer + Fall Transfer + Central Allocation)
+  springStartDate          DateTime?
+  springEndDate            DateTime?
+  fallStartDate            DateTime?
+  fallEndDate              DateTime?
+  centralStartDate         DateTime?
+  centralEndDate           DateTime?
+  Application              Application[]
+  school                   School?
 }
 
 model User {

@@ -3,19 +3,21 @@ import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
-import { 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Download, 
-  Plus, 
-  Loader2, 
-  ToggleLeft, 
+import {
+  Eye,
+  Edit,
+  Trash2,
+  Download,
+  Plus,
+  Loader2,
+  ToggleLeft,
   ToggleRight,
   FileText,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Search as SearchIcon,
+  X as XIcon
 } from 'lucide-react';
 import jwt from 'jsonwebtoken';
 import type { JWTPayload } from '@/utils/auth';
@@ -80,6 +82,11 @@ export default function TemplatesManagementV2() {
   const [updating, setUpdating] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<'all' | 'created' | 'pending'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<ProfileWithTemplate[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [lastSearchQuery, setLastSearchQuery] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -112,6 +119,67 @@ export default function TemplatesManagementV2() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const performSearch = useCallback(async (term: string) => {
+    const normalized = term.trim();
+    if (normalized.length < 2) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('未登录，请先登录');
+        router.push('/auth/login');
+        return;
+      }
+
+      setSearchLoading(true);
+      setSearchError(null);
+
+      const response = await fetch(`/api/admin/templates/search?q=${encodeURIComponent(normalized)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        router.push('/auth/login');
+        return;
+      }
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSearchResults(result.results || []);
+        setLastSearchQuery(normalized);
+      } else {
+        setSearchError(result.error || '搜索失败');
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error searching templates:', error);
+      setSearchError('搜索失败，请稍后重试');
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const term = searchTerm.trim();
+
+    if (term.length < 2) {
+      setSearchResults(null);
+      setSearchError(null);
+      setLastSearchQuery('');
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      performSearch(term);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm, performSearch]);
 
   const handleToggleActive = async (templateId: string, currentStatus: boolean) => {
     if (updating.has(templateId)) return;
@@ -153,6 +221,18 @@ export default function TemplatesManagementV2() {
     setCreating(prev => new Set(prev).add(profileKey));
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('未登录，请先登录');
+        router.push('/auth/login');
+        return;
+      }
+
+      console.log('[template-list] Creating template for profile:', {
+        profileId: profile.id,
+        profileType: profile.type,
+        profileTitle: profile.title
+      });
+
       const response = await fetch('/api/admin/templates/create-from-profile', {
         method: 'POST',
         headers: {
@@ -165,24 +245,65 @@ export default function TemplatesManagementV2() {
         })
       });
 
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[template-list] Failed to parse response:', responseText);
+        throw new Error(`服务器返回了无效的响应: ${response.status} ${response.statusText}`);
+      }
+
       if (response.ok) {
-        const result = await response.json();
         const templateId = result.template?.id;
         
-        if (templateId) {
-          // 跳转到模版编辑页面
-          router.push(`/admin/templates/edit/${templateId}`);
-        } else {
-          alert('模板创建成功！');
+        if (!templateId) {
+          console.error('[template-list] Template created but ID missing:', result);
+          alert(`模板创建成功，但未返回模板ID。响应: ${JSON.stringify(result)}`);
           await fetchData();
+          return;
         }
+
+        console.log('[template-list] Template created successfully, redirecting to edit page:', templateId);
+        // 跳转到模版编辑页面
+        router.push(`/admin/templates/edit/${templateId}`);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        alert(errorData.error || '创建失败');
+        // Handle error response
+        const errorMessage = result.message || result.error || '创建失败';
+        const errorCode = result.code || 'UNKNOWN';
+        
+        console.error('[template-list] Template creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorMessage,
+          code: errorCode,
+          fullResponse: result
+        });
+
+        // Show detailed error message
+        let userMessage = errorMessage;
+        if (result.code === 'P2002') {
+          userMessage = '模板已存在，无法重复创建';
+        } else if (response.status === 404) {
+          userMessage = '找不到对应的 WordPress 档案';
+        } else if (response.status === 403) {
+          userMessage = '权限不足，需要管理员权限';
+        } else if (response.status === 400) {
+          userMessage = `请求错误: ${errorMessage}`;
+        }
+
+        alert(`创建失败: ${userMessage}`);
       }
-    } catch (error) {
-      console.error('Error creating template:', error);
-      alert('创建失败，请重试');
+    } catch (error: any) {
+      console.error('[template-list] Error creating template:', {
+        error: error?.message || error,
+        stack: error?.stack,
+        profileId: profile.id,
+        profileType: profile.type
+      });
+      
+      const errorMessage = error?.message || '网络错误或服务器无响应';
+      alert(`创建失败: ${errorMessage}`);
     } finally {
       setCreating(prev => {
         const next = new Set(prev);
@@ -197,6 +318,14 @@ export default function TemplatesManagementV2() {
 
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('未登录，请先登录');
+        router.push('/auth/login');
+        return;
+      }
+
+      console.log('[template-list] Deleting template:', { templateId, schoolName });
+
       const response = await fetch(`/api/admin/templates/${templateId}`, {
         method: 'DELETE',
         headers: {
@@ -204,16 +333,36 @@ export default function TemplatesManagementV2() {
         }
       });
 
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[template-list] Failed to parse delete response:', responseText);
+        throw new Error(`服务器返回了无效的响应: ${response.status} ${response.statusText}`);
+      }
+
       if (response.ok) {
+        console.log('[template-list] Template deleted successfully:', templateId);
         alert('模板删除成功！');
+        // Refresh the list to update the UI
         await fetchData();
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        alert(errorData.error || '删除失败');
+        const errorMessage = result.message || result.error || '删除失败';
+        console.error('[template-list] Delete failed:', {
+          status: response.status,
+          error: errorMessage,
+          templateId
+        });
+        alert(`删除失败: ${errorMessage}`);
       }
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      alert('删除失败，请重试');
+    } catch (error: any) {
+      console.error('[template-list] Error deleting template:', {
+        error: error?.message || error,
+        templateId,
+        schoolName
+      });
+      alert(`删除失败: ${error?.message || '网络错误或服务器无响应'}`);
     }
   };
 
@@ -293,13 +442,21 @@ export default function TemplatesManagementV2() {
     return 0;
   };
 
+  const filterProfilesByStatus = useCallback((profiles: ProfileWithTemplate[]) => {
+    if (filterStatus === 'all') return profiles;
+    return profiles.filter((profile) =>
+      filterStatus === 'created' ? profile.templateStatus === 'created' : profile.templateStatus === 'pending'
+    );
+  }, [filterStatus]);
+
   // Filter profiles based on filterStatus
   const allProfiles = data?.profiles[activeTab] || [];
-  const currentProfiles = filterStatus === 'all' 
-    ? allProfiles
-    : filterStatus === 'created'
-    ? allProfiles.filter(p => p.templateStatus === 'created')
-    : allProfiles.filter(p => p.templateStatus === 'pending');
+  const currentProfiles = filterProfilesByStatus(allProfiles);
+  const filteredSearchResults = searchResults ? filterProfilesByStatus(searchResults) : null;
+  const hasActiveSearch = searchTerm.trim().length >= 2;
+  const tableProfiles = hasActiveSearch ? (filteredSearchResults || []) : currentProfiles;
+  const isTableLoading = hasActiveSearch ? searchLoading : loading;
+  const isTableEmpty = !isTableLoading && tableProfiles.length === 0;
 
   return (
     <Layout>
@@ -378,19 +535,64 @@ export default function TemplatesManagementV2() {
           </nav>
         </div>
 
+        {/* Search */}
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="relative w-full md:max-w-md">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="搜索学校名称 / 英文名 / 简称（至少输入 2 个字符）"
+              className="w-full rounded-md border border-gray-300 pl-10 pr-10 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                title="清除搜索"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
+            {searchLoading && hasActiveSearch && (
+              <Loader2 className="absolute right-10 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-primary-500" />
+            )}
+          </div>
+          <div className="text-sm text-gray-500">
+            {hasActiveSearch
+              ? searchLoading
+                ? `正在搜索 “${searchTerm.trim()}”...`
+                : `找到 ${tableProfiles.length} 条与 “${lastSearchQuery || searchTerm.trim()}” 匹配的结果`
+              : '输入至少 2 个字符开始搜索，清空输入恢复原列表'}
+          </div>
+        </div>
+        {searchError && (
+          <div className="mb-4 rounded border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+            {searchError}
+          </div>
+        )}
+
         {/* Table */}
-        {loading ? (
+        {isTableLoading ? (
           <div className="text-center py-12">
             <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto" />
-            <p className="mt-4 text-gray-600">加载中...</p>
+            <p className="mt-4 text-gray-600">{hasActiveSearch ? '搜索中...' : '加载中...'}</p>
           </div>
-        ) : currentProfiles.length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-gray-600">当前分类下没有学校</p>
-          </div>
+        ) : isTableEmpty ? (
+          hasActiveSearch ? (
+            <div className="card text-center py-12">
+              <p className="text-gray-600">没有找到与 “{lastSearchQuery || searchTerm.trim()}” 匹配的学校</p>
+            </div>
+          ) : (
+            <div className="card text-center py-12">
+              <p className="text-gray-600">当前分类下没有学校</p>
+            </div>
+          )
         ) : (
           <>
-            {activeTab === 'unresolved_raw' && (
+            {!hasActiveSearch && activeTab === 'unresolved_raw' && (
               <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start">
                   <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
@@ -444,7 +646,7 @@ export default function TemplatesManagementV2() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {currentProfiles.map((profile) => {
+                  {tableProfiles.map((profile) => {
                     const template = profile.template;
                     const fieldCount = template?.fieldsData ? getFieldCount(template.fieldsData) : 0;
                     const permalink = profile.permalink || template?.school?.permalink || null;
@@ -521,7 +723,7 @@ export default function TemplatesManagementV2() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-2">
-                            {profile.templateStatus === 'created' && template ? (
+                            {profile.hasTemplate && template ? (
                               <>
                                 {/* Toggle Active */}
                                 <button

@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticate } from '@/utils/auth';
 import { deserializeSchoolName } from '@/utils/templates';
+import { parseWordPressTemplateId } from '@/services/wordpressSchoolService';
+import { buildTemplateProfile, templateListSchoolSelect } from '@/server/templateProfiles';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,71 +25,105 @@ export default async function handler(
       return res.status(404).json({ error: 'Profile not found' });
     }
 
-    // Get all applications from Application table
-    const allApplications = await prisma.application.findMany({
-      where: { profileId: profile.id },
-      include: {
-        template: {
-          select: {
-            schoolId: true,
-            schoolName: true,
-            program: true,
-            category: true
-          }
-        },
-        userApplication: true
-      },
-      orderBy: { updatedAt: 'desc' }
-    });
-
-    // Get all UserApplication records
+    // Get all UserApplication records with school and template data
+    // We need to fetch schools with the same fields as template-list for buildTemplateProfile
     const userApplications = await prisma.userApplication.findMany({
       where: { userId },
       include: {
         application: {
-          include: { template: true }
-        },
-        school: {
-          include: {
+          include: { 
             template: {
               select: {
+                schoolId: true,
                 schoolName: true,
                 program: true,
                 category: true
               }
             }
           }
+        },
+        school: {
+          select: templateListSchoolSelect
         }
-      }
+      },
+      orderBy: { updatedAt: 'desc' }
     });
 
-    // Create a map of applicationId -> UserApplication for quick lookup
-    const userAppMap = new Map(
-      userApplications.map(ua => [ua.applicationId, ua])
-    );
-
-    // Merge Application records with UserApplication records
-    const mergedApplications = allApplications.map((app) => {
-      const userApp = app.userApplication || userAppMap.get(app.id);
-      const template = app.template;
+    // Process each user application
+    // Use buildTemplateProfile to get category, same as template-list
+    const mergedApplications = userApplications.map((userApp) => {
+      const app = userApp.application;
+      const school = userApp.school;
+      const appTemplate = app?.template;
+      
+      // Use buildTemplateProfile to get category (same logic as template-list)
+      // This ensures consistency with template-list page
+      let category: string = '未分类';
+      if (school && school.wpId) {
+        try {
+          const profile = buildTemplateProfile(school);
+          category = profile.category || '未分类';
+          
+          // Debug logging in development
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[user-applications] Category determined:', {
+              schoolId: school.id,
+              wpId: school.wpId,
+              category,
+              source: profile.classificationSource,
+              school_profile_type: school.school_profile_type,
+              profileType: school.profileType,
+              postType: school.postType,
+              templateCategory: school.template?.category
+            });
+          }
+        } catch (error) {
+          console.error('[user-applications] Error building template profile:', error, {
+            schoolId: school?.id,
+            wpId: school?.wpId
+          });
+          // Fallback to template.category if buildTemplateProfile fails
+          if (school.template?.category) {
+            category = school.template.category;
+          } else if (appTemplate?.category) {
+            category = appTemplate.category;
+          }
+        }
+      } else {
+        // If no wpId, fallback to application template category
+        if (appTemplate?.category) {
+          category = appTemplate.category;
+        }
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[user-applications] No wpId, using fallback category:', {
+            schoolId: school?.id,
+            category,
+            appTemplateCategory: appTemplate?.category
+          });
+        }
+      }
       
       return {
-        id: userApp?.id || app.id,
-        schoolId: template.schoolId,
-        localizedSchoolName: deserializeSchoolName(template.schoolName),
-        program: template.program,
-        category: template.category,
-        applicationId: app.id,
-        applicationStatus: app.status,
-        fillingProgress: userApp?.fillingProgress ?? 0,
-        interviewTime: userApp?.interviewTime,
-        examTime: userApp?.examTime,
-        result: (userApp?.result || 'pending') as 'pending' | 'admitted' | 'rejected' | 'waitlisted',
-        resultTime: userApp?.resultTime,
-        notes: userApp?.notes,
-        reminderSettings: userApp?.reminderSettings,
-        updatedAt: app.updatedAt.toISOString(),
-        templateId: app.templateId
+        id: userApp.id,
+        schoolId: school?.id || appTemplate?.schoolId || '',
+        wpid: school?.wpId || null,
+        localizedSchoolName: appTemplate 
+          ? deserializeSchoolName(appTemplate.schoolName)
+          : (school?.name ? { 'zh-CN': school.name } : {}),
+        nameEnglish: school?.nameEnglish || null,
+        program: appTemplate?.program || null,
+        category: category,
+        applicationId: app?.id || null,
+        applicationStatus: app?.status || null,
+        fillingProgress: userApp.fillingProgress,
+        interviewTime: userApp.interviewTime,
+        examTime: userApp.examTime,
+        result: (userApp.result || 'pending') as 'pending' | 'admitted' | 'rejected' | 'waitlisted',
+        resultTime: userApp.resultTime,
+        notes: userApp.notes,
+        reminderSettings: userApp.reminderSettings,
+        updatedAt: userApp.updatedAt.toISOString(),
+        templateId: app?.templateId || null
       };
     });
 

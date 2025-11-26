@@ -1,263 +1,190 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticateAdmin } from '@/utils/auth';
 import { prisma } from '@/lib/prisma';
-import { getWordPressSchools } from '@/services/wordpressSchoolService';
-import { buildWordPressTemplateId, buildStandardizedTemplateId, parseWordPressTemplateId } from '@/services/wordpressSchoolService';
 import { serializeSchoolName } from '@/utils/templates';
 import { MASTER_TEMPLATE_PREFIX, MASTER_TEMPLATE_SCHOOL_ID } from '@/constants/templates';
+import { getCategoryAbbreviation } from '@/services/wordpressSchoolService';
 
-/**
- * Create a template from WordPress school profile
- */
+const mapProfileTypeToDisplayCategory = (profileType?: string | null): string => {
+  if (!profileType) return '国际学校';
+  const normalized = profileType.trim().toLowerCase();
+  if (normalized.includes('university')) return '大学';
+  if (normalized.includes('local-secondary') || normalized.includes('local_secondary')) {
+    return '香港本地中学';
+  }
+  if (normalized.includes('local-primary') || normalized.includes('local_primary')) {
+    return '香港本地小学';
+  }
+  return '国际学校';
+};
+
+const sanitizeIdentifier = (value?: string | null): string | null => {
+  if (!value) return null;
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return normalized || null;
+};
+
+const buildTemplateIdFromSchool = (
+  school: { id: string; wpId: number | null; name: string; nameShort: string | null; shortName: string | null; nameEnglish: string | null; profileType: string | null; school_profile_type: string | null },
+  profileTypeFromRequest?: string | null
+): string => {
+  const categoryDisplay = mapProfileTypeToDisplayCategory(school.profileType || school.school_profile_type || profileTypeFromRequest);
+  const categoryAbbr = getCategoryAbbreviation(categoryDisplay);
+  const shortName = sanitizeIdentifier(school.nameShort || school.shortName || school.nameEnglish || school.name);
+
+  if (shortName) {
+    return `${shortName}-${categoryAbbr}-${new Date().getFullYear()}`;
+  }
+
+  if (school.wpId) {
+    const wpType = profileTypeFromRequest && typeof profileTypeFromRequest === 'string'
+      ? profileTypeFromRequest
+      : 'profile';
+    return `wp-${wpType}-${school.wpId}`;
+  }
+
+  return `school-${school.id}-${Date.now()}`;
+};
+
+const loadBaseFieldsData = async (baseTemplateId?: string | null) => {
+  if (baseTemplateId) {
+    const baseTemplate = await prisma.schoolFormTemplate.findUnique({
+      where: { id: baseTemplateId },
+      select: { fieldsData: true }
+    });
+    if (baseTemplate?.fieldsData) {
+      return baseTemplate.fieldsData;
+    }
+  }
+
+  let masterTemplate = await prisma.schoolFormTemplate.findUnique({
+    where: { schoolId: MASTER_TEMPLATE_SCHOOL_ID },
+    select: { fieldsData: true }
+  });
+
+  if (!masterTemplate) {
+    const fallbackMaster = await prisma.schoolFormTemplate.findFirst({
+      where: {
+        schoolId: {
+          startsWith: MASTER_TEMPLATE_PREFIX
+        }
+      },
+      select: { fieldsData: true }
+    });
+    masterTemplate = fallbackMaster || null;
+  }
+
+  if (!masterTemplate?.fieldsData) {
+    console.warn('[create-from-profile] No base template found; creating template with empty fieldsData');
+    return [];
+  }
+
+  return masterTemplate.fieldsData;
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    // Verify admin access
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     const authResult = await authenticateAdmin(req);
     if (!authResult) {
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
-    const { profileId, profileType, baseTemplateId } = req.body;
+    const { profileId, profileType, baseTemplateId } = req.body ?? {};
 
-    if (!profileId || !profileType) {
-      return res.status(400).json({ error: 'Missing required fields: profileId, profileType' });
+    if (profileId === null || profileId === undefined) {
+      return res.status(400).json({ error: 'Missing required field: profileId' });
     }
 
-    // Get WordPress schools
-    const wordPressData = await getWordPressSchools({ forceRefresh: true });
-    const profiles = wordPressData.profiles || [];
-    
-    // Find the profile
-    const profile = profiles.find(p => p.id === Number(profileId) && p.type === profileType);
-    
-    if (!profile) {
-      return res.status(404).json({ error: 'WordPress profile not found' });
+    const numericProfileId = Number(profileId);
+    if (Number.isNaN(numericProfileId)) {
+      return res.status(400).json({ error: 'Invalid profileId: must be a number' });
     }
 
-    // Extract profile_type from WordPress REST API to get accurate category
-    let accurateCategory: string | null = null;
-    try {
-      const baseUrl = process.env.WORDPRESS_BASE_URL || process.env.NEXT_PUBLIC_WORDPRESS_BASE_URL;
-      if (baseUrl) {
-        const wpBaseUrl = baseUrl.replace(/\/+$/, '');
-        // Try profile endpoint first, then school_profile as fallback
-        let endpoint = `${wpBaseUrl}/wp-json/wp/v2/${profileType}/${profileId}?_embed&acf_format=standard`;
-        let response = await fetch(endpoint, {
-          headers: { Accept: 'application/json' }
-        });
-
-        // Fallback to school_profile if profile fails
-        if (!response.ok && response.status === 404 && profileType === 'profile') {
-          endpoint = `${wpBaseUrl}/wp-json/wp/v2/school_profile/${profileId}?_embed&acf_format=standard`;
-          response = await fetch(endpoint, {
-            headers: { Accept: 'application/json' }
-          });
-        }
-
-        if (response.ok) {
-          const post = await response.json();
-          
-          // Extract profile_type slug from taxonomy terms
-          const embeddedTerms = post?._embedded?.['wp:term'];
-          if (Array.isArray(embeddedTerms)) {
-            for (const termGroup of embeddedTerms) {
-              if (Array.isArray(termGroup)) {
-                for (const term of termGroup) {
-                  if (term?.taxonomy === 'profile_type') {
-                    const slug = term?.slug || term?.name;
-                    if (slug) {
-                      // Map slug to category
-                      const slugMap: Record<string, string> = {
-                        'hk-is-template': '国际学校',
-                        'hk-ls-template': '本地中学',
-                        'hk-ls-primary-template': '本地小学',
-                        'hk-kg-template': '幼稚园'
-                      };
-                      accurateCategory = slugMap[slug] || null;
-                      break;
-                    }
-                  }
-                }
-              }
-            }
-          }
+    const school = await prisma.school.findFirst({
+      where: { wpId: numericProfileId },
+      include: {
+        template: {
+          select: { id: true }
         }
       }
-    } catch (error) {
-      console.warn('[create-from-profile] Failed to fetch profile_type from WordPress API:', error);
-      // Continue with fallback category
+    });
+
+    if (!school) {
+      return res.status(404).json({ error: 'School not found in local database. Please sync WordPress schools first.' });
     }
 
-    // Generate standardized template ID: name_short-category-year
-    // Try to get name_short from ACF or profile.nameShort
-    const nameShort = profile.nameShort || profile.acf?.name_short || profile.acf?.nameShort || null;
-    
-    // Build standardized template ID
-    const templateId = buildStandardizedTemplateId(profile, nameShort);
-    
-    // Check if template already exists
+    if (school.template || school.templateId) {
+      return res.status(400).json({
+        error: 'Template already exists for this school',
+        message: 'Each school can only have one template'
+      });
+    }
+
+    const templateSchoolId = buildTemplateIdFromSchool(school, profileType);
+
     const existingTemplate = await prisma.schoolFormTemplate.findUnique({
-      where: { schoolId: templateId }
+      where: { schoolId: templateSchoolId }
     });
 
     if (existingTemplate) {
-      return res.status(400).json({ 
-        error: 'Template already exists',
-        templateId: existingTemplate.id,
-        schoolId: existingTemplate.schoolId
+      return res.status(400).json({
+        error: 'Template already exists for this identifier',
+        message: `Template with schoolId "${templateSchoolId}" already exists`
       });
     }
 
-    // Get base template - default to master template if not provided
-    let fieldsData: any = [];
-    
-    if (baseTemplateId) {
-      // Use provided base template
-      const baseTemplate = await prisma.schoolFormTemplate.findUnique({
-        where: { id: baseTemplateId },
-        select: { fieldsData: true }
-      });
-      if (baseTemplate) {
-        fieldsData = baseTemplate.fieldsData;
-      }
-    } else {
-      // Default: find and use master template
-      // Try legacy ID first, then try prefix-based search
-      let masterTemplate = await prisma.schoolFormTemplate.findUnique({
-        where: { schoolId: MASTER_TEMPLATE_SCHOOL_ID },
-        select: { fieldsData: true }
-      });
-      
-      // If not found, try to find any template with master prefix
-      if (!masterTemplate) {
-        const allTemplates = await prisma.schoolFormTemplate.findMany({
-          where: {
-            schoolId: {
-              startsWith: MASTER_TEMPLATE_PREFIX
-            }
-          },
-          select: { fieldsData: true },
-          take: 1
-        });
-        if (allTemplates.length > 0) {
-          masterTemplate = allTemplates[0];
-        }
-      }
-      
-      if (masterTemplate) {
-        fieldsData = masterTemplate.fieldsData;
-      }
-      // If still no master template found, fieldsData remains empty array
-      // This allows the system to work even without a master template
-      // However, we should log a warning if no master template is found
-      if (!masterTemplate) {
-        console.warn('[create-from-profile] No master template found, creating template with empty fieldsData');
-      }
-    }
-    
-    // Ensure fieldsData is valid (not null)
-    if (!fieldsData) {
-      fieldsData = [];
-    }
-
-    // Create template
-    const schoolName = {
-      en: profile.title,
-      'zh-CN': profile.acf?.name_chinese || profile.title,
-      'zh-TW': profile.acf?.name_chinese || profile.title
+    const fieldsData = await loadBaseFieldsData(baseTemplateId);
+    const localizedSchoolName = {
+      en: school.nameEnglish || school.name,
+      'zh-CN': school.name,
+      'zh-TW': school.name
     };
 
-    // Use accurate category if available, otherwise fallback to profile.category
-    // Map profile.category to standard category names if needed
-    const categoryMap: Record<string, string> = {
-      '国际学校': '国际学校',
-      '香港国际学校': '国际学校',
-      '香港本地中学': '本地中学',
-      '本地中学': '本地中学',
-      '香港本地小学': '本地小学',
-      '本地小学': '本地小学',
-      '香港幼稚园': '幼稚园',
-      '幼稚园': '幼稚园',
-      '大学': '大学',
-      '内地学校': '内地学校'
-    };
-
-    // Ensure finalCategory is never null - use multiple fallback strategies
-    let finalCategory: string = '国际学校'; // Default fallback
-    
-    // Priority 1: Use accurate category from WordPress API (profile_type taxonomy)
-    if (accurateCategory) {
-      finalCategory = accurateCategory;
-    }
-    // Priority 2: Use profile.category from WordPress data
-    else if (profile.category) {
-      finalCategory = categoryMap[profile.category] || profile.category;
-    }
-    // Priority 3: Try to extract from schoolId format (for new standardized format)
-    else {
-      const schoolIdMatch = templateId.match(/-([a-z]{2})-\d{4}$/);
-      if (schoolIdMatch) {
-        const abbr = schoolIdMatch[1];
-        const abbrMap: Record<string, string> = {
-          'is': '国际学校',
-          'ls': '本地中学',
-          'lp': '本地小学',
-          'kg': '幼稚园',
-          'un': '大学',
-          'ml': '内地学校'
-        };
-        finalCategory = abbrMap[abbr] || '国际学校';
-      }
-    }
-    
-    // finalCategory is guaranteed to be non-null at this point
+    const categoryDisplay = mapProfileTypeToDisplayCategory(school.profileType || school.school_profile_type || profileType);
 
     const template = await prisma.schoolFormTemplate.create({
       data: {
-        id: templateId,
-        schoolId: templateId,
-        schoolName: serializeSchoolName(schoolName),
-        program: profile.acf?.program || '申请表单',
-        description: profile.acf?.description || null,
-        category: finalCategory, // Guaranteed to be non-null (default: '国际学校')
-        fieldsData: fieldsData,
+        id: templateSchoolId,
+        schoolId: templateSchoolId,
+        schoolName: serializeSchoolName(localizedSchoolName),
+        program: '申请表单',
+        description: null,
+        category: categoryDisplay,
+        fieldsData,
         isActive: true,
+        isApplicationOpenAllYear: true,
+        applicationStartDate: null,
+        applicationEndDate: null,
+        earlyStartDate: null,
+        earlyEndDate: null,
+        regularStartDate: null,
+        regularEndDate: null,
+        springStartDate: null,
+        springEndDate: null,
+        fallStartDate: null,
+        fallEndDate: null,
+        centralStartDate: null,
+        centralEndDate: null,
         updatedAt: new Date()
       }
     });
 
-    // Sync School table with WordPress data (name_short, permalink, and wp_id)
-    // Reuse nameShort from above (line 100)
-    const permalink = profile.permalink || profile.url || null;
-    const wpId = profile.id || null;
-
-    await prisma.school.upsert({
-      where: { templateId: template.id },
-      update: {
-        name: profile.title,
-        nameShort: nameShort || undefined,
-        permalink: permalink || undefined,
-        wpId: wpId || undefined,
-        metadataSource: 'wordpress',
-        metadataLastFetchedAt: new Date(),
-        updatedAt: new Date()
-      },
-      create: {
-        id: `${template.id}-school`,
-        name: profile.title,
-        nameShort: nameShort,
-        permalink: permalink,
-        wpId: wpId,
+    await prisma.school.update({
+      where: { id: school.id },
+      data: {
         templateId: template.id,
-        metadataSource: 'wordpress',
-        metadataLastFetchedAt: new Date(),
         updatedAt: new Date()
       }
     });
@@ -272,17 +199,42 @@ export default async function handler(
       }
     });
   } catch (error: any) {
-    console.error('Create template from profile error:', error);
-    
-    if (error.code === 'P2002') {
-      return res.status(400).json({ 
-        error: 'Template with this schoolId already exists' 
+    console.error('[template API error]', error);
+
+    if (error?.code === 'P2002') {
+      const target = error.meta?.target || [];
+      const field = Array.isArray(target) ? target.join(', ') : 'unknown';
+      return res.status(400).json({
+        error: 'Template with this schoolId already exists',
+        message: `Duplicate entry for field(s): ${field}`,
+        code: 'P2002'
       });
     }
-    
-    return res.status(500).json({ 
+
+    if (error?.code === 'P2003') {
+      return res.status(400).json({
+        error: 'Invalid foreign key reference',
+        message: error?.message || 'Referenced record does not exist',
+        code: 'P2003'
+      });
+    }
+
+    if (error?.code === 'P2011') {
+      return res.status(400).json({
+        error: 'Missing required field',
+        message: error?.message || 'A required field is missing',
+        code: 'P2011'
+      });
+    }
+
+    const errorMessage = process.env.NODE_ENV === 'development'
+      ? (error?.message || 'Internal server error')
+      : 'Failed to create template. Please check server logs for details.';
+
+    return res.status(500).json({
       error: 'Failed to create template',
-      message: process.env.NODE_ENV === 'development' ? error?.message : 'Internal server error'
+      message: errorMessage,
+      code: error?.code || 'UNKNOWN_ERROR'
     });
   }
 }

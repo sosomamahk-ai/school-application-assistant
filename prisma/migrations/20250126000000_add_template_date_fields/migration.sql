@@ -1,0 +1,14 @@
+-- AlterTable: Add new date fields to SchoolFormTemplate
+ALTER TABLE "SchoolFormTemplate" 
+  ADD COLUMN IF NOT EXISTS "isApplicationOpenAllYear" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "earlyStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "earlyEndDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "regularStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "regularEndDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "springStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "springEndDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "fallStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "fallEndDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "centralStartDate" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "centralEndDate" TIMESTAMP(3);
+

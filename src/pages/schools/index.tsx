@@ -27,6 +27,9 @@ interface SchoolRecord {
   hasApplication?: boolean;
   applicationId?: string | null;
   wpId?: number | null;
+  // Template list data fields
+  templateEnglishName?: string | null;
+  templateNameShort?: string | null;
 }
 
 const categoryMap: Record<string, string> = {
@@ -100,22 +103,51 @@ export default function SchoolsPage() {
   const { t, language } = useTranslation();
   const [schoolRecords, setSchoolRecords] = useState<SchoolRecord[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
+  const [templateListMap, setTemplateListMap] = useState<Record<string, { englishName: string; nameShort: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
+  // Fetch template list data
+  const fetchTemplateList = useCallback(async () => {
+    try {
+      const response = await fetch('/api/template-list');
+      if (response.ok) {
+        const data = await response.json();
+        const templateList = data.templateList || {};
+        setTemplateListMap(templateList);
+        return templateList;
+      }
+    } catch (error) {
+      console.error('Error fetching template list:', error);
+    }
+    return {};
+  }, []);
+
   // Fetch schools with template data
-  const fetchSchools = useCallback(async () => {
+  const fetchSchools = useCallback(async (templateList: Record<string, { englishName: string; nameShort: string | null }> = {}) => {
     try {
       const response = await fetch('/api/schools');
       if (response.ok) {
         const data = await response.json();
         const schoolList: SchoolRecord[] = (data.schools || [])
           .filter((school: any) => school.templateId)
-          .map((school: any) => ({
-            ...school,
-            schoolName: school.schoolName ?? school.name
-          }));
+          .map((school: any) => {
+            // Get template list data for this school
+            // Try multiple keys: school.id, wp_${wpId}, templateSchoolId
+            const templateData = templateList[school.id] 
+              || (school.wpId ? templateList[`wp_${school.wpId}`] : null)
+              || (school.templateSchoolId ? templateList[school.templateSchoolId] : null)
+              || null;
+
+            return {
+              ...school,
+              schoolName: school.schoolName ?? school.name,
+              // Add template list data
+              templateEnglishName: templateData?.englishName || null,
+              templateNameShort: templateData?.nameShort || null
+            };
+          });
         setSchoolRecords(schoolList);
       }
     } catch (error) {
@@ -157,10 +189,13 @@ export default function SchoolsPage() {
       return;
     }
 
-    Promise.all([fetchSchools(), fetchApplications()]).finally(() => {
-      setLoading(false);
+    // First fetch template list, then fetch schools (which depends on template list)
+    fetchTemplateList().then((templateList) => {
+      Promise.all([fetchSchools(templateList), fetchApplications()]).finally(() => {
+        setLoading(false);
+      });
     });
-  }, [mounted, router, fetchSchools, fetchApplications]);
+  }, [mounted, router, fetchTemplateList, fetchSchools, fetchApplications]);
 
   // Enrich templates with WordPress data and application status
   const enrichedTemplates = useMemo(() => {
@@ -312,6 +347,8 @@ export default function SchoolsPage() {
                     <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
                       <tr>
                         <th className="px-4 py-3 text-left whitespace-nowrap">学校名称</th>
+                        <th className="px-4 py-3 text-center whitespace-nowrap">英文名称</th>
+                        <th className="px-4 py-3 text-center whitespace-nowrap">简称</th>
                         <th className="px-4 py-3 text-center whitespace-nowrap">学校类别</th>
                         <th className="px-4 py-3 text-center whitespace-nowrap">开始申请时间</th>
                         <th className="px-4 py-3 text-center whitespace-nowrap">结束申请时间</th>
@@ -321,12 +358,12 @@ export default function SchoolsPage() {
                     <tbody className="divide-y divide-gray-100">
                       {filteredTemplates.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                          <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                             {selectedCategory ? `暂无"${selectedCategory}"类别的学校` : '暂无可用学校'}
                           </td>
                         </tr>
                       ) : (
-                        filteredTemplates.map((template) => {
+                        filteredTemplates.map((template, index) => {
                           const schoolName = getLocalizedSchoolName(template.schoolName, language);
                           return (
                             <tr key={template.id} className="hover:bg-gray-50">
@@ -343,9 +380,12 @@ export default function SchoolsPage() {
                                 ) : (
                                   <div className="font-semibold text-gray-900">{schoolName}</div>
                                 )}
-                                {template.nameShort && (
-                                  <div className="text-xs text-gray-500 mt-1">{template.nameShort}</div>
-                                )}
+                              </td>
+                              <td className="px-4 py-4 text-center text-gray-600">
+                                {template.templateEnglishName || '-'}
+                              </td>
+                              <td className="px-4 py-4 text-center text-gray-600">
+                                {template.templateNameShort || '-'}
                               </td>
                               <td className="px-4 py-4 text-center whitespace-nowrap">
                                 <span className="text-sm text-gray-600">

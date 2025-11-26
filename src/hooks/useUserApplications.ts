@@ -5,7 +5,9 @@ export type ApplicationResult = 'pending' | 'admitted' | 'rejected' | 'waitliste
 export interface UserApplicationRecord {
   id: string;
   schoolId: string;
+  wpid?: number | null;
   localizedSchoolName: string | { [lang: string]: string };
+  nameEnglish?: string | null;
   program?: string | null;
   category?: string | null;
   applicationId?: string | null;

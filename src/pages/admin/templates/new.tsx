@@ -10,7 +10,8 @@ import WordPressSchoolSelect from '@/components/wordpress/WordPressSchoolSelect'
 import WordPressSchoolInfoCard from '@/components/wordpress/WordPressSchoolInfoCard';
 import { useWordPressSchools } from '@/hooks/useWordPressSchools';
 import type { WordPressSchool } from '@/types/wordpress';
-import { buildWordPressTemplateId, matchWordPressSchoolFromTemplate } from '@/services/wordpressSchoolService';
+import { buildWordPressTemplateId, matchWordPressSchoolFromTemplate, parseWordPressTemplateId } from '@/services/wordpressSchoolService';
+import { getSchoolCategory, validateTemplateDates, type SchoolCategory } from '@/utils/templateDates';
 
 interface Field {
   id: string;
@@ -55,8 +56,52 @@ export default function NewTemplate() {
     description: '',
     category: '国际学校',
     isActive: true,
+    // Date fields
+    isApplicationOpenAllYear: false,
+    // Standard dates
+    applicationStartDate: null as string | null,
+    applicationEndDate: null as string | null,
+    // University dates
+    earlyStartDate: null as string | null,
+    earlyEndDate: null as string | null,
+    regularStartDate: null as string | null,
+    regularEndDate: null as string | null,
+    // Local school dates
+    springStartDate: null as string | null,
+    springEndDate: null as string | null,
+    fallStartDate: null as string | null,
+    fallEndDate: null as string | null,
+    centralStartDate: null as string | null,
+    centralEndDate: null as string | null,
   });
   const [fields, setFields] = useState<Field[]>([]);
+  const [schoolCategory, setSchoolCategory] = useState<SchoolCategory>('other');
+  const [loadingSchool, setLoadingSchool] = useState(false);
+
+  // Determine school category from WordPress school data
+  useEffect(() => {
+    if (!selectedWordPressSchool) {
+      setSchoolCategory('other');
+      return;
+    }
+
+    // Try to determine from WordPress school category or profile type
+    const categoryFromWP = selectedWordPressSchool.category || '';
+    const profileType = (selectedWordPressSchool as any).profileType || (selectedWordPressSchool as any).profile_type;
+    
+    if (profileType) {
+      const category = getSchoolCategory(profileType);
+      setSchoolCategory(category);
+    } else if (categoryFromWP.includes('大学') || categoryFromWP.includes('university')) {
+      setSchoolCategory('university');
+    } else if (categoryFromWP.includes('本地中学') || categoryFromWP.includes('local-secondary')) {
+      setSchoolCategory('local-secondary');
+    } else if (categoryFromWP.includes('本地小学') || categoryFromWP.includes('local-primary')) {
+      setSchoolCategory('local-primary');
+    } else {
+      setSchoolCategory('other');
+    }
+  }, [selectedWordPressSchool]);
 
   useEffect(() => {
     if (!selectedWordPressSchool) {
@@ -165,20 +210,48 @@ export default function NewTemplate() {
       return;
     }
 
+    // Validate date fields
+    const dateValidationError = validateTemplateDates(
+      template,
+      schoolCategory,
+      template.isApplicationOpenAllYear
+    );
+    if (dateValidationError) {
+      alert(dateValidationError);
+      return;
+    }
+
     setSaving(true);
 
     try {
       const token = localStorage.getItem('token');
+      
+      // Clean up template data: convert empty strings to null for date fields
+      const cleanTemplate = {
+        ...template,
+        // Convert empty date strings to null
+        applicationStartDate: template.applicationStartDate || null,
+        applicationEndDate: template.applicationEndDate || null,
+        earlyStartDate: template.earlyStartDate || null,
+        earlyEndDate: template.earlyEndDate || null,
+        regularStartDate: template.regularStartDate || null,
+        regularEndDate: template.regularEndDate || null,
+        springStartDate: template.springStartDate || null,
+        springEndDate: template.springEndDate || null,
+        fallStartDate: template.fallStartDate || null,
+        fallEndDate: template.fallEndDate || null,
+        centralStartDate: template.centralStartDate || null,
+        centralEndDate: template.centralEndDate || null,
+        fieldsData: fields
+      };
+      
       const response = await fetch('/api/admin/templates/import', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          ...template,
-          fieldsData: fields
-        })
+        body: JSON.stringify(cleanTemplate)
       });
 
       if (response.ok) {
@@ -451,6 +524,260 @@ export default function NewTemplate() {
               </label>
             </div>
           </div>
+        </div>
+
+        {/* Application Period Configuration */}
+        <div className="card mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">申请时间配置</h2>
+          
+          {/* Open All Year Checkbox */}
+          <div className="mb-6">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isApplicationOpenAllYear"
+                checked={template.isApplicationOpenAllYear}
+                onChange={(e) => {
+                  const isOpen = e.target.checked;
+                  setTemplate({
+                    ...template,
+                    isApplicationOpenAllYear: isOpen,
+                    // Clear all dates when checked
+                    ...(isOpen ? {
+                      applicationStartDate: null,
+                      applicationEndDate: null,
+                      earlyStartDate: null,
+                      earlyEndDate: null,
+                      regularStartDate: null,
+                      regularEndDate: null,
+                      springStartDate: null,
+                      springEndDate: null,
+                      fallStartDate: null,
+                      fallEndDate: null,
+                      centralStartDate: null,
+                      centralEndDate: null,
+                    } : {})
+                  });
+                }}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isApplicationOpenAllYear" className="ml-2 block text-sm font-medium text-gray-700">
+                全年可申请 (Open All Year)
+              </label>
+            </div>
+            <p className="text-sm text-gray-500 mt-1 ml-6">
+              勾选后将隐藏所有日期字段，表示该学校全年接受申请
+            </p>
+          </div>
+
+          {/* Date Fields - Only show if not "Open All Year" */}
+          {!template.isApplicationOpenAllYear && (
+            <div className="space-y-6">
+              {/* University Dates */}
+              {schoolCategory === 'university' && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">大学申请时间</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Early Decision (提前录取)</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            开始日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.earlyStartDate || ''}
+                            onChange={(e) => setTemplate({ ...template, earlyStartDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            结束日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.earlyEndDate || ''}
+                            onChange={(e) => setTemplate({ ...template, earlyEndDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Regular Decision (常规录取)</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            开始日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.regularStartDate || ''}
+                            onChange={(e) => setTemplate({ ...template, regularStartDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            结束日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.regularEndDate || ''}
+                            onChange={(e) => setTemplate({ ...template, regularEndDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Local Primary/Secondary School Dates */}
+              {(schoolCategory === 'local-primary' || schoolCategory === 'local-secondary') && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">
+                    {schoolCategory === 'local-secondary' ? '本地中学' : '本地小学'}申请时间
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Spring Transfer (春季转学)</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            开始日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.springStartDate || ''}
+                            onChange={(e) => setTemplate({ ...template, springStartDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            结束日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.springEndDate || ''}
+                            onChange={(e) => setTemplate({ ...template, springEndDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Fall Transfer (秋季转学)</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            开始日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.fallStartDate || ''}
+                            onChange={(e) => setTemplate({ ...template, fallStartDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            结束日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.fallEndDate || ''}
+                            onChange={(e) => setTemplate({ ...template, fallEndDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Central Allocation (中央派位)</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            开始日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.centralStartDate || ''}
+                            onChange={(e) => setTemplate({ ...template, centralStartDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            结束日期 <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={template.centralEndDate || ''}
+                            onChange={(e) => setTemplate({ ...template, centralEndDate: e.target.value || null })}
+                            className="input-field"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Standard Dates (for International Schools and others) */}
+              {schoolCategory === 'other' && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-4">申请时间</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        申请开始日期 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={template.applicationStartDate || ''}
+                        onChange={(e) => setTemplate({ ...template, applicationStartDate: e.target.value || null })}
+                        className="input-field"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        申请结束日期 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={template.applicationEndDate || ''}
+                        onChange={(e) => setTemplate({ ...template, applicationEndDate: e.target.value || null })}
+                        className="input-field"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {loadingSchool && (
+                <div className="text-sm text-gray-500">
+                  正在加载学校类别信息...
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Fields Configuration */}

@@ -18,24 +18,93 @@ export default async function handler(
   if (req.method === 'PATCH') {
     // Update template (e.g., toggle isActive, update dates)
     try {
-      const { isActive, applicationStartDate, applicationEndDate } = req.body;
+      const {
+        isActive,
+        isApplicationOpenAllYear,
+        applicationStartDate,
+        applicationEndDate,
+        earlyStartDate,
+        earlyEndDate,
+        regularStartDate,
+        regularEndDate,
+        springStartDate,
+        springEndDate,
+        fallStartDate,
+        fallEndDate,
+        centralStartDate,
+        centralEndDate
+      } = req.body;
 
       const updateData: any = {};
+      
+      // Helper function to parse date
+      const parseDate = (dateStr: string | null | undefined): Date | null => {
+        if (dateStr === undefined) return undefined as any;
+        if (!dateStr) return null;
+        try {
+          return new Date(dateStr);
+        } catch {
+          return null;
+        }
+      };
       
       if (typeof isActive === 'boolean') {
         updateData.isActive = isActive;
       }
       
+      if (typeof isApplicationOpenAllYear === 'boolean') {
+        updateData.isApplicationOpenAllYear = isApplicationOpenAllYear;
+      }
+      
+      // Standard dates
       if (applicationStartDate !== undefined) {
-        updateData.applicationStartDate = applicationStartDate 
-          ? new Date(applicationStartDate) 
-          : null;
+        updateData.applicationStartDate = parseDate(applicationStartDate);
       }
       
       if (applicationEndDate !== undefined) {
-        updateData.applicationEndDate = applicationEndDate 
-          ? new Date(applicationEndDate) 
-          : null;
+        updateData.applicationEndDate = parseDate(applicationEndDate);
+      }
+
+      // University dates
+      if (earlyStartDate !== undefined) {
+        updateData.earlyStartDate = parseDate(earlyStartDate);
+      }
+      
+      if (earlyEndDate !== undefined) {
+        updateData.earlyEndDate = parseDate(earlyEndDate);
+      }
+      
+      if (regularStartDate !== undefined) {
+        updateData.regularStartDate = parseDate(regularStartDate);
+      }
+      
+      if (regularEndDate !== undefined) {
+        updateData.regularEndDate = parseDate(regularEndDate);
+      }
+
+      // Local school dates
+      if (springStartDate !== undefined) {
+        updateData.springStartDate = parseDate(springStartDate);
+      }
+      
+      if (springEndDate !== undefined) {
+        updateData.springEndDate = parseDate(springEndDate);
+      }
+      
+      if (fallStartDate !== undefined) {
+        updateData.fallStartDate = parseDate(fallStartDate);
+      }
+      
+      if (fallEndDate !== undefined) {
+        updateData.fallEndDate = parseDate(fallEndDate);
+      }
+      
+      if (centralStartDate !== undefined) {
+        updateData.centralStartDate = parseDate(centralStartDate);
+      }
+      
+      if (centralEndDate !== undefined) {
+        updateData.centralEndDate = parseDate(centralEndDate);
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -52,8 +121,19 @@ export default async function handler(
         template: {
           id: template.id,
           isActive: template.isActive,
+          isApplicationOpenAllYear: template.isApplicationOpenAllYear,
           applicationStartDate: template.applicationStartDate,
-          applicationEndDate: template.applicationEndDate
+          applicationEndDate: template.applicationEndDate,
+          earlyStartDate: template.earlyStartDate,
+          earlyEndDate: template.earlyEndDate,
+          regularStartDate: template.regularStartDate,
+          regularEndDate: template.regularEndDate,
+          springStartDate: template.springStartDate,
+          springEndDate: template.springEndDate,
+          fallStartDate: template.fallStartDate,
+          fallEndDate: template.fallEndDate,
+          centralStartDate: template.centralStartDate,
+          centralEndDate: template.centralEndDate
         }
       });
     } catch (error: any) {
@@ -101,9 +181,20 @@ export default async function handler(
       where: { templateId: id as string }
     });
 
+    // Update any schools that reference this template to remove the link
+    await prisma.school.updateMany({
+      where: { templateId: id as string },
+      data: { templateId: null }
+    });
+
     // Delete the template - all templates can be deleted, including system-generated ones
     await prisma.schoolFormTemplate.delete({
       where: { id: id as string }
+    });
+
+    console.log('[templates/[id]] Template deleted successfully:', {
+      templateId: id,
+      schoolId: template.schoolId
     });
 
     res.status(200).json({ success: true, message: 'Template deleted successfully' });

@@ -91,7 +91,7 @@ export async function runPostTypeResync(postType: PostTypeKey, options: ResyncOp
         })
       );
 
-      const batchRecords = [];
+      const batchRecords: Array<{ wpId: number; extractedFields: any; postTitle: string }> = [];
       for (const { id, post, error } of batchPosts) {
         if (error) {
           // 非 404 的其他错误

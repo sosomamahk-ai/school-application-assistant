@@ -1,42 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticateAdmin } from '@/utils/auth';
-import { parseWordPressTemplateId } from '@/services/wordpressSchoolService';
-
-const PROFILE_TYPES = ['国际学校', '本地中学', '本地小学', '幼稚园', '大学', '内地学校', 'unresolved_raw'] as const;
-type ProfileCategory = (typeof PROFILE_TYPES)[number];
-
-const SLUG_CATEGORY_MAP: Record<string, ProfileCategory> = {
-  'hk-is-template': '国际学校',
-  'hk-ls-template': '本地中学',
-  'hk-ls-primary-template': '本地小学',
-  'hk-kg-template': '幼稚园',
-  'mainland-school-template': '内地学校'
-};
-
-const CODE_CATEGORY_MAP: Record<string, ProfileCategory> = {
-  A: '国际学校',
-  B: '本地中学',
-  C: '本地小学',
-  D: '幼稚园',
-  E: '内地学校'
-};
-
-function mapSlugToCategory(slug: string | null | undefined): ProfileCategory {
-  if (!slug) return 'unresolved_raw';
-  return SLUG_CATEGORY_MAP[slug] || 'unresolved_raw';
-}
-
-function mapSchoolProfileTypeCode(code: string | null | undefined) {
-  if (!code || typeof code !== 'string') {
-    return { category: 'unresolved_raw' as ProfileCategory, normalized: null as string | null };
-  }
-  const normalized = code.trim().toUpperCase();
-  return {
-    category: CODE_CATEGORY_MAP[normalized] || 'unresolved_raw',
-    normalized
-  };
-}
+import {
+  PROFILE_TYPES,
+  type ProfileCategory,
+  templateListSchoolSelect,
+  buildTemplateProfile
+} from '@/server/templateProfiles';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -56,126 +26,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           not: null
         }
       },
-      select: {
-        id: true,
-        wpId: true,
-        name: true,
-        nameEnglish: true,
-        nameShort: true,
-        permalink: true,
-        school_profile_type: true,
-        profileType: true,
-        postType: true,
-        templateId: true,
-        template: {
-          select: {
-            id: true,
-            schoolId: true,
-            isActive: true,
-            fieldsData: true,
-            createdAt: true,
-            updatedAt: true,
-            category: true,
-            applicationStartDate: true,
-            applicationEndDate: true
-          }
-        }
-      },
+      select: templateListSchoolSelect,
       orderBy: {
         updatedAt: 'desc'
       }
     });
 
-    const groupedProfiles: Record<ProfileCategory, any[]> = {
-      国际学校: [],
-      本地中学: [],
-      本地小学: [],
-      幼稚园: [],
-      大学: [],
-      内地学校: [],
-      unresolved_raw: []
-    };
+    const groupedProfiles = PROFILE_TYPES.reduce(
+      (acc, type) => {
+        acc[type] = [];
+        return acc;
+      },
+      {} as Record<ProfileCategory, any[]>
+    );
 
-    const statsByType: Record<ProfileCategory, number> = {
-      国际学校: 0,
-      本地中学: 0,
-      本地小学: 0,
-      幼稚园: 0,
-      大学: 0,
-      内地学校: 0,
-      unresolved_raw: 0
-    };
+    const statsByType = PROFILE_TYPES.reduce(
+      (acc, type) => {
+        acc[type] = 0;
+        return acc;
+      },
+      {} as Record<ProfileCategory, number>
+    );
 
     schools.forEach((school) => {
-      const wpId = school.wpId!;
-      const { category: codeCategory, normalized } = mapSchoolProfileTypeCode(school.school_profile_type);
-      const taxonomyCategory = mapSlugToCategory(school.profileType);
-      
-      // Priority 1: Use postType from School table (most reliable)
-      const isUniversityFromPostType = school.postType === 'university';
-      
-      // Priority 2: Fallback to parsing template.schoolId (for backward compatibility)
-      const parsedTemplate = school.template?.schoolId
-        ? parseWordPressTemplateId(school.template.schoolId)
-        : null;
-      const isUniversityFromTemplate = parsedTemplate?.type === 'university';
-      
-      const isUniversity = isUniversityFromPostType || isUniversityFromTemplate;
+      const profile = buildTemplateProfile(school);
 
-      let finalCategory: ProfileCategory = 'unresolved_raw';
-      let classificationSource: 'school_profile_type' | 'taxonomy' | 'post_type' | undefined;
-
-      if (isUniversity) {
-        finalCategory = '大学';
-        classificationSource = 'post_type';
-      } else if (codeCategory !== 'unresolved_raw') {
-        finalCategory = codeCategory;
-        classificationSource = 'school_profile_type';
-      } else if (taxonomyCategory !== 'unresolved_raw') {
-        finalCategory = taxonomyCategory;
-        classificationSource = 'taxonomy';
+      // Log mismatches between templateId and template relation for easier debugging
+      if (process.env.NODE_ENV === 'development' && school.templateId && !school.template) {
+        console.warn('[template-list] Mismatch: school has templateId but no template relation:', {
+          schoolId: school.id,
+          wpId: school.wpId,
+          templateId: school.templateId
+        });
+      }
+      if (process.env.NODE_ENV === 'development' && school.template && !school.templateId) {
+        console.warn('[template-list] Mismatch: school has template relation but no templateId:', {
+          schoolId: school.id,
+          wpId: school.wpId,
+          templateId: school.template.id
+        });
       }
 
-      const template = school.template
-        ? {
-          ...school.template,
-          school: {
-            name: school.name,
-            nameShort: school.nameShort,
-            permalink: school.permalink,
-            school_profile_type: school.school_profile_type
-          }
-        }
-        : null;
-
-      const profile = {
-        id: wpId,
-        type: 'profile',
-        title: school.nameEnglish || school.name,
-        nameShort: school.nameShort,
-        permalink: school.permalink,
-        acf: {
-          name_short: school.nameShort,
-          school_profile_type: school.school_profile_type
-        },
-        schoolNameDb: school.name,
-        profileType: finalCategory,
-        profileTypeSlug: school.profileType,
-        schoolProfileType: normalized,
-        classificationSource,
-        unresolvedReason:
-          finalCategory === 'unresolved_raw'
-            ? 'Missing school_profile_type and taxonomy profileType'
-            : undefined,
-        templateId: template?.id,
-        template,
-        hasTemplate: Boolean(template),
-        templateStatus: template ? 'created' : 'pending',
-        category: finalCategory
-      };
-
-      groupedProfiles[finalCategory].push(profile);
-      statsByType[finalCategory] += 1;
+      groupedProfiles[profile.category].push(profile);
+      statsByType[profile.category] += 1;
     });
 
     // Sort entries alphabetically within each category for consistency
@@ -184,8 +77,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const total = schools.length;
-    const withTemplate = schools.filter((school) => Boolean(school.templateId)).length;
+    // Count schools that have both templateId and template relation
+    const withTemplate = schools.filter((school) => Boolean(school.templateId) && Boolean(school.template)).length;
     const withoutTemplate = total - withTemplate;
+
+    // Log summary for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[template-list] Summary:', {
+        total,
+        withTemplate,
+        withoutTemplate,
+        schoolsWithTemplateIdOnly: schools.filter(s => s.templateId && !s.template).length,
+        schoolsWithTemplateOnly: schools.filter(s => s.template && !s.templateId).length
+      });
+    }
 
     return res.status(200).json({
       success: true,

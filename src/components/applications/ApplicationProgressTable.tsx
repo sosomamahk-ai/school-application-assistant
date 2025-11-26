@@ -3,18 +3,23 @@ import { Trash2 } from 'lucide-react';
 import { getLocalizedSchoolName } from '@/utils/i18n';
 import type { UserApplicationRecord } from '@/hooks/useUserApplications';
 
-// 类别映射
+// 类别映射 - 与 template-list 保持一致
 const categoryMap: Record<string, string> = {
   '国际学校': '国际学校',
+  '香港国际学校': '国际学校',
+  '本地中学': '本地中学',
   '香港本地中学': '本地中学',
+  '本地小学': '本地小学',
   '香港本地小学': '本地小学',
-  '香港幼稚园': '幼稚园',
   '幼稚园': '幼稚园',
-  '大学': '大学'
+  '香港幼稚园': '幼稚园',
+  '大学': '大学',
+  '内地学校': '内地学校',
+  'unresolved_raw': '未分类'
 };
 
 const getCategoryLabel = (category: string | null | undefined): string => {
-  if (!category) return '国际学校';
+  if (!category || category === '未分类') return '未分类';
   return categoryMap[category] || category;
 };
 
@@ -88,7 +93,7 @@ export default function ApplicationProgressTable({ records, onEdit, onDelete, ap
                 <tr key={record.id} className="hover:bg-gray-50">
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="font-semibold text-gray-900">{schoolName}</div>
-                    <div className="text-xs text-gray-500 mt-1">{record.program}</div>
+                    <div className="text-xs text-gray-500 mt-1">{record.nameEnglish || record.program || ''}</div>
                   </td>
                   <td className="px-4 py-4 text-center whitespace-nowrap">
                     <span className="text-sm text-gray-600">
