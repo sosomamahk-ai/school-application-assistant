@@ -6,8 +6,8 @@ export const PROFILE_TYPES = [
   '本地中学',
   '本地小学',
   '幼稚园',
-  '大学',
   '内地学校',
+  '大学',
   'unresolved_raw'
 ] as const;
 

@@ -177,10 +177,27 @@ export default function NewTemplate() {
         setTemplate({
           schoolId: '',
           schoolName: `${baseData.schoolName} - 副本`,
-          program: baseData.program,
-          description: baseData.description,
+          program: baseData.program || '',
+          description: baseData.description || '',
           category: baseData.category || '国际学校',
-          isActive: true
+          isActive: true,
+          // Date fields
+          isApplicationOpenAllYear: baseData.isApplicationOpenAllYear || false,
+          // Standard dates
+          applicationStartDate: baseData.applicationStartDate || null,
+          applicationEndDate: baseData.applicationEndDate || null,
+          // University dates
+          earlyStartDate: baseData.earlyStartDate || null,
+          earlyEndDate: baseData.earlyEndDate || null,
+          regularStartDate: baseData.regularStartDate || null,
+          regularEndDate: baseData.regularEndDate || null,
+          // Local school dates
+          springStartDate: baseData.springStartDate || null,
+          springEndDate: baseData.springEndDate || null,
+          fallStartDate: baseData.fallStartDate || null,
+          fallEndDate: baseData.fallEndDate || null,
+          centralStartDate: baseData.centralStartDate || null,
+          centralEndDate: baseData.centralEndDate || null,
         });
         
         // Deep clone fieldsData to ensure all nested structures (sections, fields, sub-items) are fully copied

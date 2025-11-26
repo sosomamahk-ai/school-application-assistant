@@ -77,8 +77,8 @@ const PROFILE_TYPES: Array<{ key: string; label: string; isWarning?: boolean }> 
   { key: '本地中学', label: '本地中学' },
   { key: '本地小学', label: '本地小学' },
   { key: '幼稚园', label: '幼稚园' },
-  { key: '大学', label: '大学' },
   { key: '内地学校', label: '内地学校' },
+  { key: '大学', label: '大学' },
   { key: 'unresolved_raw', label: '未分类 (需检查)', isWarning: true }
 ];
 

@@ -15,45 +15,7 @@ export default function EditTemplate() {
   const [schoolCategory, setSchoolCategory] = useState<SchoolCategory>('other');
   const [loadingSchool, setLoadingSchool] = useState(false);
 
-  const fetchTemplate = useCallback(async () => {
-    if (!id || typeof id !== 'string') return;
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/templates/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTemplate(data.template);
-        
-        // Fetch school profileType to determine category
-        if (data.template?.schoolId) {
-          fetchSchoolCategory(data.template.schoolId);
-        }
-      } else {
-        alert('模板加载失败');
-        router.push('/admin/templates');
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      alert('模板加载失败');
-      router.push('/admin/templates');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, router]);
-
-  useEffect(() => {
-    if (id) {
-      fetchTemplate();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, fetchTemplate]);
-
-  const fetchSchoolCategory = async (schoolId: string) => {
+  const fetchSchoolCategory = useCallback(async (schoolId: string) => {
     setLoadingSchool(true);
     try {
       const token = localStorage.getItem('token');
@@ -88,7 +50,44 @@ export default function EditTemplate() {
     } finally {
       setLoadingSchool(false);
     }
-  };
+  }, [id]);
+
+  const fetchTemplate = useCallback(async () => {
+    if (!id || typeof id !== 'string') return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/templates/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTemplate(data.template);
+        
+        // Fetch school profileType to determine category
+        if (data.template?.schoolId) {
+          fetchSchoolCategory(data.template.schoolId);
+        }
+      } else {
+        alert('模板加载失败');
+        router.push('/admin/templates');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      alert('模板加载失败');
+      router.push('/admin/templates');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, router, fetchSchoolCategory]);
+
+  useEffect(() => {
+    if (id) {
+      fetchTemplate();
+    }
+  }, [id, fetchTemplate]);
 
   const handleSave = async () => {
     if (!template) return;
