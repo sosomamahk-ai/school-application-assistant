@@ -114,6 +114,9 @@ export class PrismaSyncService {
             // Taxonomy 字段 profile_type -> 数据库字段 profileType
             data.profileType = extracted.value;
             break;
+          case 'postType':
+            data.postType = extracted.value;
+            break;
           case 'slug':
             // slug 可以存储在 notes 或作为标识符，但 schema 中没有 slug 字段
             // 如果需要可以添加到 notes
@@ -123,6 +126,10 @@ export class PrismaSyncService {
             this.logger.debug(`未映射的字段: ${dbField} = ${extracted.value}`);
         }
       }
+    }
+
+    if (!data.postType && this.config.wpPostType) {
+      data.postType = this.config.wpPostType;
     }
 
     return data;

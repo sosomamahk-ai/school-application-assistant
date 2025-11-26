@@ -392,6 +392,14 @@ export function extractFields(
   if (!extracted.slug) {
     extracted.slug = extractPostField(post, 'slug');
   }
+
+  extracted.postType = {
+    value: config.wpPostType || null,
+    source: 'config',
+    rawData: config.wpPostType || null,
+    present: Boolean(config.wpPostType),
+    path: ['config', 'wpPostType'],
+  };
   
   return extracted;
 }

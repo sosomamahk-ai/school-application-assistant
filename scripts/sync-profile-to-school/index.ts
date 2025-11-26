@@ -115,7 +115,11 @@ async function sync(): Promise<SyncResult> {
     
     if (config.singlePostId) {
       logger.info(`单条调试模式: 拉取 post ID ${config.singlePostId}`);
-      posts = [await wpClient.getPost(config.singlePostId)];
+      const singlePost = await wpClient.getPost(config.singlePostId);
+      posts = singlePost ? [singlePost] : [];
+      if (!singlePost) {
+        logger.warn(`⚠️  post ID ${config.singlePostId} 不存在（404）`);
+      }
     } else {
       posts = await wpClient.getAllPosts();
     }
@@ -345,7 +349,11 @@ async function syncSample(
       
       try {
         const post = await wpClient.getPost(id);
-        posts.push(post);
+        if (post) {
+          posts.push(post);
+        } else {
+          logger.warn(`⚠️  post ID ${id} 不存在（404），跳过`);
+        }
       } catch (error: any) {
         logger.error(`获取 post ${id} 失败: ${error.message}`);
         // 继续处理其他 posts

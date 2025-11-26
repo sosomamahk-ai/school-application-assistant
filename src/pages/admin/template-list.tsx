@@ -24,6 +24,7 @@ import { useTranslation } from '@/contexts/TranslationContext';
 import type { WordPressSchool } from '@/types/wordpress';
 
 interface ProfileWithTemplate extends WordPressSchool {
+  schoolNameDb?: string | null;
   templateId?: string;
   template?: {
     id: string;
@@ -31,6 +32,7 @@ interface ProfileWithTemplate extends WordPressSchool {
     isActive: boolean;
     fieldsData: any;
     school?: {
+      name?: string | null;
       nameShort?: string | null;
       permalink?: string | null;
     } | null;
@@ -40,6 +42,7 @@ interface ProfileWithTemplate extends WordPressSchool {
   profileType?: string;
   profileTypeSlug?: string | null;
   schoolProfileType?: string | null;
+  classificationSource?: 'school_profile_type' | 'taxonomy' | 'post_type';
   unresolvedReason?: string;
 }
 
@@ -63,6 +66,8 @@ const PROFILE_TYPES: Array<{ key: string; label: string; isWarning?: boolean }> 
   { key: '本地中学', label: '本地中学' },
   { key: '本地小学', label: '本地小学' },
   { key: '幼稚园', label: '幼稚园' },
+  { key: '大学', label: '大学' },
+  { key: '内地学校', label: '内地学校' },
   { key: 'unresolved_raw', label: '未分类 (需检查)', isWarning: true }
 ];
 
@@ -80,7 +85,7 @@ export default function TemplatesManagementV2() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/templates-v2', {
+      const response = await fetch('/api/admin/template-list', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -408,11 +413,14 @@ export default function TemplatesManagementV2() {
               </div>
             )}
           <div className="card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+            <div>
+              <table className="min-w-full divide-y divide-gray-200 table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                      WordPress 标题
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                       学校名称
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -439,13 +447,29 @@ export default function TemplatesManagementV2() {
                   {currentProfiles.map((profile) => {
                     const template = profile.template;
                     const fieldCount = template?.fieldsData ? getFieldCount(template.fieldsData) : 0;
+                    const permalink = profile.permalink || template?.school?.permalink || null;
+                    const displaySchoolName = profile.schoolNameDb || template?.school?.name || profile.title;
                     
                     return (
                       <tr key={`${profile.type}-${profile.id}`} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 align-top whitespace-normal break-words w-1/5">
+                          {permalink ? (
+                            <a
+                              href={permalink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary-600 hover:text-primary-800 font-medium"
+                            >
+                              {displaySchoolName}
+                            </a>
+                          ) : (
+                            <span className="text-gray-900 font-medium">{displaySchoolName}</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 align-top whitespace-normal break-words w-1/5">
                           <div className="text-sm font-medium text-gray-900">{profile.title}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 align-top whitespace-normal break-words">
                           <div className="text-sm text-gray-500">
                             {template?.school?.nameShort || profile.nameShort || profile.acf?.name_short || '-'}
                           </div>

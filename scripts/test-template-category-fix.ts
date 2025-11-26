@@ -67,7 +67,7 @@ async function testTemplateCategoryCreation() {
   }
 
   // Check if category is a valid value
-  const validCategories = ['国际学校', '本地中学', '本地小学', '幼稚园', '大学'];
+  const validCategories = ['国际学校', '本地中学', '本地小学', '幼稚园', '大学', '内地学校'];
   if (sampleTemplate.category && validCategories.includes(sampleTemplate.category)) {
     addTest(
       'Template Creation - Valid Category',
@@ -130,7 +130,8 @@ async function testTemplateCategoryRead() {
           'ls': '本地中学',
           'lp': '本地小学',
           'kg': '幼稚园',
-          'un': '大学'
+          'un': '大学',
+          'ml': '内地学校'
         };
         const extractedCategory = abbrMap[abbr];
         if (extractedCategory) {
@@ -176,7 +177,7 @@ async function testCategoryConsistency() {
     }
   });
 
-  const validCategories = ['国际学校', '本地中学', '本地小学', '幼稚园', '大学'];
+  const validCategories = ['国际学校', '本地中学', '本地小学', '幼稚园', '大学', '内地学校'];
   const invalidCategories: string[] = [];
 
   allTemplates.forEach(template => {

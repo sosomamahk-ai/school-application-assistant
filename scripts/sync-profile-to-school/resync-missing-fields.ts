@@ -12,10 +12,18 @@ import { createLogger } from './logger';
 import { WordPressClient } from './wordpress-client';
 import { PrismaSyncService } from './prisma-sync';
 import { extractFields } from './field-extractor';
+import { buildPostTypeConfig, PostTypeKey } from './postTypeConfig';
 
 dotenv.config();
 
 const prisma = new PrismaClient();
+
+type ResyncRecord = {
+  id: string;
+  wpId: number | null;
+  name: string;
+  postType: string | null;
+};
 
 async function resyncMissingFields(options: {
   limit?: number;
@@ -30,7 +38,6 @@ async function resyncMissingFields(options: {
   }
   
   const logger = createLogger(config);
-  const wpClient = new WordPressClient(config);
   const syncService = new PrismaSyncService(config, logger);
 
   // 查找需要重新同步的记录
@@ -78,18 +85,26 @@ async function resyncMissingFields(options: {
 
   // 如果指定了 limit，只同步部分记录；否则同步全部
   const limit = options.limit || totalCount;
-  const recordsToSync = await prisma.school.findMany({
+  const rawRecords = await prisma.school.findMany({
     where: query,
     select: {
       id: true,
       wpId: true,
       name: true,
+      postType: true, // Prisma 可能尚未生成，可通过 any 访问
     },
     take: limit,
     orderBy: {
       updatedAt: 'desc',
     },
-  });
+  } as any);
+
+  const recordsToSync: ResyncRecord[] = rawRecords.map((record: any) => ({
+    id: record.id,
+    wpId: record.wpId,
+    name: record.name,
+    postType: record.postType ?? null,
+  }));
 
   if (limit < totalCount) {
     logger.info(`将同步前 ${limit} 条记录（共 ${totalCount} 条）`);
@@ -113,33 +128,92 @@ async function resyncMissingFields(options: {
   for (let i = 0; i < recordsToSync.length; i++) {
     const record = recordsToSync[i];
     const wpId = record.wpId!;
+    const wpNumericId = Number(wpId);
+    if (!Number.isFinite(wpNumericId)) {
+      logger.warn(`⚠️  记录 ${record.id} 的 wpId 无效，跳过`);
+      failureCount++;
+      continue;
+    }
 
-    logger.info(`[${i + 1}/${recordsToSync.length}] 重新同步 wpId=${wpId}: ${record.name}`);
+    const recordPostType = (record as any).postType as string | null | undefined;
+    logger.info(
+      `[${i + 1}/${recordsToSync.length}] 重新同步 wpId=${wpId}: ${record.name} (postType: ${recordPostType || '未知'})`
+    );
 
     try {
-      // 从 WordPress 获取最新数据
-      const post = await wpClient.getPost(wpId);
-      
-      if (!post) {
-        logger.error(`无法获取 wpId=${wpId} 的 WordPress 数据`);
-        failureCount++;
+      // 智能检测 postType：如果 postType 为 null 或返回 404，尝试另一个 endpoint
+      let detectedPostType: PostTypeKey | null = null;
+      let post: any = null;
+      let recordConfig: any = null;
+      let recordWpClient: WordPressClient | null = null;
+
+      // 确定要尝试的 postType 顺序
+      const postTypesToTry: PostTypeKey[] = [];
+      if (recordPostType === 'profile' || recordPostType === null) {
+        // 如果标记为 profile 或 null，先尝试 profile
+        postTypesToTry.push('profile', 'university');
+      } else if (recordPostType === 'university') {
+        // 如果标记为 university，先尝试 university
+        postTypesToTry.push('university', 'profile');
+      } else {
+        // 未知类型，先尝试 profile
+        postTypesToTry.push('profile', 'university');
+      }
+
+      // 尝试每个 postType
+      for (const tryPostType of postTypesToTry) {
+        try {
+          recordConfig = buildPostTypeConfig(config, tryPostType);
+          recordWpClient = new WordPressClient(recordConfig);
+          
+          logger.debug(`  尝试从 ${tryPostType} endpoint 获取 wpId=${wpId}...`);
+          post = await recordWpClient.getPost(wpNumericId);
+          
+          if (post) {
+            // 成功获取，记录检测到的 postType
+            detectedPostType = tryPostType;
+            logger.info(`  ✅ 从 ${tryPostType} endpoint 成功获取数据`);
+            break;
+          }
+        } catch (error: any) {
+          // 如果是 404 错误，尝试下一个 endpoint
+          if (error.message?.includes('404') || error.message?.includes('Not Found')) {
+            logger.debug(`  ⚠️  ${tryPostType} endpoint 返回 404，尝试下一个...`);
+            continue;
+          }
+          // 其他错误，抛出
+          throw error;
+        }
+      }
+
+      // 如果所有尝试都失败
+      if (!post || !detectedPostType) {
+        logger.warn(`⚠️  wpId=${wpId} (${record.name}) 在所有 endpoint 中都不存在，跳过同步`);
         continue;
       }
 
-      // 提取字段
-      const extractedFields = extractFields(post, config);
+      // 如果检测到的 postType 与数据库中的不一致，记录警告
+      if (recordPostType && recordPostType !== detectedPostType) {
+        logger.warn(`  ⚠️  检测到 postType 不一致：数据库=${recordPostType}，实际=${detectedPostType}，将更新为正确的 postType`);
+      }
+
+      // 提取字段（使用检测到的 postType 的配置）
+      const extractedFields = extractFields(post, recordConfig!);
 
       // 获取 post 标题
-      const postTitle = typeof post.title === 'string'
-        ? post.title
-        : post.title?.rendered || record.name;
+      const postTitle =
+        typeof post.title === 'string'
+          ? post.title
+          : typeof post.title?.rendered === 'string'
+            ? post.title.rendered
+            : record.name || `Post ${wpNumericId}`;
 
-      // 同步到数据库
-      const result = await syncService.upsertSchool(wpId, extractedFields, postTitle);
+      // 同步到数据库（会自动设置正确的 postType）
+      const result = await syncService.upsertSchool(wpNumericId, extractedFields, postTitle);
 
       if (result.success) {
         successCount++;
-        logger.info(`✅ 成功重新同步 wpId=${wpId}`);
+        logger.info(`✅ 成功重新同步 wpId=${wpId} (postType: ${detectedPostType})`);
       } else {
         failureCount++;
         logger.error(`❌ 重新同步失败 wpId=${wpId}: ${result.error}`);

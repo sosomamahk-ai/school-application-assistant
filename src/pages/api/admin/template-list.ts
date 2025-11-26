@@ -1,22 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { authenticateAdmin } from '@/utils/auth';
+import { parseWordPressTemplateId } from '@/services/wordpressSchoolService';
 
-const PROFILE_TYPES = ['国际学校', '本地中学', '本地小学', '幼稚园', 'unresolved_raw'] as const;
+const PROFILE_TYPES = ['国际学校', '本地中学', '本地小学', '幼稚园', '大学', '内地学校', 'unresolved_raw'] as const;
 type ProfileCategory = (typeof PROFILE_TYPES)[number];
 
 const SLUG_CATEGORY_MAP: Record<string, ProfileCategory> = {
   'hk-is-template': '国际学校',
   'hk-ls-template': '本地中学',
   'hk-ls-primary-template': '本地小学',
-  'hk-kg-template': '幼稚园'
+  'hk-kg-template': '幼稚园',
+  'mainland-school-template': '内地学校'
 };
 
 const CODE_CATEGORY_MAP: Record<string, ProfileCategory> = {
   A: '国际学校',
   B: '本地中学',
   C: '本地小学',
-  D: '幼稚园'
+  D: '幼稚园',
+  E: '内地学校'
 };
 
 function mapSlugToCategory(slug: string | null | undefined): ProfileCategory {
@@ -62,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         permalink: true,
         school_profile_type: true,
         profileType: true,
+        postType: true,
         templateId: true,
         template: {
           select: {
@@ -87,6 +91,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       本地中学: [],
       本地小学: [],
       幼稚园: [],
+      大学: [],
+      内地学校: [],
       unresolved_raw: []
     };
 
@@ -95,6 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       本地中学: 0,
       本地小学: 0,
       幼稚园: 0,
+      大学: 0,
+      内地学校: 0,
       unresolved_raw: 0
     };
 
@@ -102,18 +110,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const wpId = school.wpId!;
       const { category: codeCategory, normalized } = mapSchoolProfileTypeCode(school.school_profile_type);
       const taxonomyCategory = mapSlugToCategory(school.profileType);
-      const finalCategory = codeCategory !== 'unresolved_raw' ? codeCategory : taxonomyCategory;
-      const classificationSource: 'school_profile_type' | 'taxonomy' | undefined =
-        codeCategory !== 'unresolved_raw'
-          ? 'school_profile_type'
-          : taxonomyCategory !== 'unresolved_raw'
-          ? 'taxonomy'
-          : undefined;
+      
+      // Priority 1: Use postType from School table (most reliable)
+      const isUniversityFromPostType = school.postType === 'university';
+      
+      // Priority 2: Fallback to parsing template.schoolId (for backward compatibility)
+      const parsedTemplate = school.template?.schoolId
+        ? parseWordPressTemplateId(school.template.schoolId)
+        : null;
+      const isUniversityFromTemplate = parsedTemplate?.type === 'university';
+      
+      const isUniversity = isUniversityFromPostType || isUniversityFromTemplate;
+
+      let finalCategory: ProfileCategory = 'unresolved_raw';
+      let classificationSource: 'school_profile_type' | 'taxonomy' | 'post_type' | undefined;
+
+      if (isUniversity) {
+        finalCategory = '大学';
+        classificationSource = 'post_type';
+      } else if (codeCategory !== 'unresolved_raw') {
+        finalCategory = codeCategory;
+        classificationSource = 'school_profile_type';
+      } else if (taxonomyCategory !== 'unresolved_raw') {
+        finalCategory = taxonomyCategory;
+        classificationSource = 'taxonomy';
+      }
 
       const template = school.template
         ? {
           ...school.template,
           school: {
+            name: school.name,
             nameShort: school.nameShort,
             permalink: school.permalink,
             school_profile_type: school.school_profile_type
@@ -131,6 +158,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name_short: school.nameShort,
           school_profile_type: school.school_profile_type
         },
+        schoolNameDb: school.name,
         profileType: finalCategory,
         profileTypeSlug: school.profileType,
         schoolProfileType: normalized,
@@ -171,7 +199,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
   } catch (error: any) {
-    console.error('[API /admin/templates-v2] Error:', error);
+    console.error('[API /admin/template-list] Error:', error);
     return res.status(500).json({
       error: 'Failed to load template data',
       message: process.env.NODE_ENV === 'development' ? error?.message : 'Internal server error'

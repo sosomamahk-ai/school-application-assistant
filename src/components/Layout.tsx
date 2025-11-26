@@ -118,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
       icon: Shield
     },
     {
-      href: '/admin/templates-v2',
+      href: '/admin/template-list',
       label: '模版列表',
       icon: FileText
     },

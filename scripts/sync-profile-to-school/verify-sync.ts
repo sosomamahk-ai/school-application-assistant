@@ -18,6 +18,12 @@ const prisma = new PrismaClient();
 interface SyncStats {
   total: number;
   withWpId: number;
+  postType: {
+    total: number;
+    profile: number;
+    university: number;
+    null: number;
+  };
   school_profile_type: {
     total: number;
     filled: number;
@@ -65,9 +71,40 @@ async function getSyncStats(): Promise<SyncStats> {
     },
   });
 
+  // 统计 postType
+  const postType_profile_result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+    SELECT COUNT(*) as count 
+    FROM "School" 
+    WHERE "wpId" IS NOT NULL 
+    AND "postType" = 'profile'
+  `;
+  const postType_profile = Number(postType_profile_result[0]?.count || 0);
+
+  const postType_university_result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+    SELECT COUNT(*) as count 
+    FROM "School" 
+    WHERE "wpId" IS NOT NULL 
+    AND "postType" = 'university'
+  `;
+  const postType_university = Number(postType_university_result[0]?.count || 0);
+
+  const postType_null_result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+    SELECT COUNT(*) as count 
+    FROM "School" 
+    WHERE "wpId" IS NOT NULL 
+    AND "postType" IS NULL
+  `;
+  const postType_null = Number(postType_null_result[0]?.count || 0);
+
   return {
     total,
     withWpId,
+    postType: {
+      total: withWpId,
+      profile: postType_profile,
+      university: postType_university,
+      null: postType_null,
+    },
     school_profile_type: {
       total: withWpId,
       filled: school_profile_type_filled,
@@ -98,6 +135,7 @@ async function verifySingleRecord(wpId: number) {
     nameShort: string | null;
     school_profile_type: string | null;
     profileType: string | null;
+    postType: string | null;
     country: string | null;
     location: string | null;
     bandType: string | null;
@@ -105,7 +143,7 @@ async function verifySingleRecord(wpId: number) {
   }>>`
     SELECT 
       id, name, "wpId", "nameEnglish", "nameShort", 
-      "school_profile_type", "profileType",
+      "school_profile_type", "profileType", "postType",
       country, location, "bandType", "metadataLastFetchedAt"
     FROM "School"
     WHERE "wpId" = ${wpId}
@@ -139,6 +177,7 @@ async function verifySingleRecord(wpId: number) {
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`数据库记录:`);
   console.log(`  名称: ${dbRecord.name}`);
+  console.log(`  postType: ${dbRecord.postType || '(null)'} ⭐`);
   console.log(`  nameEnglish: ${dbRecord.nameEnglish || '(null)'}`);
   console.log(`  nameShort: ${dbRecord.nameShort || '(null)'}`);
   console.log(`  school_profile_type (ACF): ${dbRecord.school_profile_type || '(null)'}`);
@@ -202,6 +241,12 @@ async function main() {
   console.log(`总记录数: ${stats.total}`);
   console.log(`有 wpId 的记录数: ${stats.withWpId} (${((stats.withWpId / stats.total) * 100).toFixed(1)}%)\n`);
 
+  console.log(`postType (WordPress Post Type) ⭐:`);
+  console.log(`  总数: ${stats.postType.total}`);
+  console.log(`  profile: ${stats.postType.profile} (${((stats.postType.profile / stats.postType.total) * 100).toFixed(1)}%)`);
+  console.log(`  university: ${stats.postType.university} (${((stats.postType.university / stats.postType.total) * 100).toFixed(1)}%)`);
+  console.log(`  未设置: ${stats.postType.null} (${((stats.postType.null / stats.postType.total) * 100).toFixed(1)}%)\n`);
+
   console.log(`school_profile_type (ACF 字段):`);
   console.log(`  总数: ${stats.school_profile_type.total}`);
   console.log(`  已填充: ${stats.school_profile_type.filled} (${((stats.school_profile_type.filled / stats.school_profile_type.total) * 100).toFixed(1)}%)`);
@@ -248,6 +293,33 @@ async function main() {
     });
   } else {
     console.log(`✅ 所有有 wpId 的记录都填充了 school_profile_type`);
+  }
+
+  // 显示最近同步的 university 记录示例
+  if (stats.postType.university > 0) {
+    console.log(`\n📚 最近同步的 University 记录示例 (前 5 条):`);
+    const universityExamples = await prisma.$queryRaw<Array<{
+      id: string;
+      name: string;
+      wpId: number;
+      postType: string | null;
+      nameEnglish: string | null;
+      nameShort: string | null;
+      metadataLastFetchedAt: Date | null;
+    }>>`
+      SELECT id, name, "wpId", "postType", "nameEnglish", "nameShort", "metadataLastFetchedAt"
+      FROM "School"
+      WHERE "wpId" IS NOT NULL 
+      AND "postType" = 'university'
+      ORDER BY "metadataLastFetchedAt" DESC NULLS LAST, "updatedAt" DESC
+      LIMIT 5
+    `;
+
+    universityExamples.forEach((record, index) => {
+      console.log(`  ${index + 1}. wpId=${record.wpId}, name="${record.name}"`);
+      console.log(`     postType=${record.postType}, nameEnglish=${record.nameEnglish || '(null)'}, nameShort=${record.nameShort || '(null)'}`);
+      console.log(`     最后同步: ${record.metadataLastFetchedAt ? new Date(record.metadataLastFetchedAt).toLocaleString() : '(null)'}`);
+    });
   }
 
   console.log('\n═══════════════════════════════════════════════════════════');

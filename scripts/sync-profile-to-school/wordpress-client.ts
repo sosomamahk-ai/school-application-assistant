@@ -120,8 +120,9 @@ export class WordPressClient {
 
   /**
    * 获取单个 post
+   * @returns Post 数据，如果不存在（404）则返回 null
    */
-  async getPost(id: number): Promise<WordPressPostWithTerms> {
+  async getPost(id: number): Promise<WordPressPostWithTerms | null> {
     const url = `${this.baseUrl}${this.config.wpApiProfileEndpoint}/${id}?_embed`;
     
     try {
@@ -133,6 +134,10 @@ export class WordPressClient {
       const data = await response.json() as WordPressPostWithTerms;
       return data;
     } catch (error: any) {
+      // 如果是 404 错误，返回 null 而不是抛出错误
+      if (error.message?.includes('404') || error.message?.includes('Not Found')) {
+        return null;
+      }
       throw new Error(`Failed to fetch post ${id}: ${error.message}`);
     }
   }

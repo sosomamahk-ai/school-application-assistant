@@ -34,7 +34,7 @@ export interface WordPressPostWithTerms extends WordPressPost {
 
 export interface ExtractedField {
   value: any;
-  source: 'acf' | 'taxonomy' | 'post_field' | 'meta';
+  source: 'acf' | 'taxonomy' | 'post_field' | 'meta' | 'config';
   rawData: any;
   present: boolean; // 字段是否存在于 API 响应中
   path: string[]; // 字段路径（用于诊断）

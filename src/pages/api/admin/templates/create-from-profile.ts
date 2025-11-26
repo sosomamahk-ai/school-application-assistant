@@ -185,7 +185,8 @@ export default async function handler(
       '本地小学': '本地小学',
       '香港幼稚园': '幼稚园',
       '幼稚园': '幼稚园',
-      '大学': '大学'
+      '大学': '大学',
+      '内地学校': '内地学校'
     };
 
     // Ensure finalCategory is never null - use multiple fallback strategies
@@ -209,7 +210,8 @@ export default async function handler(
           'ls': '本地中学',
           'lp': '本地小学',
           'kg': '幼稚园',
-          'un': '大学'
+          'un': '大学',
+          'ml': '内地学校'
         };
         finalCategory = abbrMap[abbr] || '国际学校';
       }

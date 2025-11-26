@@ -38,11 +38,12 @@ const categoryMap: Record<string, string> = {
   '本地小学': '本地小学',
   '香港幼稚园': '幼稚园',
   '幼稚园': '幼稚园',
-  '大学': '大学'
+  '大学': '大学',
+  '内地学校': '内地学校'
 };
 
 // Extract category from schoolId if it follows the new format: {name_short}-{category_abbr}-{year}
-// Category abbreviations: is (国际学校), ls (本地中学), lp (本地小学), kg (幼稚园), un (大学)
+// Category abbreviations: is (国际学校), ls (本地中学), lp (本地小学), kg (幼稚园), un (大学), ml (内地学校)
 const extractCategoryFromSchoolId = (schoolId: string | null | undefined): string | null => {
   if (!schoolId) return null;
   
@@ -55,7 +56,8 @@ const extractCategoryFromSchoolId = (schoolId: string | null | undefined): strin
       'ls': '本地中学',
       'lp': '本地小学',
       'kg': '幼稚园',
-      'un': '大学'
+      'un': '大学',
+      'ml': '内地学校'
     };
     return abbrMap[abbr] || null;
   }
@@ -89,7 +91,8 @@ const categoryIcons: Record<string, any> = {
   '本地中学': School,
   '本地小学': BookOpen,
   '幼稚园': Baby,
-  '大学': Users
+  '大学': Users,
+  '内地学校': School
 };
 
 export default function SchoolsPage() {

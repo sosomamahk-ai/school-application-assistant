@@ -101,6 +101,7 @@ model School {
   bandType              String?
   school_profile_type   String?            // ACF 字段: acf.school_profile_type
   profileType           String?            // Taxonomy 字段: taxonomy.profile_type
+  postType              String?            // WordPress post type: 'profile' | 'university'
   template              SchoolFormTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
   UserApplication       UserApplication[]
 

@@ -195,3 +195,4 @@ curl "https://school-application-assistant.vercel.app/api/wordpress/school-profi
 **验证时间：** 2025-11-23  
 **验证方式：** 自动测试脚本
 
+

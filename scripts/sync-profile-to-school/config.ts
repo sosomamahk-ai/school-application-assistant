@@ -37,6 +37,7 @@ export interface SyncConfig {
   // WordPress 配置
   wpBaseUrl: string;
   wpApiProfileEndpoint: string;
+  wpPostType?: 'profile' | 'university';
   
   // 认证配置
   auth: AuthConfig;
@@ -191,6 +192,7 @@ export function loadConfig(): SyncConfig {
   return {
     wpBaseUrl: wpBaseUrl.replace(/\/$/, ''), // 移除末尾斜杠
     wpApiProfileEndpoint: process.env.WP_API_PROFILE_ENDPOINT || '/wp-json/wp/v2/profile',
+    wpPostType: 'profile',
     auth: buildAuthConfig(),
     prismaSchemaPath,
     batchSize: parseInt(process.env.BATCH_SIZE || '50', 10),

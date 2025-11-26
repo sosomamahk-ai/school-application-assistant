@@ -353,6 +353,7 @@ export async function syncAllWPSchools(): Promise<{
                   nameShort: nameShort || undefined,
                   permalink: permalink || undefined,
                   profileType: profileType,
+                  postType: wpSchool.type || undefined,
                   templateId: templateId || undefined,
                   country: country || undefined,
                   location: location || undefined,
@@ -380,6 +381,7 @@ export async function syncAllWPSchools(): Promise<{
                       nameShort: nameShort,  // Allow null
                       permalink: permalink || undefined,
                       profileType: profileType,
+                      postType: wpSchool.type || undefined,
                       country: country || undefined,
                       location: location || undefined,
                       bandType: bandType || undefined,
@@ -399,6 +401,7 @@ export async function syncAllWPSchools(): Promise<{
                       nameShort: nameShort,  // Can be null
                       permalink: permalink,
                       profileType: profileType,
+                      postType: wpSchool.type || undefined,
                       templateId: templateId,
                       country: country || undefined,
                       location: location || undefined,
@@ -420,6 +423,7 @@ export async function syncAllWPSchools(): Promise<{
                     nameShort: nameShort,  // Can be null
                     permalink: permalink,
                     profileType: profileType,
+                    postType: wpSchool.type || undefined,
                     country: country || undefined,
                     location: location || undefined,
                     bandType: bandType || undefined,
@@ -446,6 +450,7 @@ export async function syncAllWPSchools(): Promise<{
                     nameShort: nameShort,  // Allow null
                     permalink: permalink || undefined,
                     profileType: profileType,
+                    postType: wpSchool.type || undefined,
                     templateId: templateId || undefined,
                     country: country || undefined,
                     location: location || undefined,
@@ -473,6 +478,7 @@ export async function syncAllWPSchools(): Promise<{
                 nameShort: nameShort,  // Allow null
                 permalink: permalink || undefined,
                 profileType: profileType,
+                postType: wpSchool.type || undefined,
                 country: country || undefined,
                 location: location || undefined,
                 bandType: bandType || undefined,
@@ -487,6 +493,7 @@ export async function syncAllWPSchools(): Promise<{
                 nameShort: nameShort,  // Can be null
                 permalink: permalink,
                 profileType: profileType,
+                postType: wpSchool.type || undefined,
                 templateId: templateId,
                 country: country || undefined,
                 location: location || undefined,
@@ -515,6 +522,7 @@ export async function syncAllWPSchools(): Promise<{
                     nameShort: nameShort,  // Allow null
                     permalink: permalink || undefined,
                     profileType: profileType,
+                    postType: wpSchool.type || undefined,
                     country: country || undefined,
                     location: location || undefined,
                     bandType: bandType || undefined,

@@ -51,7 +51,9 @@
     "sync:profile-to-school:test-extraction": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/test-field-extraction.ts",
     "sync:profile-to-school:verify": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/verify-sync.ts",
     "sync:profile-to-school:resync": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/resync-missing-fields.ts",
-    "sync:profile-to-school:resync-all": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/resync-all-profiles.ts"
+    "sync:profile-to-school:resync-all": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/resync-all-profiles.ts",
+    "sync:university:resync-all": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/resync-all-universities.ts",
+    "sync:university:test": "ts-node --project tsconfig.scripts.json scripts/sync-profile-to-school/resync-all-universities.ts -- --limit 10"
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",

@@ -86,7 +86,7 @@ export default function EditTemplate() {
 
       if (response.ok) {
         alert('模板更新成功！');
-        router.push('/admin/templates-v2');
+        router.push('/admin/template-list');
       } else {
         const error = await response.json();
         alert(`更新失败: ${error.error || '未知错误'}`);

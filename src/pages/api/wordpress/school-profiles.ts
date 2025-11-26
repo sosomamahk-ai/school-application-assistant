@@ -96,7 +96,8 @@ function mapSlugToCategory(slug: string | null): string {
     'hk-is-template': '国际学校',
     'hk-ls-template': '本地中学',
     'hk-ls-primary-template': '本地小学',
-    'hk-kg-template': '幼稚园'
+    'hk-kg-template': '幼稚园',
+    'mainland-school-template': '内地学校'
   };
 
   return slugMap[slug] || 'unresolved_raw';
@@ -104,7 +105,7 @@ function mapSlugToCategory(slug: string | null): string {
 
 /**
  * Map school_profile_type code (ACF field) to display category
- * A -> 国际学校, B -> 本地中学, C -> 本地小学, D -> 幼稚园
+ * A -> 国际学校, B -> 本地中学, C -> 本地小学, D -> 幼稚园, E -> 内地学校
  */
 function mapSchoolProfileTypeCode(code: string | null | undefined): {
   category: string;
@@ -119,7 +120,8 @@ function mapSchoolProfileTypeCode(code: string | null | undefined): {
     A: '国际学校',
     B: '本地中学',
     C: '本地小学',
-    D: '幼稚园'
+    D: '幼稚园',
+    E: '内地学校'
   };
 
   return {
@@ -641,6 +643,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       '本地中学': [],
       '本地小学': [],
       '幼稚园': [],
+      '内地学校': [],
       'unresolved_raw': []
     };
 
