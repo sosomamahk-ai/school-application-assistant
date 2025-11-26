@@ -51,14 +51,19 @@ npm run sync:profile-to-school:resync-all
 | `npm run sync:profile-to-school:resync-all -- --limit 10` | 测试 10 条记录 |
 | `npm run sync:profile-to-school:resync-all -- --dry-run` | 测试模式 |
 
-### 重新同步缺失字段（通用）
+### 重新同步缺失字段（通用）⭐
 
 | 命令 | 说明 |
 |------|------|
-| `npm run sync:profile-to-school:resync` | 同步缺失字段的记录 |
-| `npm run sync:profile-to-school:resync -- --all` | 重新同步所有记录 |
-| `npm run sync:profile-to-school:resync -- --limit 100` | 只同步前 100 条 |
+| `npm run sync:profile-to-school:resync` | 同步所有缺失字段的记录（只更新数据库中为 null 的字段，不会覆盖已有数据） |
+| `npm run sync:profile-to-school:resync -- --all` | 重新同步所有记录（会更新所有字段，包括已有数据） |
+| `npm run sync:profile-to-school:resync -- --limit 100` | 只同步前 100 条缺失字段的记录 |
 | `npm run sync:profile-to-school:resync -- --wp-id 22117` | 同步指定记录 |
+
+**重要说明**：
+- `resync` 命令（不带 `--all`）**只会更新数据库中为 null 的字段**，不会覆盖已有数据
+- 包括的字段：postType, nameEnglish, nameShort, bandType, country, location, profileType, school_profile_type
+- 如果 postType 检测到与数据库不一致，也会更新（用于修复错误的 postType）
 
 ### 验证和诊断
 
@@ -100,15 +105,28 @@ postType (WordPress Post Type) ⭐:
 
 ---
 
-## 🔄 修复 postType 为 null
+## 🔄 修复 null 字段（包括 postType、post meta、term 数据）
 
 ```bash
-# 重新同步所有记录（会自动设置 postType）
+# 同步所有缺失字段的记录（包括 postType, nameEnglish, nameShort, bandType, country, location 等）
+npm run sync:profile-to-school:resync
+
+# 或者重新同步所有记录（不限制缺失字段）
 npm run sync:profile-to-school:resync -- --all
 
 # 验证结果
 npm run sync:profile-to-school:verify
 ```
+
+**注意**：`sync:profile-to-school:resync` 命令会检查并同步所有可能为 null 的字段，包括：
+- `postType` (WordPress post type)
+- `nameEnglish` (ACF 字段)
+- `nameShort` (ACF 字段)
+- `bandType` (Taxonomy 字段)
+- `country` (Taxonomy 字段)
+- `location` (Taxonomy 字段)
+- `profileType` (Taxonomy 字段)
+- `school_profile_type` (ACF 字段)
 
 ---
 

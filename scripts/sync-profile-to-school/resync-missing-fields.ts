@@ -55,13 +55,18 @@ async function resyncMissingFields(options: {
       wpId: options.wpId,
     };
   } else {
-    // 只同步缺失字段的记录
+    // 只同步缺失字段的记录（检查所有可能为 null 的字段）
     query = {
       wpId: { not: null },
       OR: [
         { school_profile_type: null },
         { profileType: null },
         { nameEnglish: null },
+        { nameShort: null },
+        { bandType: null },
+        { country: null },
+        { location: null },
+        { postType: null },
       ],
     };
   }
@@ -208,16 +213,80 @@ async function resyncMissingFields(options: {
             ? post.title.rendered
             : record.name || `Post ${wpNumericId}`;
 
-      // 同步到数据库（会自动设置正确的 postType）
-      const result = await syncService.upsertSchool(wpNumericId, extractedFields, postTitle);
+      // 获取现有记录，以便只更新 null 字段
+      const existingRecord = await prisma.school.findFirst({
+        where: { wpId: wpNumericId },
+      });
 
-      if (result.success) {
-        successCount++;
-        logger.info(`✅ 成功重新同步 wpId=${wpId} (postType: ${detectedPostType})`);
+      if (existingRecord) {
+        // 只更新那些在数据库中为 null 但在 WordPress 中有值的字段
+        const updateData: any = {
+          updatedAt: new Date(),
+          metadataSource: 'wordpress',
+          metadataLastFetchedAt: new Date(),
+        };
+
+        // 检查每个字段，只更新 null 字段
+        const fieldMappings: Array<{ extractedKey: string; dbKey: string }> = [
+          { extractedKey: 'nameEnglish', dbKey: 'nameEnglish' },
+          { extractedKey: 'nameShort', dbKey: 'nameShort' },
+          { extractedKey: 'bandType', dbKey: 'bandType' },
+          { extractedKey: 'country', dbKey: 'country' },
+          { extractedKey: 'location', dbKey: 'location' },
+          { extractedKey: 'schoolProfileTypeFromACF', dbKey: 'school_profile_type' },
+          { extractedKey: 'profileTypeFromTaxonomy', dbKey: 'profileType' },
+          { extractedKey: 'postType', dbKey: 'postType' },
+        ];
+
+        let hasUpdates = false;
+        for (const mapping of fieldMappings) {
+          const extracted = extractedFields[mapping.extractedKey];
+          const existingValue = (existingRecord as any)[mapping.dbKey];
+          
+          // 更新条件：
+          // 1) 数据库中为 null，且 WordPress 中有值
+          // 2) 对于 postType：如果检测到的与数据库中的不一致，也要更新
+          const shouldUpdate = 
+            (existingValue === null && extracted?.value !== null && extracted?.value !== undefined) ||
+            (mapping.dbKey === 'postType' && 
+             existingValue !== null && 
+             extracted?.value !== null && 
+             existingValue !== extracted.value);
+          
+          if (shouldUpdate) {
+            updateData[mapping.dbKey] = extracted.value;
+            hasUpdates = true;
+            if (existingValue === null) {
+              logger.debug(`  将更新 ${mapping.dbKey}: null -> ${extracted.value}`);
+            } else {
+              logger.debug(`  将更新 ${mapping.dbKey}: ${existingValue} -> ${extracted.value}`);
+            }
+          }
+        }
+
+        if (hasUpdates) {
+          // 执行更新
+          await prisma.school.update({
+            where: { id: existingRecord.id },
+            data: updateData,
+          });
+          successCount++;
+          logger.info(`✅ 成功更新缺失字段 wpId=${wpId} (postType: ${detectedPostType})`);
+        } else {
+          logger.info(`ℹ️  wpId=${wpId} 没有需要更新的字段（所有字段都已填充或 WordPress 中无数据）`);
+        }
       } else {
-        failureCount++;
-        logger.error(`❌ 重新同步失败 wpId=${wpId}: ${result.error}`);
+        // 记录不存在，使用正常的 upsert 创建
+        const result = await syncService.upsertSchool(wpNumericId, extractedFields, postTitle);
+        if (result.success) {
+          successCount++;
+          logger.info(`✅ 成功创建新记录 wpId=${wpId} (postType: ${detectedPostType})`);
+        } else {
+          failureCount++;
+          logger.error(`❌ 创建记录失败 wpId=${wpId}: ${result.error}`);
+        }
       }
+
 
       // 添加延迟，避免请求过快
       if (i < recordsToSync.length - 1) {

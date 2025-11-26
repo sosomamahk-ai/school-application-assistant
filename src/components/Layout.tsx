@@ -133,11 +133,6 @@ export default function Layout({ children }: LayoutProps) {
       icon: Settings
     },
     {
-      href: '/admin/schools',
-      label: getLabel('navbar.adminSchools', '学校映射管理'),
-      icon: LayoutDashboard
-    },
-    {
       href: '/admin/auto-apply-scripts',
       label: '自动申请脚本',
       icon: FileText
@@ -145,18 +140,30 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   const renderLinks = (links: typeof primaryLinks, isMobile = false) =>
-    links.map(({ href, label, icon: Icon }) => (
-      <Link
-        key={href}
-        href={href}
-        className={`flex items-center space-x-2 py-2 ${
-          router.pathname === href ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
-        } ${isMobile ? 'px-2' : ''}`}
-      >
-        <Icon className="h-5 w-5" />
-        <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{label}</span>
-      </Link>
-    ));
+    links.map(({ href, label, icon: Icon }) => {
+      const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        // Prevent event propagation issues on mobile
+        e.stopPropagation();
+        // Close mobile menu after navigation starts
+        if (isMobile) {
+          setMobileMenuOpen(false);
+        }
+      };
+
+      return (
+        <Link
+          key={href}
+          href={href}
+          onClick={handleLinkClick}
+          className={`flex items-center space-x-2 py-2 ${
+            router.pathname === href ? 'text-primary-600' : 'text-gray-700 hover:text-primary-600'
+          } ${isMobile ? 'px-2' : ''}`}
+        >
+          <Icon className="h-5 w-5" />
+          <span className={`font-medium ${language === 'en' ? 'text-sm' : ''}`}>{label}</span>
+        </Link>
+      );
+    });
 
   // 统一使用左侧边栏布局（与 WordPress 保持一致）
   return (
@@ -214,6 +221,10 @@ export default function Layout({ children }: LayoutProps) {
             className={`bg-white border-b border-gray-100 shadow-sm transition-all duration-200 ${
               mobileMenuOpen ? 'max-h-screen' : 'max-h-0 overflow-hidden'
             }`}
+            onClick={(e) => {
+              // Prevent clicks inside the menu from bubbling up
+              e.stopPropagation();
+            }}
           >
             <div className="px-4 sm:px-6 py-4 space-y-4">
               <div className="space-y-2">{renderLinks(primaryLinks, true)}</div>
@@ -223,7 +234,10 @@ export default function Layout({ children }: LayoutProps) {
               <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                 <LanguageSwitch variant="minimal" />
                 <button
-                  onClick={handleLogout}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLogout();
+                  }}
                   className="flex items-center space-x-2 text-gray-700 hover:text-red-600"
                 >
                   <LogOut className="h-5 w-5" />

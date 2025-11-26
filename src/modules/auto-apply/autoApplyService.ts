@@ -11,8 +11,7 @@ import type {
   SchoolScriptMap,
 } from "./engine/types";
 import { exampleSchoolScript } from "./schools/example-school";
-import { dscInternationalSchoolScript } from "./schools/dsc-international-school";
-import { dscHkis2025Script } from "./schools/dsc-hkis-2025";
+
 
 export interface AutoApplyServiceOptions {
   logger?: AutomationLogger;
@@ -45,8 +44,6 @@ const defaultLogger: AutomationLogger = {
 
 const scriptRegistry: SchoolScriptMap = {
   [exampleSchoolScript.id]: exampleSchoolScript,
-  [dscInternationalSchoolScript.id]: dscInternationalSchoolScript,
-  [dscHkis2025Script.id]: dscHkis2025Script,
 };
 
 export class AutoApplyService {

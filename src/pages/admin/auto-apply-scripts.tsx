@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/router';
 import { useTranslation } from '@/contexts/TranslationContext';
-import { Bot, Plus, CheckCircle, XCircle, Loader2, FileCode, Copy, Download } from 'lucide-react';
+import { Bot, Plus, CheckCircle, XCircle, Loader2, FileCode, Copy, Download, Trash2 } from 'lucide-react';
 
 interface Template {
   id: string;
@@ -42,6 +42,7 @@ export default function AdminAutoApplyScriptsPage() {
     instructions?: any;
     varName?: string;
   } | null>(null);
+  const [deletingScriptId, setDeletingScriptId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -178,6 +179,39 @@ export default function AdminAutoApplyScriptsPage() {
     return template.schoolName?.['zh-CN'] || template.schoolName?.['en'] || template.schoolId;
   };
 
+  const handleDeleteScript = async (script: Script) => {
+    if (!confirm(`确定要删除脚本 "${script.name}" 吗？此操作不可恢复。`)) {
+      return;
+    }
+
+    setDeletingScriptId(script.id);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/admin/auto-apply-scripts?schoolId=${encodeURIComponent(script.schoolId)}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '删除脚本失败');
+      }
+
+      setSuccess(`脚本 "${script.name}" 已成功删除`);
+      setTimeout(() => setSuccess(null), 3000);
+      fetchScripts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除脚本失败');
+    } finally {
+      setDeletingScriptId(null);
+    }
+  };
+
   return (
     <>
       <Head>
@@ -294,15 +328,35 @@ export default function AdminAutoApplyScriptsPage() {
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          <button
-                            className="text-primary-600 hover:text-primary-700 text-xs"
-                            onClick={() => {
-                              navigator.clipboard.writeText(script.filePath);
-                              alert('文件路径已复制到剪贴板');
-                            }}
-                          >
-                            查看文件
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-primary-600 hover:text-primary-700 text-xs"
+                              onClick={() => {
+                                navigator.clipboard.writeText(script.filePath);
+                                alert('文件路径已复制到剪贴板');
+                              }}
+                            >
+                              查看文件
+                            </button>
+                            <button
+                              onClick={() => handleDeleteScript(script)}
+                              disabled={deletingScriptId === script.id}
+                              className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="删除脚本"
+                            >
+                              {deletingScriptId === script.id ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  删除中
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  删除
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

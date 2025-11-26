@@ -5,7 +5,6 @@ import Layout from '@/components/Layout';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import { getSchoolCategory, validateTemplateDates, type SchoolCategory } from '@/utils/templateDates';
-import { parseWordPressTemplateId } from '@/services/wordpressSchoolService';
 
 export default function EditTemplate() {
   const router = useRouter();
@@ -69,37 +68,14 @@ export default function EditTemplate() {
         const templateData = await templateResponse.json();
         const template = templateData.template;
         
-        // Try to get school from database
-        const parsed = parseWordPressTemplateId(schoolId);
-        if (parsed) {
-          const schoolsResponse = await fetch(`/api/admin/schools`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (schoolsResponse.ok) {
-            const schoolsData = await schoolsResponse.json();
-            const school = (schoolsData.schools || []).find((s: any) => s.wpId === parsed.id);
-            if (school?.profileType) {
-              const category = getSchoolCategory(school.profileType);
-              setSchoolCategory(category);
-            } else {
-              // Fallback: determine from template category
-              const categoryFromTemplate = template?.category || '';
-              if (categoryFromTemplate.includes('大学') || categoryFromTemplate.includes('university')) {
-                setSchoolCategory('university');
-              } else if (categoryFromTemplate.includes('本地中学') || categoryFromTemplate.includes('local-secondary')) {
-                setSchoolCategory('local-secondary');
-              } else if (categoryFromTemplate.includes('本地小学') || categoryFromTemplate.includes('local-primary')) {
-                setSchoolCategory('local-primary');
-              } else {
-                setSchoolCategory('other');
-              }
-            }
-          } else {
-            setSchoolCategory('other');
-          }
+        // Determine category from template category
+        const categoryFromTemplate = template?.category || '';
+        if (categoryFromTemplate.includes('大学') || categoryFromTemplate.includes('university')) {
+          setSchoolCategory('university');
+        } else if (categoryFromTemplate.includes('本地中学') || categoryFromTemplate.includes('local-secondary')) {
+          setSchoolCategory('local-secondary');
+        } else if (categoryFromTemplate.includes('本地小学') || categoryFromTemplate.includes('local-primary')) {
+          setSchoolCategory('local-primary');
         } else {
           setSchoolCategory('other');
         }
@@ -107,7 +83,7 @@ export default function EditTemplate() {
         setSchoolCategory('other');
       }
     } catch (error) {
-      console.error('Error fetching school profileType:', error);
+      console.error('Error fetching school category:', error);
       setSchoolCategory('other');
     } finally {
       setLoadingSchool(false);

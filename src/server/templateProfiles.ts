@@ -52,6 +52,14 @@ export const templateListSchoolSelect = {
       applicationStartDate: true,
       applicationEndDate: true
     }
+  },
+  scripts: {
+    select: {
+      id: true,
+      name: true,
+      createdAt: true,
+      updatedAt: true
+    }
   }
 } as const;
 
@@ -124,6 +132,7 @@ export function buildTemplateProfile(school: TemplateListSchool) {
       school_profile_type: school.school_profile_type
     },
     schoolNameDb: school.name,
+    schoolId: school.id, // Include the actual school.id for script operations
     profileType: finalCategory,
     profileTypeSlug: school.profileType,
     schoolProfileType: normalized,
@@ -136,7 +145,8 @@ export function buildTemplateProfile(school: TemplateListSchool) {
     template,
     hasTemplate,
     templateStatus: hasTemplate ? 'created' : 'pending',
-    category: finalCategory
+    category: finalCategory,
+    scripts: school.scripts || []
   };
 }
 

@@ -25,8 +25,16 @@ import { getTokenFromCookieHeader } from '@/utils/token';
 import { useTranslation } from '@/contexts/TranslationContext';
 import type { WordPressSchool } from '@/types/wordpress';
 
+interface Script {
+  id: number;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ProfileWithTemplate extends WordPressSchool {
   schoolNameDb?: string | null;
+  schoolId?: string; // The actual school.id from database
   templateId?: string;
   template?: {
     id: string;
@@ -46,6 +54,7 @@ interface ProfileWithTemplate extends WordPressSchool {
   schoolProfileType?: string | null;
   classificationSource?: 'school_profile_type' | 'taxonomy' | 'post_type';
   unresolvedReason?: string;
+  scripts?: Script[];
 }
 
 interface GroupedProfiles {
@@ -87,6 +96,15 @@ export default function TemplatesManagementV2() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [lastSearchQuery, setLastSearchQuery] = useState('');
+  
+  // Script management states
+  const [showCreateScriptModal, setShowCreateScriptModal] = useState(false);
+  const [showEditScriptModal, setShowEditScriptModal] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState<ProfileWithTemplate | null>(null);
+  const [selectedScripts, setSelectedScripts] = useState<Script[]>([]);
+  const [scriptName, setScriptName] = useState('');
+  const [selectedScriptId, setSelectedScriptId] = useState<number | null>(null);
+  const [scriptLoading, setScriptLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -409,6 +427,178 @@ export default function TemplatesManagementV2() {
     }
   };
 
+  // Script management functions
+  const openCreateScriptModal = (profile: ProfileWithTemplate) => {
+    // Get school ID from profile - need to find the actual school ID
+    // The profile.id is wpId, we need to find the school by wpId
+    setSelectedSchool(profile);
+    setScriptName('');
+    setShowCreateScriptModal(true);
+  };
+
+  const openEditScriptModal = async (profile: ProfileWithTemplate) => {
+    setSelectedSchool(profile);
+    const scripts = profile.scripts || [];
+    setSelectedScripts(scripts);
+    
+    if (scripts.length === 0) {
+      alert('该学校没有脚本');
+      return;
+    }
+    
+    if (scripts.length === 1) {
+      setSelectedScriptId(scripts[0].id);
+      setScriptName(scripts[0].name);
+      setShowEditScriptModal(true);
+    } else {
+      // Multiple scripts - show selection
+      setShowEditScriptModal(true);
+      if (scripts.length > 0) {
+        setSelectedScriptId(scripts[0].id);
+        setScriptName(scripts[0].name);
+      }
+    }
+  };
+
+  const handleCreateScript = async () => {
+    if (!selectedSchool || !scriptName.trim()) {
+      alert('请输入脚本名称');
+      return;
+    }
+
+    if (!selectedSchool.schoolId) {
+      alert('无法确定学校ID');
+      return;
+    }
+
+    setScriptLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/scripts/create', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          schoolId: selectedSchool.schoolId,
+          name: scriptName.trim()
+        })
+      });
+
+      if (response.ok) {
+        alert('脚本创建成功！');
+        setShowCreateScriptModal(false);
+        setScriptName('');
+        await fetchData(); // Refresh data
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`创建失败: ${errorData.error || '未知错误'}`);
+      }
+    } catch (error: any) {
+      console.error('Error creating script:', error);
+      alert(`创建失败: ${error?.message || '网络错误'}`);
+    } finally {
+      setScriptLoading(false);
+    }
+  };
+
+  const handleUpdateScript = async () => {
+    if (!selectedScriptId || !scriptName.trim()) {
+      alert('请选择脚本并输入名称');
+      return;
+    }
+
+    setScriptLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/scripts/update', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: selectedScriptId,
+          name: scriptName.trim()
+        })
+      });
+
+      if (response.ok) {
+        alert('脚本更新成功！');
+        setShowEditScriptModal(false);
+        setScriptName('');
+        setSelectedScriptId(null);
+        await fetchData(); // Refresh data
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`更新失败: ${errorData.error || '未知错误'}`);
+      }
+    } catch (error: any) {
+      console.error('Error updating script:', error);
+      alert(`更新失败: ${error?.message || '网络错误'}`);
+    } finally {
+      setScriptLoading(false);
+    }
+  };
+
+  const handleDeleteScript = async (profile: ProfileWithTemplate) => {
+    const scripts = profile.scripts || [];
+    
+    if (scripts.length === 0) {
+      alert('该学校没有脚本');
+      return;
+    }
+
+    let scriptToDelete: Script;
+    
+    if (scripts.length === 1) {
+      scriptToDelete = scripts[0];
+    } else {
+      // Multiple scripts - show selection modal
+      setSelectedSchool(profile);
+      setSelectedScripts(scripts);
+      setSelectedScriptId(scripts[0].id);
+      // We'll use a simple prompt for now, but could enhance with a modal
+      const scriptList = scripts.map((s, idx) => `${idx + 1}. ${s.name} (ID: ${s.id})`).join('\n');
+      const choice = prompt(`该学校有 ${scripts.length} 个脚本：\n${scriptList}\n\n请输入要删除的脚本编号 (1-${scripts.length}):`);
+      if (!choice) return;
+      
+      const scriptIndex = parseInt(choice) - 1;
+      if (isNaN(scriptIndex) || scriptIndex < 0 || scriptIndex >= scripts.length) {
+        alert('无效的脚本编号');
+        return;
+      }
+      
+      scriptToDelete = scripts[scriptIndex];
+    }
+
+    if (!confirm(`确定要删除脚本"${scriptToDelete.name}"吗？此操作不可恢复。`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/scripts/${scriptToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('脚本删除成功！');
+        await fetchData(); // Refresh data
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`删除失败: ${errorData.error || '未知错误'}`);
+      }
+    } catch (error: any) {
+      console.error('Error deleting script:', error);
+      alert(`删除失败: ${error?.message || '网络错误'}`);
+    }
+  };
+
   const getFieldCount = (fieldsData: any): number => {
     if (!fieldsData) return 0;
     if (Array.isArray(fieldsData)) {
@@ -506,13 +696,13 @@ export default function TemplatesManagementV2() {
 
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-8 overflow-x-auto scrollbar-hide">
             {PROFILE_TYPES.map((type) => (
               <button
                 key={type.key}
                 onClick={() => setActiveTab(type.key)}
                 className={`
-                  py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap
+                  py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex-shrink-0
                   ${activeTab === type.key
                     ? type.isWarning 
                       ? 'border-yellow-500 text-yellow-600'
@@ -615,33 +805,36 @@ export default function TemplatesManagementV2() {
               </div>
             )}
           <div className="card overflow-hidden">
-            <div>
-              <table className="min-w-full divide-y divide-gray-200 table-fixed">
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
-                      WordPress 标题
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      学校中文名
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       学校名称
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      简称 (name_short)
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      简称
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       学校类别
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      模版 ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      字段数
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       模版状态
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      操作
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      模版操作
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      脚本操作
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      模版 ID
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
+                      字段数
                     </th>
                   </tr>
                 </thead>
@@ -654,29 +847,29 @@ export default function TemplatesManagementV2() {
                     
                     return (
                       <tr key={`${profile.type}-${profile.id}`} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 align-top whitespace-normal break-words w-1/5">
+                        <td className="px-4 py-4 align-top whitespace-normal break-words max-w-xs">
                           {permalink ? (
                             <a
                               href={permalink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary-600 hover:text-primary-800 font-medium"
+                              className="text-primary-600 hover:text-primary-800 font-medium text-sm"
                             >
                               {displaySchoolName}
                             </a>
                           ) : (
-                            <span className="text-gray-900 font-medium">{displaySchoolName}</span>
+                            <span className="text-gray-900 font-medium text-sm">{displaySchoolName}</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 align-top whitespace-normal break-words w-1/5">
+                        <td className="px-4 py-4 align-top whitespace-normal break-words max-w-xs">
                           <div className="text-sm font-medium text-gray-900">{profile.title}</div>
                         </td>
-                        <td className="px-6 py-4 align-top whitespace-normal break-words">
+                        <td className="px-4 py-4 align-top whitespace-nowrap">
                           <div className="text-sm text-gray-500">
                             {template?.school?.nameShort || profile.nameShort || profile.acf?.name_short || '-'}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
                           {profile.profileType === 'unresolved_raw' ? (
                             <span className="px-2 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                               <AlertTriangle className="h-3 w-3 mr-1" />
@@ -687,28 +880,8 @@ export default function TemplatesManagementV2() {
                               {profile.profileType || profile.category || activeTab}
                             </span>
                           )}
-                          {profile.schoolProfileType && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              school_profile_type: {profile.schoolProfileType}
-                            </div>
-                          )}
-                          {profile.unresolvedReason && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              原因: {profile.unresolvedReason}
-                            </div>
-                          )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500 font-mono">
-                            {template?.schoolId || profile.templateId || '-'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">
-                            {fieldCount > 0 ? fieldCount : '-'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
                           {profile.templateStatus === 'created' ? (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               <CheckCircle className="h-3 w-3 mr-1" />
@@ -721,8 +894,8 @@ export default function TemplatesManagementV2() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end space-x-2">
+                        <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <div className="flex items-center justify-center space-x-2">
                             {profile.hasTemplate && template ? (
                               <>
                                 {/* Toggle Active */}
@@ -799,6 +972,57 @@ export default function TemplatesManagementV2() {
                             )}
                           </div>
                         </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <div className="flex items-center justify-center space-x-2">
+                            {(!profile.scripts || profile.scripts.length === 0) ? (
+                              <button
+                                onClick={() => openCreateScriptModal(profile)}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-[goldenrod] hover:bg-[#daa520] disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="创建脚本"
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                创建脚本
+                              </button>
+                            ) : (
+                              <>
+                                <span className="text-xs text-gray-500 mr-1" title={`脚本(${profile.scripts.length})`}>
+                                  ({profile.scripts.length})
+                                </span>
+                                <button
+                                  onClick={() => openCreateScriptModal(profile)}
+                                  className="text-primary-600 hover:text-primary-900"
+                                  title="再创建"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => openEditScriptModal(profile)}
+                                  className="text-primary-600 hover:text-primary-900"
+                                  title="编辑"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteScript(profile)}
+                                  className="text-red-600 hover:text-red-900"
+                                  title="删除"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                          <div className="text-sm text-gray-500 font-mono">
+                            {template?.schoolId || profile.templateId || '-'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-center min-w-[80px]">
+                          <div className="text-sm text-gray-500">
+                            {fieldCount > 0 ? fieldCount : '-'}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -807,6 +1031,168 @@ export default function TemplatesManagementV2() {
             </div>
           </div>
           </>
+        )}
+
+        {/* Create Script Modal */}
+        {showCreateScriptModal && selectedSchool && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">创建脚本</h2>
+                  <button
+                    onClick={() => {
+                      setShowCreateScriptModal(false);
+                      setScriptName('');
+                      setSelectedSchool(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="关闭"
+                    aria-label="关闭"
+                  >
+                    <XIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{selectedSchool.title}</p>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    脚本名称 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={scriptName}
+                    onChange={(e) => setScriptName(e.target.value)}
+                    placeholder="请输入脚本名称"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowCreateScriptModal(false);
+                    setScriptName('');
+                    setSelectedSchool(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleCreateScript}
+                  disabled={scriptLoading || !scriptName.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {scriptLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 inline mr-2 animate-spin" />
+                      创建中...
+                    </>
+                  ) : (
+                    '创建'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Script Modal */}
+        {showEditScriptModal && selectedSchool && selectedScripts.length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">编辑脚本</h2>
+                  <button
+                    onClick={() => {
+                      setShowEditScriptModal(false);
+                      setScriptName('');
+                      setSelectedScriptId(null);
+                      setSelectedSchool(null);
+                      setSelectedScripts([]);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="关闭"
+                    aria-label="关闭"
+                  >
+                    <XIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{selectedSchool.title}</p>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                {selectedScripts.length > 1 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      选择脚本
+                    </label>
+                    <select
+                      value={selectedScriptId || ''}
+                      onChange={(e) => {
+                        const scriptId = parseInt(e.target.value);
+                        setSelectedScriptId(scriptId);
+                        const script = selectedScripts.find(s => s.id === scriptId);
+                        setScriptName(script?.name || '');
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      aria-label="选择脚本"
+                    >
+                      {selectedScripts.map((script) => (
+                        <option key={script.id} value={script.id}>
+                          {script.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    脚本名称 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={scriptName}
+                    onChange={(e) => setScriptName(e.target.value)}
+                    placeholder="请输入脚本名称"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    autoFocus={selectedScripts.length === 1}
+                  />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowEditScriptModal(false);
+                    setScriptName('');
+                    setSelectedScriptId(null);
+                    setSelectedSchool(null);
+                    setSelectedScripts([]);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleUpdateScript}
+                  disabled={scriptLoading || !scriptName.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {scriptLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 inline mr-2 animate-spin" />
+                      更新中...
+                    </>
+                  ) : (
+                    '更新'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </Layout>

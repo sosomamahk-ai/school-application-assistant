@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { authenticate } from '@/utils/auth';
-import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
+import { readdir, readFile, writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
@@ -365,6 +365,114 @@ async function registerScriptInService(
   }
 }
 
+// 从脚本文件中提取变量名
+function extractVarNameFromScript(content: string): string | null {
+  // 匹配 export const ${varName}: SchoolAutomationScript
+  const match = content.match(/export const (\w+):\s*SchoolAutomationScript/);
+  return match ? match[1] : null;
+}
+
+// 从 service 文件中取消注册脚本
+async function unregisterScriptFromService(
+  varName: string,
+  schoolId: string
+): Promise<void> {
+  try {
+    let serviceContent = await readFile(SERVICE_FILE, 'utf-8');
+    let modified = false;
+
+    // 移除 import 语句 - 匹配整行 import 语句
+    // 例如: import { dscInternationalSchoolScript } from "./schools/dsc-international-school";
+    const importLines = serviceContent.split('\n');
+    const filteredImportLines = importLines.filter(line => {
+      // 如果这行包含 import 并且包含 varName，则移除
+      const isImportLine = line.trim().startsWith('import ');
+      const containsVarName = line.includes(varName);
+      return !(isImportLine && containsVarName);
+    });
+    
+    if (filteredImportLines.length !== importLines.length) {
+      serviceContent = filteredImportLines.join('\n');
+      modified = true;
+    }
+
+    // 从注册表中移除条目
+    const registryPattern = /const scriptRegistry: SchoolScriptMap = \{([^}]+)\};/s;
+    const match = serviceContent.match(registryPattern);
+    if (match) {
+      let registryContent = match[1];
+      // 移除包含 varName.id 的行
+      const lines = registryContent.split('\n');
+      const filteredLines = lines.filter(line => {
+        // 移除包含 [${varName}.id] 或 ${varName}.id 的行
+        const trimmedLine = line.trim();
+        return !trimmedLine.includes(`${varName}.id`) && 
+               !trimmedLine.includes(`[${varName}.id]`) &&
+               !trimmedLine.match(new RegExp(`\\[.*${varName}\\.id.*\\]`));
+      });
+      
+      if (filteredLines.length !== lines.length) {
+        const updatedRegistryContent = filteredLines.join('\n');
+        const updatedRegistry = `const scriptRegistry: SchoolScriptMap = {${updatedRegistryContent}};`;
+        serviceContent = serviceContent.replace(registryPattern, updatedRegistry);
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      await writeFile(SERVICE_FILE, serviceContent, 'utf8');
+    }
+  } catch (error) {
+    console.error('Failed to unregister script from service:', error);
+    throw error;
+  }
+}
+
+// 删除脚本
+async function deleteScript(schoolId: string): Promise<void> {
+  // 在生产环境中，不允许删除文件
+  if (isProduction) {
+    throw new Error('生产环境中无法删除脚本文件，请在本地环境中删除');
+  }
+
+  // 查找脚本文件
+  const files = await readdir(SCRIPTS_DIR);
+  
+  let scriptFilePath: string | null = null;
+  let varName: string | null = null;
+
+  // 遍历所有脚本文件，找到匹配的 schoolId
+  for (const file of files) {
+    if (file.endsWith('.ts') && file !== 'common.ts' && file !== 'example-school.ts') {
+      const filePath = join(SCRIPTS_DIR, file);
+      try {
+        const content = await readFile(filePath, 'utf-8');
+        const idMatch = content.match(/id:\s*["']([^"']+)["']/);
+        if (idMatch && idMatch[1] === schoolId) {
+          scriptFilePath = filePath;
+          varName = extractVarNameFromScript(content);
+          break;
+        }
+      } catch (error) {
+        console.error(`Failed to read script file ${file}:`, error);
+        // 继续查找其他文件
+      }
+    }
+  }
+
+  if (!scriptFilePath) {
+    throw new Error(`找不到学校ID为 ${schoolId} 的脚本文件`);
+  }
+
+  // 从 service 文件中取消注册
+  if (varName) {
+    await unregisterScriptFromService(varName, schoolId);
+  }
+
+  // 删除脚本文件
+  await unlink(scriptFilePath);
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -426,7 +534,29 @@ export default async function handler(
       }
     }
 
-    res.setHeader('Allow', ['GET', 'POST']);
+    if (req.method === 'DELETE') {
+      try {
+        const { schoolId } = req.query;
+
+        if (!schoolId || typeof schoolId !== 'string') {
+          return res.status(400).json({ error: 'Missing or invalid schoolId' });
+        }
+
+        await deleteScript(schoolId);
+        
+        return res.status(200).json({ 
+          success: true, 
+          message: 'Script deleted successfully' 
+        });
+      } catch (error) {
+        console.error('Failed to delete script:', error);
+        return res.status(500).json({ 
+          error: error instanceof Error ? error.message : 'Failed to delete script' 
+        });
+      }
+    }
+
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('API handler error:', error);

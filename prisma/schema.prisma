@@ -104,6 +104,7 @@ model School {
   postType              String? // WordPress post type: 'profile' | 'university'
   template              SchoolFormTemplate? @relation(fields: [templateId], references: [id], onDelete: Cascade)
   UserApplication       UserApplication[]
+  scripts               Script[]
 
   @@index([applicationEnd])
   @@index([applicationStart])
@@ -204,4 +205,16 @@ model WordPressProfileCache {
   updatedAt    DateTime
 
   @@index([lastSyncedAt])
+}
+
+model Script {
+  id        Int      @id @default(autoincrement())
+  schoolId  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
 }
