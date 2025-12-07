@@ -1,0 +1,50 @@
+[33m4e6fae9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Update Template List Layout
+[33m72b3b32[m Update Template Page with Script Button
+[33med9f481[m Update Overview Page
+[33mf360f5e[m Update Template-List
+[33m556b064[m Update Template Page
+[33med61a92[m Update Data Retrieving Method
+[33mb2ea689[m Wordpress Sync
+[33m09f2666[m Update Application List
+[33m4c06997[m Update School List
+[33mebf6975[m Update Application Page
+[33m798b82d[m Fix Error
+[33m9e0eda7[m Update schools.tsx
+[33m84102e4[m Update Application Page
+[33m15d4c00[m Update Template Page Layout
+[33mc319302[m Update Wordpress Data Retrieving
+[33m269d368[m Fix: Change cron schedule to daily (Hobby plan limit)
+[33m2e0c5f8[m Push to Deploy
+[33m37e0f51[m Update Wordpress Connections
+[33m28dbc68[m Update Available Applications Table
+[33m47dc21a[m Update Application Progress Table
+[33mce3cb35[m Update Applications Available Page
+[33md9c9aa9[m Update My Application Page Box Layout
+[33mb5727fc[m Update My Application Page Layout
+[33m0fa118b[m Update Progress Button Layout
+[33m4862442[m Update Application Progress Button
+[33me0a60d3[m Fix Wordpress API Integration
+[33mcbd313d[m Fix error
+[33mdb33d3e[m Fix OpenAI EV
+[33md93a76b[m FIX openai connection
+[33mdf85913[m Fix OpenAI.ts
+[33m4ed80b1[m Fix OpenAI Connection
+[33m3eb0115[m Update OpenAI Workers
+[33m87b5b16[m Fix Cloudflare Connection Errors
+[33ma8e0d90[m VPN Setting
+[33m23712ee[m Fix Auto Templates Error
+[33mcc1f617[m Fix Auto Template Errors
+[33m51c5456[m Fix Auto Template Error
+[33m259032e[m Auto Generate Templates
+[33m5544759[m Fix Waittime Error for Auto-apply
+[33m3f0856c[m Fix Runtime Error
+[33m228ce61[m Fix Loop Error
+[33m519ffe8[m Update Application Button
+[33m32d8967[m Change order for Navbar
+[33md6df538[m Dashboard Redesign
+[33m82e8ee8[m Fix Auto Apply Form
+[33m271634d[m Fix School Mapping
+[33m1c92cc5[m Playwright Script Manual
+[33m07b0fa9[m Update Vercel Index Page
+[33me3ec358[m Fix Error
+[33m95243ef[m Update Vercel Page

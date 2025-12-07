@@ -136,75 +136,17 @@ const extractLogoUrl = (post: any): string | null => {
   if (process.env.NODE_ENV === 'development') {
     console.log('[extractLogoUrl] Post structure:', {
       hasAcf: !!post?.acf,
-      acfLogo: post?.acf?.logo,
-      hasMeta: !!post?.meta,
-      thumbnailId: post?.meta?._thumbnail_id || post?._thumbnail_id,
-      hasEmbedded: !!post?._embedded,
-      embeddedMedia: post?._embedded?.['wp:featuredmedia'],
-      featuredMedia: post?.featured_media,
-      featuredMediaUrl: post?.featured_media_url
+      acfLogo: post?.acf?.logo
     });
   }
   
-  // 1. Try ACF logo field first
+  // Try ACF logo field only
   const fromAcf = post?.acf?.logo;
   if (typeof fromAcf === 'string' && fromAcf.trim()) {
     return fromAcf.trim();
   }
   if (fromAcf?.url && typeof fromAcf.url === 'string') {
     return fromAcf.url.trim();
-  }
-  
-  // 2. Try _thumbnail_id meta key (WordPress featured image)
-  // WordPress REST API returns meta fields differently - check multiple locations
-  const thumbnailId = 
-    post?.meta?._thumbnail_id?.[0] || // Meta can be array
-    post?.meta?._thumbnail_id ||       // Or direct value
-    post?._thumbnail_id ||              // Or at root level
-    post?.featured_media;               // Or as featured_media ID
-  
-  if (thumbnailId) {
-    // If we have embedded media, use it (most reliable)
-    const embedded = post?._embedded?.['wp:featuredmedia'];
-    if (Array.isArray(embedded) && embedded.length > 0) {
-      const media = embedded[0];
-      if (media?.source_url) {
-        return media.source_url;
-      }
-      if (media?.media_details?.sizes) {
-        // Try to get a good size
-        const sizes = media.media_details.sizes;
-        const preferredSizes = ['medium', 'thumbnail', 'full'];
-        for (const size of preferredSizes) {
-          if (sizes[size]?.source_url) {
-            return sizes[size].source_url;
-          }
-        }
-      }
-    }
-    
-    // If we have featured_media_url directly
-    if (post?.featured_media_url && typeof post.featured_media_url === 'string') {
-      return post.featured_media_url.trim();
-    }
-    
-    // If we have featured_media object with source_url
-    if (post?.featured_media?.source_url && typeof post.featured_media.source_url === 'string') {
-      return post.featured_media.source_url.trim();
-    }
-  }
-  
-  // 3. Fallback to embedded featured media (even without thumbnail_id)
-  const embedded = post?._embedded?.['wp:featuredmedia'];
-  if (Array.isArray(embedded) && embedded.length > 0) {
-    const media = embedded[0];
-    if (media?.source_url) {
-      return media.source_url;
-    }
-  }
-  
-  if (post?.featured_media_url && typeof post.featured_media_url === 'string') {
-    return post.featured_media_url.trim();
   }
   
   return null;
